@@ -53,8 +53,11 @@ pub fn parse_rec_spec(value: &str) -> Option<RecSpec> {
     };
     // Split into digits + trailing unit char. Empty digit run (e.g. `rec:+m`,
     // `rec:d`) and digits-only (e.g. `rec:3`) are both rejected here.
-    let unit_byte = *rest.as_bytes().last()?;
-    let digits = &rest[..rest.len() - 1];
+    // Slice off the last *char*, not the last byte: a multibyte trailing
+    // char (e.g. `rec:1я`) would otherwise put the split mid-codepoint and
+    // panic. Any non-ASCII unit is rejected by the match below anyway.
+    let unit_ch = rest.chars().next_back()?;
+    let digits = &rest[..rest.len() - unit_ch.len_utf8()];
     if digits.is_empty() {
         return None;
     }
@@ -62,12 +65,12 @@ pub fn parse_rec_spec(value: &str) -> Option<RecSpec> {
     if n == 0 {
         return None;
     }
-    let unit = match unit_byte {
-        b'd' => RecUnit::Day,
-        b'b' => RecUnit::BusinessDay,
-        b'w' => RecUnit::Week,
-        b'm' => RecUnit::Month,
-        b'y' => RecUnit::Year,
+    let unit = match unit_ch {
+        'd' => RecUnit::Day,
+        'b' => RecUnit::BusinessDay,
+        'w' => RecUnit::Week,
+        'm' => RecUnit::Month,
+        'y' => RecUnit::Year,
         _ => return None,
     };
     Some(RecSpec { strict, n, unit })
@@ -155,6 +158,35 @@ mod tests {
             "", "d", "1", "+", "+m", "0d", "-1d", "1z", "abc", "1.5d", "1 d", "1dx", " 1d",
         ] {
             assert!(parse_rec_spec(bad).is_none(), "expected None for {:?}", bad);
+        }
+    }
+
+    #[test]
+    fn never_panics_on_any_trailing_char() {
+        // A valid unit is always one ASCII letter. The parser must reject any
+        // other trailing char — 2-byte (Cyrillic/Greek/Hebrew), 3-byte
+        // (CJK/Hangul), or 4-byte (emoji) — by returning None, never by
+        // slicing mid-codepoint and panicking. Sweep the BMP broadly plus a
+        // few astral-plane samples; the assertion is "doesn't panic", and
+        // None is the correct answer for every one of these.
+        let mut samples: Vec<char> = ('\u{00A1}'..='\u{FFFF}').step_by(13).collect();
+        samples.extend(['я', 'м', '日', '한', 'Ω', 'א', 'ñ', '€', '🦀', '😀', '𝕏']);
+        for c in samples {
+            for form in [
+                format!("{c}"),
+                format!("1{c}"),
+                format!("+1{c}"),
+                format!("12{c}"),
+                format!("{c}d"),
+            ] {
+                let _ = parse_rec_spec(&form);
+                if !form.ends_with(['d', 'b', 'w', 'm', 'y']) {
+                    assert!(
+                        parse_rec_spec(&form).is_none(),
+                        "expected None for {form:?}"
+                    );
+                }
+            }
         }
     }
 

@@ -926,14 +926,16 @@ fn parse_day_ordinal(s: &str) -> Option<u32> {
         }
         return None;
     }
-    if s.len() >= 3 {
-        let (num, suffix) = s.split_at(s.len() - 2);
-        if matches!(suffix, "st" | "nd" | "rd" | "th")
-            && let Ok(n) = num.parse::<u32>()
-            && (1..=31).contains(&n)
-        {
-            return Some(n);
-        }
+    // "1st", "2nd", "3rd", "15th". strip_suffix matches by content, so it is
+    // char-boundary safe — a word ending in a multibyte char (e.g. "дня)")
+    // simply won't match an ASCII ordinal suffix instead of panicking.
+    if let Some(num) = ["st", "nd", "rd", "th"]
+        .iter()
+        .find_map(|suf| s.strip_suffix(suf))
+        && let Ok(n) = num.parse::<u32>()
+        && (1..=31).contains(&n)
+    {
+        return Some(n);
     }
     Some(match s {
         "first" => 1,
@@ -1124,6 +1126,17 @@ mod tests {
         let parsed = try_parse(input, today).unwrap();
         let out = format_as_todo_txt(&parsed);
         assert_eq!(out, "Pay rent +home @bank due:2026-06-01 rec:+1m t:-3d");
+    }
+
+    #[test]
+    fn cyrillic_body_with_parenthetical_does_not_panic() {
+        // Regression: a word like "дня)" is 7 bytes (three 2-byte Cyrillic
+        // chars + ")"). parse_day_ordinal sliced at byte len-2, landing inside
+        // the multibyte 'я' and panicking. The whole app crashed on save.
+        let today = d("2026-05-17");
+        let parsed = try_parse("Приготовить ужин (на 2 дня) today", today).unwrap();
+        assert_eq!(parsed.due, Some(today));
+        assert_eq!(parsed.body, "Приготовить ужин (на 2 дня)");
     }
 
     #[test]

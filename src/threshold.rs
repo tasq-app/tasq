@@ -57,17 +57,20 @@ fn parse_relative(value: &str) -> Option<ThresholdSpec> {
     if rest.is_empty() {
         return None;
     }
-    let unit_byte = *rest.as_bytes().last()?;
-    let digits = &rest[..rest.len() - 1];
+    // Slice off the last *char*, not the last byte: a multibyte trailing
+    // char (e.g. `t:-3я`) would otherwise put the split mid-codepoint and
+    // panic. Any non-ASCII unit is rejected by the match below anyway.
+    let unit_ch = rest.chars().next_back()?;
+    let digits = &rest[..rest.len() - unit_ch.len_utf8()];
     if digits.is_empty() {
         return None;
     }
     let n: u32 = digits.parse().ok()?;
-    let unit = match unit_byte {
-        b'd' => RecUnit::Day,
-        b'b' => RecUnit::BusinessDay,
-        b'w' => RecUnit::Week,
-        b'm' => RecUnit::Month,
+    let unit = match unit_ch {
+        'd' => RecUnit::Day,
+        'b' => RecUnit::BusinessDay,
+        'w' => RecUnit::Week,
+        'm' => RecUnit::Month,
         // Year deliberately omitted from the threshold grammar.
         _ => return None,
     };
@@ -278,6 +281,31 @@ mod tests {
                 "expected None for {:?}",
                 bad
             );
+        }
+    }
+
+    #[test]
+    fn never_panics_on_any_trailing_char() {
+        // A valid relative unit is one ASCII letter (d/b/w/m). Any other
+        // trailing char — 2-byte (Cyrillic/Greek/Hebrew), 3-byte (CJK/
+        // Hangul), or 4-byte (emoji) — must be rejected by returning None,
+        // never by slicing mid-codepoint and panicking. The assertion is
+        // "doesn't panic"; None is the correct answer for all of these.
+        let mut samples: Vec<char> = ('\u{00A1}'..='\u{FFFF}').step_by(13).collect();
+        samples.extend(['я', 'м', '日', '한', 'Ω', 'א', 'ñ', '€', '🦀', '😀', '𝕏']);
+        for c in samples {
+            for form in [
+                format!("{c}"),
+                format!("1{c}"),
+                format!("-1{c}"),
+                format!("+1{c}"),
+                format!("12{c}"),
+            ] {
+                assert!(
+                    parse_threshold(&form).is_none(),
+                    "expected None for {form:?}"
+                );
+            }
         }
     }
 

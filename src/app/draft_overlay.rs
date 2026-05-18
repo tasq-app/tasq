@@ -528,7 +528,7 @@ fn strip_trigger_literal(app: &mut App, key: &str, anchor: usize) {
     let key_with_colon = format!("{key}:");
     let text = app.draft.text();
     let end = anchor + key_with_colon.len();
-    if end > text.len() || text[anchor..end] != key_with_colon {
+    if text.get(anchor..end) != Some(key_with_colon.as_str()) {
         return;
     }
     let strip_start = if anchor > 0
