@@ -207,7 +207,8 @@ Standard [todo.txt](https://github.com/todotxt/todo.txt) lines:
 - `+project` — project tag
 - `@context` — context tag
 - `key:value` — extension; `due:YYYY-MM-DD` is recognized for sort and
-  due-bucket grouping in the list view
+  due-bucket grouping in the list view. Keys you'd rather not see can be
+  hidden from the rows via [`hide_keys`](#hiding-keyvalue-tags)
 - `rec:[+]N{d,b,w,m,y}` — recurrence; on completion (`x`), tuxedo inserts
   a fresh copy of the task with `due:` advanced by `N` days, business
   days (Mon–Fri), weeks, months, or years. The `+` prefix means
@@ -324,6 +325,21 @@ Saved searches (created with `fs`) are written one per line as
 round-trip as plain text, so you can add, rename, or delete them by editing
 `config.toml` directly; a repeated `filter.<name>` keeps the last value, and
 `<name>` may not contain `=`.
+
+### Hiding `key:value` tags
+
+Some `key:value` extensions are for machines, not eyes — e.g. a `uid:` you
+sync against. Add a comma-separated `hide_keys` line to `config.toml` and
+those keys' tokens are dropped from the task rows (list and archive views):
+
+```toml
+hide_keys = uid, sync
+```
+
+Matching is case-insensitive. Hiding is purely visual — the tags stay on
+disk untouched, still serialize, and still show in the detail pane's **RAW**
+section (a deliberate escape hatch). Searches still match hidden text; the
+hidden characters just aren't drawn.
 
 ## Development
 

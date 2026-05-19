@@ -97,6 +97,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             show_line_num: app.prefs.layout.line_num,
             match_term: None,
             today: &app.today,
+            hidden_keys: &app.prefs.hidden_keys,
         };
         if i == app.cursor {
             cursor_line = Some(lines.len());

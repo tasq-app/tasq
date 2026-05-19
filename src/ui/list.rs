@@ -81,6 +81,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                     Some(&app.filter.search)
                 },
                 today: &app.today,
+                hidden_keys: &app.prefs.hidden_keys,
             };
             if i == app.cursor {
                 cursor_line = Some(lines.len());

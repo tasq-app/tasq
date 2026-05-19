@@ -15,6 +15,10 @@ pub struct RowOpts<'a> {
     pub show_line_num: bool,
     pub match_term: Option<&'a str>,
     pub today: &'a str,
+    /// `key:value` tokens whose key is in this list are omitted from the
+    /// rendered body. Empty (the common case) means render everything,
+    /// byte-for-byte as before.
+    pub hidden_keys: &'a [String],
 }
 
 pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<'a> {
@@ -72,11 +76,18 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
         opts.match_term.and_then(|n| subseq_match_ci(body, n));
     let body_start = body.as_ptr() as usize;
     let mut rest = body;
+    // Whether any visible body token has been emitted yet. Drives the
+    // hidden-token branch's whitespace fix-up so a skipped token never
+    // leaves a leading, trailing, or doubled space. When `hidden_keys`
+    // is empty the branch is never entered and output is byte-identical
+    // to before.
+    let mut emitted_body_token = false;
     while !rest.is_empty() {
         let ws_end = rest
             .find(|c: char| !c.is_whitespace())
             .unwrap_or(rest.len());
-        if ws_end > 0 {
+        let pushed_ws = ws_end > 0;
+        if pushed_ws {
             spans.push(Span::raw(&rest[..ws_end]));
             rest = &rest[ws_end..];
         }
@@ -85,6 +96,23 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
         }
         let tok_end = rest.find(char::is_whitespace).unwrap_or(rest.len());
         let token = &rest[..tok_end];
+        if is_hidden_kv(token, opts.hidden_keys) {
+            // Drop the separator we just emitted for this token...
+            if pushed_ws {
+                spans.pop();
+            }
+            rest = &rest[tok_end..];
+            // ...and if nothing visible precedes it, also swallow the
+            // following whitespace run so the next token doesn't inherit
+            // an orphan leading space.
+            if !emitted_body_token {
+                let n = rest
+                    .find(|c: char| !c.is_whitespace())
+                    .unwrap_or(rest.len());
+                rest = &rest[n..];
+            }
+            continue;
+        }
         let token_offset = token.as_ptr() as usize - body_start;
         push_token_spans(
             &mut spans,
@@ -95,6 +123,7 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
             opts,
             theme,
         );
+        emitted_body_token = true;
         rest = &rest[tok_end..];
     }
     let line_style = if opts.cursor {
@@ -178,6 +207,21 @@ fn push_token_spans<'a>(
     }
     if cursor < token.len() {
         spans.push(Span::styled(&token[cursor..], base_style));
+    }
+}
+
+/// True when `token` is a `key:value` pair whose key (case-insensitively)
+/// appears in `hidden_keys`. Empty list short-circuits so the common path
+/// stays allocation- and comparison-free.
+fn is_hidden_kv(token: &str, hidden_keys: &[String]) -> bool {
+    if hidden_keys.is_empty() {
+        return false;
+    }
+    match token.split_once(':') {
+        Some((k, v)) if !k.is_empty() && !v.is_empty() => {
+            hidden_keys.iter().any(|h| h.eq_ignore_ascii_case(k))
+        }
+        _ => false,
     }
 }
 
@@ -309,6 +353,7 @@ mod tests {
             show_line_num: false,
             match_term: Some("a"),
             today: "2026-05-06",
+            hidden_keys: &[],
         };
         // Build must not panic; we don't assert on the rendered spans.
         let _ = build_line(&task, opts, &MUTED);
@@ -329,6 +374,7 @@ mod tests {
             show_line_num: false,
             match_term: Some("cade"),
             today: "2026-05-06",
+            hidden_keys: &[],
         };
         let line = build_line(&task, opts, &MUTED);
         let highlight_bg = MUTED.matched;
@@ -339,5 +385,82 @@ mod tests {
             .map(|s| s.content.as_ref())
             .collect();
         assert_eq!(highlighted, "Cade");
+    }
+
+    /// Render `raw` and return the body text (all span content joined,
+    /// fixed glyph/priority prefix trimmed). Tasks here carry no priority
+    /// and aren't done, so the prefix is pure leading whitespace and the
+    /// "no leading body space" invariant makes `trim_start` exact.
+    fn body_text(raw: &str, hidden: &[String]) -> String {
+        let task = parse_line(raw).unwrap();
+        let opts = RowOpts {
+            idx_label: 0,
+            cursor: false,
+            multi_mode: false,
+            multi_checked: false,
+            selected: false,
+            show_line_num: false,
+            match_term: None,
+            today: "2026-05-06",
+            hidden_keys: hidden,
+        };
+        let line = build_line(&task, opts, &MUTED);
+        line.spans
+            .iter()
+            .map(|s| s.content.as_ref())
+            .collect::<String>()
+            .trim_start()
+            .to_string()
+    }
+
+    #[test]
+    fn hidden_key_in_middle_omitted() {
+        let h = vec!["uid".to_string()];
+        assert_eq!(
+            body_text("Call dentist uid:abc-123 @phone +health", &h),
+            "Call dentist @phone +health",
+        );
+    }
+
+    #[test]
+    fn hidden_key_at_start_omitted() {
+        let h = vec!["uid".to_string()];
+        assert_eq!(body_text("uid:abc-123 Call dentist", &h), "Call dentist");
+    }
+
+    #[test]
+    fn hidden_key_at_end_omitted() {
+        let h = vec!["uid".to_string()];
+        assert_eq!(body_text("Call dentist uid:abc-123", &h), "Call dentist");
+    }
+
+    #[test]
+    fn adjacent_hidden_keys_collapse_to_single_space() {
+        let h = vec!["uid".to_string(), "sync".to_string()];
+        assert_eq!(body_text("Call uid:a sync:b dentist", &h), "Call dentist",);
+    }
+
+    #[test]
+    fn hidden_key_match_is_case_insensitive() {
+        let h = vec!["uid".to_string()];
+        assert_eq!(body_text("Call UID:abc done", &h), "Call done");
+    }
+
+    #[test]
+    fn empty_hidden_list_renders_everything_unchanged() {
+        assert_eq!(
+            body_text("Call dentist uid:abc @phone +health", &[]),
+            "Call dentist uid:abc @phone +health",
+        );
+    }
+
+    #[test]
+    fn non_listed_key_not_hidden() {
+        let h = vec!["uid".to_string()];
+        // `due:` stays; only configured keys are dropped.
+        assert_eq!(
+            body_text("Pay rent due:2026-05-15 uid:x", &h),
+            "Pay rent due:2026-05-15",
+        );
     }
 }

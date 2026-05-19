@@ -40,6 +40,10 @@ pub struct Config {
     /// The query is a `/`-search needle (subsequence match on the task
     /// body); see `App::save_current_filter_as`.
     pub filters: Vec<(String, String)>,
+    /// Metadata keys whose `key:value` tokens are omitted from rendered
+    /// task rows (list + archive). The line is stored on disk untouched;
+    /// this only affects display. Serialized as `hide_keys = a, b, c`.
+    pub hidden_keys: Vec<String>,
 }
 
 impl Config {
@@ -162,6 +166,17 @@ fn parse(s: &str) -> Config {
                 c.share_token = Some(v.to_ascii_lowercase());
             }
             "share_port" => c.share_port = v.parse().ok(),
+            // Comma-separated key list; surrounding whitespace trimmed and
+            // empty entries (trailing/double comma) dropped so a hand-
+            // edited line is forgiving.
+            "hide_keys" => {
+                c.hidden_keys = v
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_string)
+                    .collect();
+            }
             // Saved searches: `filter.<name> = <query>`. The name is the
             // (trimmed) text after the `filter.` prefix; the query is the
             // (unquoted) value, which may itself contain `=`. A repeated
@@ -222,6 +237,9 @@ fn serialize(c: &Config) -> String {
     for (name, query) in &c.filters {
         let _ = writeln!(out, "filter.{name} = {query}");
     }
+    if !c.hidden_keys.is_empty() {
+        let _ = writeln!(out, "hide_keys = {}", c.hidden_keys.join(", "));
+    }
     out
 }
 
@@ -264,6 +282,7 @@ mod tests {
                 ("weekly".into(), "report".into()),
                 ("waiting".into(), "@waiting due=2026".into()),
             ],
+            hidden_keys: vec!["uid".into(), "sync".into()],
         };
         let s = serialize(&c);
         let parsed = parse(&s);
@@ -324,6 +343,19 @@ mod tests {
                 ("other".to_string(), "x".to_string()),
             ]
         );
+    }
+
+    #[test]
+    fn hide_keys_parsed_trimmed_and_round_trips() {
+        // Comma-separated, surrounding whitespace trimmed, empty entries
+        // dropped (trailing comma / double comma from a hand-edited file).
+        let c = parse("hide_keys = uid ,  sync ,,\n");
+        assert_eq!(c.hidden_keys, vec!["uid".to_string(), "sync".to_string()]);
+        // serialize -> parse must reproduce the same list.
+        let reparsed = parse(&serialize(&c));
+        assert_eq!(reparsed.hidden_keys, c.hidden_keys);
+        // Absent key leaves the list empty, not None/garbage.
+        assert!(parse("theme = Dawn\n").hidden_keys.is_empty());
     }
 
     #[test]
@@ -403,6 +435,7 @@ mod tests {
             share_token: None,
             share_port: None,
             filters: vec![("errand".into(), "@errand".into())],
+            hidden_keys: vec!["uid".into()],
         };
         written.save_to(&path).expect("save should succeed");
         assert!(path.exists());

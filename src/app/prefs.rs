@@ -34,6 +34,9 @@ pub struct Prefs {
     pub layout: Layout,
     pub show_done: bool,
     pub show_future: bool,
+    /// Metadata keys whose `key:value` tokens are hidden from task rows.
+    /// Config-only (no in-app toggle); see `Config::hidden_keys`.
+    pub hidden_keys: Vec<String>,
 }
 
 impl Prefs {
@@ -55,6 +58,7 @@ impl Prefs {
             },
             show_done: cfg.show_done.unwrap_or(false),
             show_future: cfg.show_future.unwrap_or(false),
+            hidden_keys: cfg.hidden_keys,
         }
     }
 
@@ -139,6 +143,7 @@ impl Prefs {
         cfg.show_status_bar = Some(self.layout.status_bar);
         cfg.show_done = Some(self.show_done);
         cfg.show_future = Some(self.show_future);
+        cfg.hidden_keys = self.hidden_keys.clone();
         cfg.save()
     }
 }
