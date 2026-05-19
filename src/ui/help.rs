@@ -40,8 +40,8 @@ const VIEW: Section = (
     "VIEW",
     &[
         ("/", "fuzzy search"),
-        ("fp", "filter by project"),
-        ("fc", "filter by context"),
+        ("fp / fc", "filter project/context"),
+        ("ff / fs", "saved filter pick/save"),
         ("S", "cycle sort"),
         ("v", "visual / multi-select"),
         ("l", "list view"),

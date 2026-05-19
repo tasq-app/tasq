@@ -27,10 +27,12 @@ pub enum Mode {
     Visual,
     Help,
     Settings,
-    PromptProject, // text input → add project on current task
-    PromptContext, // text input → add/remove context on current task
-    PickProject,   // j/k cycles through projects to filter by
-    PickContext,   // j/k cycles through contexts to filter by
+    PromptProject,    // text input → add project on current task
+    PromptContext,    // text input → add/remove context on current task
+    PickProject,      // j/k cycles through projects to filter by
+    PickContext,      // j/k cycles through contexts to filter by
+    PickSavedFilter,  // j/k cycles through saved searches to apply
+    PromptSaveFilter, // text input → name the current search and save it
     CommandPalette,
     /// QR + URL overlay for the in-TUI capture server. Any key
     /// dismisses; press `s` again to re-open without rebinding (the
@@ -144,4 +146,13 @@ impl Filter {
         self.context = None;
         self.search.clear();
     }
+}
+
+/// A user-named saved search. `query` is a `/`-search needle (case-insensitive
+/// subsequence match on the task body), recalled via the `ff` picker and
+/// persisted as a `filter.<name> = <query>` line in the config.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SavedFilter {
+    pub name: String,
+    pub query: String,
 }

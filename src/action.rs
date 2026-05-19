@@ -29,6 +29,10 @@ pub enum Action {
     ArmF,
     PickProject,
     PickContext,
+    /// `ff` — open the saved-search cycle picker.
+    PickSavedFilter,
+    /// `fs` — name the active `/`-search and persist it.
+    SaveCurrentFilter,
     CycleSort,
     BeginPromptProject,
     BeginPromptContext,

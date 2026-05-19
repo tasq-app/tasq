@@ -1,13 +1,14 @@
 ---
 source: tests/snapshots.rs
+assertion_line: 226
 expression: buffer_to_text(&buf)
 ---
  FILTERS                   ▶▮◀ /tmp/tuxedo-snapshot.txt  •  15 tas DETAIL                           
      ┌ tuxedo · help ─────────────────────────────────────────────────────────────────────────┐     
  PROJ│  NAVIGATION                                  VIEW                                      │     
    +w│    j / ↓             next task                 /                 fuzzy search          │     
-   +h│    k / ↑             previous task             fp                filter by project     │     
-   +f│    gg                first task                fc                filter by context     │     
+   +h│    k / ↑             previous task             fp / fc           filter project/context│     
+   +f│    gg                first task                ff / fs           saved filter pick/save│     
    +h│    G                 last task                 S                 cycle sort            │     
    +l│    Ctrl-d / Ctrl-u   page down / up            v                 visual / multi-select │     
    +p│                                                l                 list view             │     

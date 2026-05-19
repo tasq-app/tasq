@@ -25,6 +25,7 @@ brew install webstonehq/tap/tuxedo
 - **Atomic, sync-friendly writes.** Every change goes through write-temp-then-rename. If another process — Dropbox, an editor, a script — modifies the file, tuxedo reloads on the next keypress (or within ~250 ms while idle) and flashes a notice.
 - **Sibling-file archive.** `A` moves completed tasks to `done.txt` next to your file, atomically.
 - **Filter, sort, multi-select.** Cycle by `+project` or `@context`, sort by priority / due / file order, and bulk-complete or bulk-delete in visual mode.
+- **Saved searches.** Name the active `/`-search with `fs`, then recall it any time by cycling saved filters with `ff`. Stored as plain `filter.<name>` lines in the config — hand-editable like everything else.
 - **Four themes, three densities.** Cycle with `T` and `D`. Choices persist across runs.
 - **No daemon, no database, no cloud.** One file in, one file out.
 
@@ -35,7 +36,7 @@ brew install webstonehq/tap/tuxedo
 | **Empty state** • cell-bowtie mark and quick-start when the file has no tasks | ![empty](docs/screenshots/empty.svg) |
 | **List** • list of todos, optionally grouped | ![empty](docs/screenshots/list.svg) |
 | **Archive** • completed tasks grouped by completion date | ![archive](docs/screenshots/archive.svg) |
-| **Filter sidebar active** • `fp` cycles projects with j/k, `fc` cycles contexts | ![filter](docs/screenshots/filter.svg) |
+| **Filter sidebar active** • `fp` cycles projects with j/k, `fc` cycles contexts; saved searches list under a **SAVED** heading with live match counts | ![filter](docs/screenshots/filter.svg) |
 | **Command palette** • `:` or `Ctrl-P` opens a fuzzy palette over every action | ![command palette](docs/screenshots/command-palette.svg) |
 | **Help** • `?` opens the full keybindings overlay | ![help](docs/screenshots/help.svg) |
 
@@ -154,6 +155,8 @@ can browse, un-archive, or permanently delete past tasks.
 | `/` | search |
 | `fp` | filter by project (`j` / `k` cycles, `Esc` clears) |
 | `fc` | filter by context (`j` / `k` cycles, `Esc` clears) |
+| `ff` | pick a saved search (`j` / `k` cycles, `Enter` keeps, `Esc` reverts) |
+| `fs` | save the active `/`-search as a named filter |
 | `S` | cycle sort: priority → due → file order |
 | `v` | enter visual / multi-select; `space` toggles a row |
 | `x` / `dd` (in visual) | bulk-complete / bulk-delete the selection |
@@ -182,8 +185,8 @@ can browse, un-archive, or permanently delete past tasks.
 | `,` | settings overlay |
 | `q` | quit |
 
-Two-key chord prompts (`gg`, `dd`, `yy`, `yb`, `fp`, `fc`) show a `g…` /
-`d…` / `y…` / `f…` indicator in the status-bar mode chip while the
+Two-key chord prompts (`gg`, `dd`, `yy`, `yb`, `fp`, `fc`, `ff`, `fs`) show
+a `g…` / `d…` / `y…` / `f…` indicator in the status-bar mode chip while the
 leader is armed; the window is 600 ms.
 
 Copy uses the OSC 52 terminal escape, so it works locally and over SSH on
@@ -315,6 +318,12 @@ Two additional keys, `share_token` and `share_port`, are written by the
 as a secret — anyone who has the value and LAN reach can append to your
 inbox. Delete the key from `config.toml` to rotate it on the next `s`
 press.
+
+Saved searches (created with `fs`) are written one per line as
+`filter.<name> = <query>`, where `<query>` is the `/`-search needle. They
+round-trip as plain text, so you can add, rename, or delete them by editing
+`config.toml` directly; a repeated `filter.<name>` keeps the last value, and
+`<name>` may not contain `=`.
 
 ## Development
 

@@ -20,6 +20,7 @@ mod mutations;
 pub mod palette;
 mod picker;
 mod prefs;
+mod saved;
 mod selection;
 mod types;
 mod visibility;
@@ -42,8 +43,8 @@ pub use palette::CommandPaletteState;
 pub use prefs::{Layout, Prefs};
 pub use selection::Selection;
 pub use types::{
-    AUTOCOMPLETE_CAP, AddOutcome, Density, FLASH_TTL, Filter, LEADER_WINDOW, Mode, Sort,
-    UNDO_LIMIT, View,
+    AUTOCOMPLETE_CAP, AddOutcome, Density, FLASH_TTL, Filter, LEADER_WINDOW, Mode, SavedFilter,
+    Sort, UNDO_LIMIT, View,
 };
 pub use visibility::{GroupKey, ListDueBucket, ordered_unique};
 
@@ -98,6 +99,18 @@ pub struct App {
     /// Receiver for the background update check. Drained each tick; cleared
     /// once a result has been received or the sender hung up.
     update_check: Option<Receiver<Option<String>>>,
+    /// User-named saved searches, loaded from config at startup and
+    /// upserted via `fs`. Recalled with the `ff` picker.
+    pub saved_filters: Vec<SavedFilter>,
+    /// The search string that was active when the `ff` picker opened, so
+    /// cancelling (`Esc`) restores it instead of leaving the previewed
+    /// filter applied. `None` outside `Mode::PickSavedFilter`.
+    saved_pick_restore: Option<String>,
+    /// Index into `saved_filters` of the row the `ff` picker currently
+    /// previews. Tracked explicitly rather than re-derived from
+    /// `filter.search` so duplicate queries don't strand j/k. Only
+    /// meaningful while `Mode::PickSavedFilter`; re-seeded on each open.
+    saved_pick_idx: usize,
     pub command_palette: CommandPaletteState,
     /// Vertical scroll offset (rows from the top of the line list) for each
     /// view, keyed by `View::idx()`. Updated at render time via `Cell` so the
@@ -114,6 +127,15 @@ impl App {
     pub fn new(file_path: PathBuf, body: String, today: String, cfg: Config) -> Self {
         let tasks = todo::parse_file(&body);
         let archive = Archive::spawn(&file_path);
+        // Read saved filters before `cfg` is moved into `Prefs::from_config`.
+        let saved_filters = cfg
+            .filters
+            .iter()
+            .map(|(name, query)| SavedFilter {
+                name: name.clone(),
+                query: query.clone(),
+            })
+            .collect();
         let mut app = Self {
             tasks,
             view: View::List,
@@ -137,6 +159,9 @@ impl App {
             archive,
             latest_version: None,
             update_check: None,
+            saved_filters,
+            saved_pick_restore: None,
+            saved_pick_idx: 0,
             command_palette: CommandPaletteState::default(),
             view_scroll: [Cell::new(0), Cell::new(0)],
             share: None,

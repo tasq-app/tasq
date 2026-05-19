@@ -35,6 +35,11 @@ pub struct Config {
     /// a future launch, the server falls back to an OS-assigned port
     /// and rewrites this field.
     pub share_port: Option<u16>,
+    /// User-defined saved searches, as `(name, query)` pairs in file
+    /// order. Serialized one-per-line as `filter.<name> = <query>`.
+    /// The query is a `/`-search needle (subsequence match on the task
+    /// body); see `App::save_current_filter_as`.
+    pub filters: Vec<(String, String)>,
 }
 
 impl Config {
@@ -157,6 +162,21 @@ fn parse(s: &str) -> Config {
                 c.share_token = Some(v.to_ascii_lowercase());
             }
             "share_port" => c.share_port = v.parse().ok(),
+            // Saved searches: `filter.<name> = <query>`. The name is the
+            // (trimmed) text after the `filter.` prefix; the query is the
+            // (unquoted) value, which may itself contain `=`. A repeated
+            // name collapses to one entry, last value wins, position of
+            // the first occurrence kept — matching `upsert`'s semantics.
+            _ if k
+                .strip_prefix("filter.")
+                .is_some_and(|n| !n.trim().is_empty()) =>
+            {
+                let name = k.strip_prefix("filter.").expect("checked above").trim();
+                match c.filters.iter_mut().find(|(n, _)| n.as_str() == name) {
+                    Some((_, q)) => *q = v.to_string(),
+                    None => c.filters.push((name.to_string(), v.to_string())),
+                }
+            }
             _ => {} // forward-compatible: ignore unknowns
         }
     }
@@ -199,6 +219,9 @@ fn serialize(c: &Config) -> String {
     if let Some(v) = c.share_port {
         let _ = writeln!(out, "share_port = {v}");
     }
+    for (name, query) in &c.filters {
+        let _ = writeln!(out, "filter.{name} = {query}");
+    }
     out
 }
 
@@ -237,10 +260,70 @@ mod tests {
             show_future: Some(true),
             share_token: Some("a".repeat(64)),
             share_port: Some(18080),
+            filters: vec![
+                ("weekly".into(), "report".into()),
+                ("waiting".into(), "@waiting due=2026".into()),
+            ],
         };
         let s = serialize(&c);
         let parsed = parse(&s);
         assert_eq!(parsed, c);
+    }
+
+    #[test]
+    fn filters_round_trip() {
+        let c = Config {
+            filters: vec![
+                ("weekly".into(), "report".into()),
+                // Query may contain '=' — split_once('=') only splits the
+                // first '=', so the key/value boundary stays unambiguous.
+                ("waiting".into(), "due=2026".into()),
+            ],
+            ..Config::default()
+        };
+        let s = serialize(&c);
+        let parsed = parse(&s);
+        assert_eq!(parsed.filters, c.filters);
+    }
+
+    #[test]
+    fn filter_lines_parsed_and_others_ignored() {
+        let s = "theme = Dawn\nfilter.weekly = report\nbogus = 42\nfilter.waiting = @waiting\n";
+        let c = parse(s);
+        assert_eq!(c.theme.as_deref(), Some("Dawn"));
+        assert_eq!(
+            c.filters,
+            vec![
+                ("weekly".to_string(), "report".to_string()),
+                ("waiting".to_string(), "@waiting".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn filter_name_trimmed_on_parse() {
+        // A hand-edited `filter.  weekly  = report` must yield the same
+        // name an in-app save would, so the picker/panel don't show a
+        // padded duplicate.
+        let c = parse("filter.  weekly  = report\n");
+        assert_eq!(
+            c.filters,
+            vec![("weekly".to_string(), "report".to_string())]
+        );
+    }
+
+    #[test]
+    fn duplicate_filter_lines_dedup_last_wins_in_place() {
+        // Two `filter.weekly` lines (hand-edited config) collapse to one
+        // entry, last value wins, keeping the first occurrence's position.
+        let c = parse("filter.weekly = first\nfilter.other = x\nfilter.weekly = second\n");
+        assert_eq!(
+            c.filters,
+            vec![
+                ("weekly".to_string(), "second".to_string()),
+                ("other".to_string(), "x".to_string()),
+            ]
+        );
     }
 
     #[test]
@@ -319,6 +402,7 @@ mod tests {
             show_future: Some(false),
             share_token: None,
             share_port: None,
+            filters: vec![("errand".into(), "@errand".into())],
         };
         written.save_to(&path).expect("save should succeed");
         assert!(path.exists());

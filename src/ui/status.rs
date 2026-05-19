@@ -20,6 +20,8 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         Mode::PromptContext => "CONTEXT".into(),
         Mode::PickProject => "PICK +PROJECT".into(),
         Mode::PickContext => "PICK @CONTEXT".into(),
+        Mode::PickSavedFilter => "PICK FILTER".into(),
+        Mode::PromptSaveFilter => "SAVE FILTER".into(),
         Mode::CommandPalette => "COMMAND".into(),
         Mode::Share => "SHARE".into(),
     };
@@ -39,6 +41,8 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         Mode::PromptContext => "type @context name · Enter toggle · Esc cancel",
         Mode::PickProject => "j/k or ↑↓ cycle projects · Enter keep · Esc clear",
         Mode::PickContext => "j/k or ↑↓ cycle contexts · Enter keep · Esc clear",
+        Mode::PickSavedFilter => "j/k or ↑↓ cycle filters · Enter keep · Esc revert",
+        Mode::PromptSaveFilter => "type a filter name · Enter save · Esc cancel",
         Mode::CommandPalette => "type to filter · Enter run · Esc cancel",
         Mode::Share => "scan the QR · any key dismisses",
         _ => "j/k · a add · x done · / search · ? help · u undo · q quit",

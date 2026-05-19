@@ -113,6 +113,16 @@ pub const ENTRIES: &[PaletteEntry] = &[
         action: Action::PickContext,
     },
     PaletteEntry {
+        label: "pick saved filter",
+        keys: "ff",
+        action: Action::PickSavedFilter,
+    },
+    PaletteEntry {
+        label: "save search as filter",
+        keys: "fs",
+        action: Action::SaveCurrentFilter,
+    },
+    PaletteEntry {
         label: "cycle sort",
         keys: "S",
         action: Action::CycleSort,

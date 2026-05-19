@@ -5,7 +5,9 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 
 use crate::app::{App, ordered_unique};
+use crate::search::subseq_match_ci;
 use crate::theme::Theme;
+use crate::todo;
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let theme = app.theme();
@@ -56,6 +58,32 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         for (name, count) in &contexts {
             let active = app.filter.context.as_deref() == Some(name.as_str());
             lines.push(filter_row(theme, "@", name, *count, active, theme.context));
+        }
+    }
+
+    let saved = app.saved_filters();
+    if !saved.is_empty() {
+        lines.push(line_pad(theme, vec![Span::raw(" ")]));
+        lines.push(line_pad(
+            theme,
+            vec![Span::styled(
+                " SAVED",
+                Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD),
+            )],
+        ));
+        for f in saved {
+            let active = app.filter().search == f.query;
+            let count = app
+                .tasks()
+                .iter()
+                .filter(|t| {
+                    !t.done
+                        && subseq_match_ci(todo::body_after_priority(&t.raw), &f.query).is_some()
+                })
+                .count();
+            lines.push(filter_row(theme, "", &f.name, count, active, theme.accent));
         }
     }
 

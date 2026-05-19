@@ -1,5 +1,6 @@
 ---
 source: tests/snapshots.rs
+assertion_line: 226
 expression: buffer_to_text(&buf)
 ---
  FILTERS                   ▶▮◀ /tmp/tuxedo-snapshot.txt  •  15 tas DETAIL                           
@@ -9,12 +10,12 @@ expression: buffer_to_text(&buf)
    +health           3      2   (A) Call dentist to reschedule cle due       2026-05-06  today      
    +finance          2     PRIORITY B  3  ──────────────────────── projects  +work                  
    +home            ┌ tuxedo · command ────────────────────────────────────────┐ptop                
-   +learning        │ > arch█  3 matches                                       │                    
+   +learning        │ > arch█  4 matches                                       │                    
    +personal        │──────────────────────────────────────────────────────────│                    
    +travel          │ ▶ archive completed tasks                              A │                    
                     │   toggle archive view                                  a │1 Finish Q2 board   
  CONTEXTS           │   fuzzy search                                         / │aptop               
-   @errands         │                                                          │6                   
+   @errands         │   save search as filter                               fs │6                   
    @home            │                                                          │                    
    @laptop          │                                                          │                    
    @phone           │                                                          │                    

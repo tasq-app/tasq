@@ -46,13 +46,51 @@ impl App {
         self.flash_pick_context();
     }
 
+    /// Enter saved-filter picker mode. Seeds to the saved filter whose query
+    /// equals the active search (so reopening highlights the current one),
+    /// else the first. Stashes the pre-picker search so `pick_cancel` can
+    /// revert. Inside the picker, j/k cycle through saved searches.
+    pub fn enter_pick_saved(&mut self) {
+        if self.saved_filters.is_empty() {
+            self.flash("no saved filters");
+            return;
+        }
+        self.saved_pick_restore = Some(self.filter.search.clone());
+        // Highlight the saved filter matching the active search, else the
+        // first; track the index so duplicate queries stay distinguishable.
+        self.saved_pick_idx = self
+            .saved_filters
+            .iter()
+            .position(|f| f.query == self.filter.search)
+            .unwrap_or(0);
+        self.filter.search = self.saved_filters[self.saved_pick_idx].query.clone();
+        self.cursor = 0;
+        self.mode = Mode::PickSavedFilter;
+        self.recompute_visible();
+        self.flash_pick_saved();
+    }
+
+    /// Commit an open picker (Enter): keep the previewed filter, return to
+    /// Normal. For the saved-filter picker this also drops the revert
+    /// snapshot so a later cancel elsewhere can't resurrect it.
+    pub fn pick_accept(&mut self) {
+        if self.mode == Mode::PickSavedFilter {
+            self.saved_pick_restore = None;
+        }
+        self.mode = Mode::Normal;
+    }
+
     /// Cancel an open picker. Clears only the filter that was being picked
     /// (so escaping the context picker doesn't drop a project filter that
-    /// the user set independently).
+    /// the user set independently). The saved-filter picker restores the
+    /// search that was active before it opened.
     pub fn pick_cancel(&mut self) {
         match self.mode {
             Mode::PickProject => self.filter.project = None,
             Mode::PickContext => self.filter.context = None,
+            Mode::PickSavedFilter => {
+                self.filter.search = self.saved_pick_restore.take().unwrap_or_default();
+            }
             _ => {}
         }
         self.cursor = 0;
@@ -83,6 +121,21 @@ impl App {
                 self.recompute_visible();
                 self.flash_pick_context();
             }
+            Mode::PickSavedFilter => {
+                let len = self.saved_filters.len();
+                if len == 0 {
+                    return;
+                }
+                self.saved_pick_idx = if forward {
+                    (self.saved_pick_idx + 1) % len
+                } else {
+                    (self.saved_pick_idx + len - 1) % len
+                };
+                self.filter.search = self.saved_filters[self.saved_pick_idx].query.clone();
+                self.cursor = 0;
+                self.recompute_visible();
+                self.flash_pick_saved();
+            }
             _ => {}
         }
     }
@@ -100,6 +153,14 @@ impl App {
         if let Some(cur) = self.filter.context.clone() {
             let pos = position_of(&all, &cur);
             self.flash(format!("@{}  ({}/{})", cur, pos + 1, all.len()));
+        }
+    }
+
+    fn flash_pick_saved(&mut self) {
+        let len = self.saved_filters.len();
+        if let Some(f) = self.saved_filters.get(self.saved_pick_idx) {
+            let name = f.name.clone();
+            self.flash(format!("{}  ({}/{})", name, self.saved_pick_idx + 1, len));
         }
     }
 }
@@ -164,6 +225,103 @@ mod tests {
         assert_eq!(app.filter.project.as_deref(), Some("work"));
         assert!(app.filter.context.is_none());
         assert_eq!(app.mode, Mode::Normal);
+    }
+
+    #[test]
+    fn pick_saved_seeds_first_steps_and_cancel_reverts() {
+        use crate::app::SavedFilter;
+        let mut app = build_app(crate::sample::TODO_RAW);
+        app.saved_filters = vec![
+            SavedFilter {
+                name: "a".into(),
+                query: "alpha".into(),
+            },
+            SavedFilter {
+                name: "b".into(),
+                query: "beta".into(),
+            },
+        ];
+        app.set_search("pre".into()); // an unrelated search active beforehand
+        app.enter_pick_saved();
+        assert_eq!(app.mode, Mode::PickSavedFilter);
+        // No saved query equals "pre", so it seeds to the first filter.
+        assert_eq!(app.filter().search, "alpha");
+        app.pick_step(true);
+        assert_eq!(app.filter().search, "beta");
+        app.pick_step(true); // wraps
+        assert_eq!(app.filter().search, "alpha");
+        app.pick_cancel();
+        assert_eq!(app.mode, Mode::Normal);
+        assert_eq!(app.filter().search, "pre"); // reverted to pre-picker search
+    }
+
+    #[test]
+    fn pick_saved_seeds_from_active_query_and_commit_keeps() {
+        use crate::app::SavedFilter;
+        let mut app = build_app(crate::sample::TODO_RAW);
+        app.saved_filters = vec![
+            SavedFilter {
+                name: "a".into(),
+                query: "alpha".into(),
+            },
+            SavedFilter {
+                name: "b".into(),
+                query: "beta".into(),
+            },
+        ];
+        app.set_search("beta".into());
+        app.enter_pick_saved();
+        // The active search matches filter "b", so it seeds there.
+        assert_eq!(app.filter().search, "beta");
+        app.pick_step(true); // wraps to "a"
+        assert_eq!(app.filter().search, "alpha");
+        app.pick_accept();
+        assert_eq!(app.mode, Mode::Normal);
+        assert_eq!(app.filter().search, "alpha"); // commit keeps the preview
+    }
+
+    #[test]
+    fn enter_pick_saved_empty_flashes_and_stays_normal() {
+        let mut app = build_app(crate::sample::TODO_RAW);
+        app.enter_pick_saved();
+        assert_eq!(app.mode, Mode::Normal);
+        assert_eq!(app.flash_active(), Some("no saved filters"));
+    }
+
+    #[test]
+    fn pick_saved_steps_by_index_through_duplicate_queries() {
+        // Two filters share a query; selection must track the index, not
+        // be re-derived from `filter.search` (which can't tell them apart
+        // and would strand j/k on the first match).
+        use crate::app::SavedFilter;
+        let mut app = build_app(crate::sample::TODO_RAW);
+        app.saved_filters = vec![
+            SavedFilter {
+                name: "a".into(),
+                query: "dup".into(),
+            },
+            SavedFilter {
+                name: "b".into(),
+                query: "dup".into(),
+            },
+            SavedFilter {
+                name: "c".into(),
+                query: "other".into(),
+            },
+        ];
+        app.enter_pick_saved();
+        assert_eq!(app.flash_active(), Some("a  (1/3)"));
+        app.pick_step(true);
+        assert_eq!(app.flash_active(), Some("b  (2/3)"));
+        assert_eq!(app.filter().search, "dup");
+        app.pick_step(true);
+        assert_eq!(app.flash_active(), Some("c  (3/3)"));
+        assert_eq!(app.filter().search, "other");
+        app.pick_step(true); // wraps
+        assert_eq!(app.flash_active(), Some("a  (1/3)"));
+        assert_eq!(app.filter().search, "dup");
+        app.pick_step(false); // back-wrap to "c"
+        assert_eq!(app.flash_active(), Some("c  (3/3)"));
     }
 
     #[test]

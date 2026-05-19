@@ -160,8 +160,10 @@ fn handle_key(app: &mut App, key: KeyEvent) {
         Mode::Search => handle_search(app, key),
         Mode::Help => handle_help(app, key),
         Mode::Settings => handle_settings(app, key),
-        Mode::PromptProject | Mode::PromptContext => handle_prompt(app, key),
-        Mode::PickProject | Mode::PickContext => handle_pick(app, key),
+        Mode::PromptProject | Mode::PromptContext | Mode::PromptSaveFilter => {
+            handle_prompt(app, key)
+        }
+        Mode::PickProject | Mode::PickContext | Mode::PickSavedFilter => handle_pick(app, key),
         Mode::CommandPalette => handle_command_palette(app, key),
         Mode::Share => handle_share(app, key),
         Mode::Normal | Mode::Visual => handle_normal(app, key),
@@ -452,7 +454,7 @@ fn handle_pick(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Char('j') | KeyCode::Down => app.pick_step(true),
         KeyCode::Char('k') | KeyCode::Up => app.pick_step(false),
-        KeyCode::Enter => app.mode = Mode::Normal,
+        KeyCode::Enter => app.pick_accept(),
         KeyCode::Esc => app.pick_cancel(),
         _ => {}
     }
@@ -521,6 +523,7 @@ fn handle_prompt(app: &mut App, key: KeyEvent) {
             match prev_mode {
                 Mode::PromptProject => app.add_project_to_current(&value),
                 Mode::PromptContext => app.toggle_context_on_current(&value),
+                Mode::PromptSaveFilter => app.save_current_filter_as(&value),
                 _ => {}
             }
         }
@@ -592,8 +595,23 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent) -> Option<Action> {
         KeyCode::Char('v') => Action::ToggleVisual,
         KeyCode::Char(' ') => Action::ToggleSelected,
         KeyCode::Char('A') => Action::ArchiveCompleted,
-        KeyCode::Char('f') => Action::ArmF,
-        KeyCode::Char('s') => Action::OpenShare,
+        // First 'f' arms the leader; a second 'f' (`ff`) opens the saved-
+        // search picker. Mirrors the `fp`/`fc` pattern below.
+        KeyCode::Char('f') => {
+            if app.chord.consume('f') {
+                Action::PickSavedFilter
+            } else {
+                Action::ArmF
+            }
+        }
+        KeyCode::Char('s') => {
+            // `fs` saves the active search; plain 's' opens the share QR.
+            if app.chord.consume('f') {
+                Action::SaveCurrentFilter
+            } else {
+                Action::OpenShare
+            }
+        }
         KeyCode::Char('S') => Action::CycleSort,
         KeyCode::Char('+') => Action::BeginPromptProject,
         KeyCode::Char('[') => Action::ToggleLeftPane,
@@ -638,6 +656,8 @@ fn apply_action(app: &mut App, action: Action) {
             | Action::BeginPromptContext
             | Action::PickProject
             | Action::PickContext
+            | Action::PickSavedFilter
+            | Action::SaveCurrentFilter
             | Action::CycleSort
             | Action::ToggleShowDone
             | Action::ToggleShowFuture
@@ -752,6 +772,15 @@ fn apply_action(app: &mut App, action: Action) {
         Action::ArmF => app.chord.arm('f'),
         Action::PickProject => app.enter_pick_project(),
         Action::PickContext => app.enter_pick_context(),
+        Action::PickSavedFilter => app.enter_pick_saved(),
+        Action::SaveCurrentFilter => {
+            if app.filter().search.is_empty() {
+                app.flash("no active search to save");
+            } else {
+                app.mode = Mode::PromptSaveFilter;
+                app.draft_clear();
+            }
+        }
         Action::CycleSort => app.cycle_sort(),
         Action::BeginPromptProject => {
             app.mode = Mode::PromptProject;

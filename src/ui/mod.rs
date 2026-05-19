@@ -127,7 +127,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
             frame.render_widget(Clear, body_area);
             settings::render(frame, body_area, app);
         }
-        Mode::PromptProject | Mode::PromptContext => {
+        Mode::PromptProject | Mode::PromptContext | Mode::PromptSaveFilter => {
             let w: u16 = PROMPT_MAX_W.min(area.width.saturating_sub(4));
             let r = centered_in(area, w, PROMPT_H);
             frame.render_widget(Clear, r);
