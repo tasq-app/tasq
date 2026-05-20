@@ -103,7 +103,7 @@ impl Config {
     /// Resolve `${XDG_CONFIG_HOME:-$HOME/.config}/tuxedo/config.toml`.
     /// Returns None only when neither XDG_CONFIG_HOME nor HOME is set.
     pub fn path() -> Option<PathBuf> {
-        let base = xdg_config_home()?;
+        let base = crate::xdg::config_home()?;
         Some(Self::path_in(&base))
     }
 
@@ -112,29 +112,6 @@ impl Config {
     pub fn path_in(xdg_base: &Path) -> PathBuf {
         xdg_base.join("tuxedo").join("config.toml")
     }
-}
-
-/// Resolve the XDG base config directory. Per the XDG Base Directory Spec,
-/// `XDG_CONFIG_HOME` MUST be an absolute path; relative values are to be
-/// ignored. We honor that and warn once so users debugging path resolution
-/// can see why their relative override didn't take effect.
-fn xdg_config_home() -> Option<PathBuf> {
-    if let Some(v) = std::env::var_os("XDG_CONFIG_HOME")
-        && !v.is_empty()
-    {
-        let p = PathBuf::from(&v);
-        if p.is_absolute() {
-            return Some(p);
-        }
-        // Warn to stderr; this fires before the TUI takes over so it lands
-        // in the user's terminal scrollback, not the alt-screen.
-        eprintln!(
-            "tuxedo: ignoring non-absolute XDG_CONFIG_HOME={:?} (per XDG spec)",
-            p.display()
-        );
-    }
-    let home = std::env::var_os("HOME")?;
-    Some(PathBuf::from(home).join(".config"))
 }
 
 fn parse(s: &str) -> Config {

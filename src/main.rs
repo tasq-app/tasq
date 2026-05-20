@@ -11,6 +11,7 @@ use tuxedo::action::Action;
 use tuxedo::app::{AddOutcome, App, Mode, OverlayKind, View};
 use tuxedo::cli;
 use tuxedo::config::Config;
+use tuxedo::theme;
 use tuxedo::{clipboard, todo, ui, update};
 
 const EVENT_POLL: Duration = Duration::from_millis(250);
@@ -52,8 +53,31 @@ fn main() -> Result<()> {
     };
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
     let cfg = Config::load();
+    // Load user-supplied themes before constructing App, so the theme named
+    // in cfg can resolve to a custom theme on the first `Prefs::from_config`.
+    let theme_warnings = match theme::themes_dir() {
+        Some(dir) => {
+            let (user_themes, warnings) = theme::load_user_themes(&dir);
+            theme::init(user_themes);
+            warnings
+        }
+        None => {
+            theme::init(Vec::new());
+            Vec::new()
+        }
+    };
     let mut app_state = App::new(path.clone(), body, today, cfg);
     app_state.config_path = Config::path();
+    // Surface theme-load problems on the first frame. Flash is single-line,
+    // so collapse multiple warnings to a count and let the user investigate
+    // their themes directory.
+    match theme_warnings.len() {
+        0 => {}
+        1 => app_state.flash(theme_warnings.into_iter().next().expect("len==1")),
+        n => app_state.flash(format!(
+            "{n} theme(s) skipped — check ~/.config/tuxedo/themes/"
+        )),
+    }
     if std::env::var_os("TUXEDO_NO_UPDATE_CHECK").is_none() {
         app_state.set_update_check(update::spawn_check());
     }

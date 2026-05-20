@@ -88,7 +88,7 @@ fn main() -> std::io::Result<()> {
     save(&app, &out.join("empty.svg"))?;
 
     // 7. List view in every built-in theme — for the README's themes section.
-    for (i, t) in theme::ALL.iter().enumerate() {
+    for (i, t) in theme::BUILT_IN.iter().enumerate() {
         let mut app = make();
         app.prefs.set_theme_idx(i);
         let slug = t.name.to_lowercase().replace(' ', "-");

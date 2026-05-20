@@ -16,3 +16,4 @@ pub mod threshold;
 pub mod todo;
 pub mod ui;
 pub mod update;
+pub mod xdg;

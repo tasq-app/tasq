@@ -44,7 +44,7 @@ impl Prefs {
         let theme_idx = cfg
             .theme
             .as_deref()
-            .and_then(|name| theme::ALL.iter().position(|t| t.name == name))
+            .and_then(|name| theme::all().iter().position(|t| t.name == name))
             .unwrap_or(0);
         Self {
             theme_idx,
@@ -63,7 +63,8 @@ impl Prefs {
     }
 
     pub fn theme(&self) -> &'static Theme {
-        theme::ALL[self.theme_idx % theme::ALL.len()]
+        let all = theme::all();
+        all[self.theme_idx % all.len()]
     }
 
     pub fn theme_idx(&self) -> usize {
@@ -74,7 +75,7 @@ impl Prefs {
     /// example to render every theme; production code should call
     /// `cycle_theme` instead so the change persists with a flash message.
     pub fn set_theme_idx(&mut self, idx: usize) {
-        self.theme_idx = idx % theme::ALL.len();
+        self.theme_idx = idx % theme::all().len();
     }
 
     pub fn sort_label(&self) -> &'static str {
@@ -82,7 +83,7 @@ impl Prefs {
     }
 
     pub fn cycle_theme(&mut self) -> String {
-        self.theme_idx = (self.theme_idx + 1) % theme::ALL.len();
+        self.theme_idx = (self.theme_idx + 1) % theme::all().len();
         format!("theme: {}", self.theme().name)
     }
 
