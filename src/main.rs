@@ -7,11 +7,14 @@ use anyhow::{Context, Result};
 use ratatui::DefaultTerminal;
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
+use std::io::Write;
+
 use tuxedo::action::Action;
 use tuxedo::app::{AddOutcome, App, Mode, OverlayKind, View};
 use tuxedo::cli;
 use tuxedo::config::Config;
 use tuxedo::theme;
+use tuxedo::ui::hyperlinks;
 use tuxedo::{clipboard, todo, ui, update};
 
 const EVENT_POLL: Duration = Duration::from_millis(250);
@@ -132,7 +135,21 @@ fn run(mut terminal: DefaultTerminal, app: &mut App) -> Result<()> {
             dirty = true;
         }
         if dirty {
-            terminal.draw(|f| ui::draw(f, app))?;
+            // Extract URL runs from the completed frame before the borrow on
+            // terminal ends, then write the OSC 8 overlay directly to the
+            // backend writer. Doing this here (rather than inside `ui::draw`)
+            // keeps cell symbols byte-identical to a plain render, so
+            // ratatui's diff width calculation doesn't skip cells past the
+            // URL — see `ui::hyperlinks` for the full explanation.
+            let runs = {
+                let frame = terminal.draw(|f| ui::draw(f, app))?;
+                hyperlinks::collect(frame.buffer)
+            };
+            if !runs.is_empty() {
+                let backend = terminal.backend_mut();
+                hyperlinks::emit_overlay(backend, &runs)?;
+                backend.flush()?;
+            }
             dirty = false;
         }
         let timeout = next_timeout(app);

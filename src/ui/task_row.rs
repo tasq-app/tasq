@@ -156,6 +156,13 @@ fn push_token_spans<'a>(
         ));
         return;
     }
+    // URLs are picked off before the generic key:value branch — `http:` would
+    // otherwise classify as a lowercase key and steal the underline + accent
+    // styling that doubles as the OSC 8 hyperlink marker (see `ui::hyperlinks`).
+    if is_url_token(token) {
+        spans.push(Span::styled(token, url_token_style(task.done, theme)));
+        return;
+    }
     // generic key:value (lowercase key)
     if let Some((k, _v)) = token.split_once(':')
         && !k.is_empty()
@@ -223,6 +230,21 @@ fn is_hidden_kv(token: &str, hidden_keys: &[String]) -> bool {
         }
         _ => false,
     }
+}
+
+pub(crate) fn is_url_token(token: &str) -> bool {
+    token.starts_with("http://") || token.starts_with("https://")
+}
+
+pub(crate) fn url_token_style(task_done: bool, theme: &Theme) -> Style {
+    let color = if task_done { theme.done } else { theme.accent };
+    let mut style = Style::default()
+        .fg(color)
+        .add_modifier(Modifier::UNDERLINED);
+    if task_done {
+        style = style.add_modifier(Modifier::DIM);
+    }
+    style
 }
 
 fn sigil_token_color(token: &str, task: &Task, theme: &Theme) -> Option<Color> {
@@ -451,6 +473,67 @@ mod tests {
         assert_eq!(
             body_text("Call dentist uid:abc @phone +health", &[]),
             "Call dentist uid:abc @phone +health",
+        );
+    }
+
+    #[test]
+    fn url_token_is_underlined_and_accented() {
+        // The underline modifier is the sentinel `ui::hyperlinks::linkify`
+        // looks for. If this test fails, OSC 8 hyperlinks silently stop being
+        // emitted — break it intentionally only when changing the marker.
+        let task = parse_line("See https://example.com for details").unwrap();
+        let opts = RowOpts {
+            idx_label: 0,
+            cursor: false,
+            multi_mode: false,
+            multi_checked: false,
+            selected: false,
+            show_line_num: false,
+            match_term: None,
+            today: "2026-05-06",
+            hidden_keys: &[],
+        };
+        let line = build_line(&task, opts, &MUTED);
+        let url_span = line
+            .spans
+            .iter()
+            .find(|s| s.content.as_ref() == "https://example.com")
+            .expect("URL token rendered as its own span");
+        assert!(
+            url_span.style.add_modifier.contains(Modifier::UNDERLINED),
+            "URL span must carry Modifier::UNDERLINED; got {:?}",
+            url_span.style,
+        );
+        assert_eq!(url_span.style.fg, Some(MUTED.accent));
+    }
+
+    #[test]
+    fn url_token_not_classified_as_key_value() {
+        // Without the URL branch in front of the generic key:value branch,
+        // `http:` would split into ("http", "//example.com") and render with
+        // the dim key-value style instead of the accent + underline.
+        let task = parse_line("note http://example.com").unwrap();
+        let opts = RowOpts {
+            idx_label: 0,
+            cursor: false,
+            multi_mode: false,
+            multi_checked: false,
+            selected: false,
+            show_line_num: false,
+            match_term: None,
+            today: "2026-05-06",
+            hidden_keys: &[],
+        };
+        let line = build_line(&task, opts, &MUTED);
+        let url_span = line
+            .spans
+            .iter()
+            .find(|s| s.content.as_ref() == "http://example.com")
+            .expect("URL span");
+        assert_ne!(
+            url_span.style.fg,
+            Some(MUTED.dim),
+            "URL must not pick up the dim key-value color",
         );
     }
 

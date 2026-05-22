@@ -7,7 +7,7 @@ use ratatui::widgets::Paragraph;
 use crate::app::App;
 use crate::theme::Theme;
 use crate::todo::Task;
-use crate::ui::task_row::{due_label, due_token_style};
+use crate::ui::task_row::{due_label, due_token_style, is_url_token, url_token_style};
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let theme = app.theme();
@@ -184,6 +184,9 @@ fn style_raw_token<'a>(
     }
     if let Some(rest) = token.strip_prefix("due:") {
         return Span::styled(token, due_token_style(task.done, rest, today, theme));
+    }
+    if is_url_token(token) {
+        return Span::styled(token, url_token_style(task.done, theme));
     }
     if token.len() > 1 && token.starts_with('+') {
         return Span::styled(token, Style::default().fg(theme.project));

@@ -31,3 +31,4 @@ x 2026-05-12 2026-05-12 When no projects and contexts are listed in the sidebar,
 x 2026-05-13 2026-05-13 Add an inbox
 x 2026-05-13 2026-05-13 Add a PWA (capture + read-only list)
 x 2026-05-17 2026-05-17 Issue #2: Another cyrillic issue
+x 2026-05-21 2026-05-13 OSC 8 hyperlinks: URLs in task body become clickable in supported terminals

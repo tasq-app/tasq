@@ -13,6 +13,7 @@ pub mod empty;
 pub mod filters;
 pub mod header;
 pub mod help;
+pub mod hyperlinks;
 pub mod list;
 pub mod logo;
 pub mod settings;
@@ -150,6 +151,9 @@ pub fn draw(frame: &mut Frame, app: &App) {
         }
         _ => {}
     }
+    // OSC 8 hyperlinks are applied post-draw by the caller (see
+    // `hyperlinks::collect` + `emit_overlay`). Doing it inside the buffer
+    // breaks ratatui's diff width calculation — keep cell symbols pristine.
 }
 
 pub(crate) fn centered_in(parent: Rect, w: u16, h: u16) -> Rect {
