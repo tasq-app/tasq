@@ -38,6 +38,9 @@ pub enum Mode {
     /// dismisses; press `s` again to re-open without rebinding (the
     /// server stays running once started).
     Share,
+    /// Theme picker dialog — j/k to preview themes, Enter to accept,
+    /// Esc to revert.
+    PickTheme,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -50,4 +50,6 @@ pub enum Action {
     /// binds the HTTP server; subsequent invocations just re-show the
     /// overlay.
     OpenShare,
+    /// Open the theme picker dialog (j/k to preview, Enter to accept).
+    OpenThemePicker,
 }
