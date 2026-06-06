@@ -205,6 +205,7 @@ fn handle_key(app: &mut App, key: KeyEvent) {
             handle_prompt(app, key)
         }
         Mode::PickProject | Mode::PickContext | Mode::PickSavedFilter => handle_pick(app, key),
+        Mode::PickTheme => handle_pick_theme(app, key),
         Mode::CommandPalette => handle_command_palette(app, key),
         Mode::Share => handle_share(app, key),
         Mode::Normal | Mode::Visual => handle_normal(app, key),
@@ -501,6 +502,16 @@ fn handle_pick(app: &mut App, key: KeyEvent) {
     }
 }
 
+fn handle_pick_theme(app: &mut App, key: KeyEvent) {
+    match key.code {
+        KeyCode::Char('j') | KeyCode::Down => app.pick_theme_step(true),
+        KeyCode::Char('k') | KeyCode::Up => app.pick_theme_step(false),
+        KeyCode::Enter => app.pick_theme_accept(),
+        KeyCode::Esc => app.pick_theme_cancel(),
+        _ => {}
+    }
+}
+
 fn handle_command_palette(app: &mut App, key: KeyEvent) {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
     // List navigation. Plain j/k must type into the search box — the user
@@ -657,7 +668,7 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent) -> Option<Action> {
         KeyCode::Char('+') => Action::BeginPromptProject,
         KeyCode::Char('[') => Action::ToggleLeftPane,
         KeyCode::Char(']') => Action::ToggleRightPane,
-        KeyCode::Char('T') => Action::CycleTheme,
+        KeyCode::Char('T') => Action::OpenThemePicker,
         KeyCode::Char('D') => Action::CycleDensity,
         KeyCode::Char('L') => Action::ToggleLineNum,
         KeyCode::Char('H') => Action::ToggleShowDone,
@@ -865,6 +876,13 @@ fn apply_action(app: &mut App, action: Action) {
             }
             Err(e) => app.flash(format!("share unavailable: {e}")),
         },
+        Action::OpenThemePicker => {
+            if theme::all().len() <= 1 {
+                app.flash("only one theme");
+            } else {
+                app.enter_pick_theme();
+            }
+        }
         Action::EscapeStack => {
             let has_pc = app.filter().project.is_some() || app.filter().context.is_some();
             let has_search = !app.filter().search.is_empty();

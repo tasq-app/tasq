@@ -4,7 +4,7 @@ use std::sync::mpsc::{Receiver, TryRecvError};
 
 use crate::config::Config;
 use crate::serve::{self, ShareInfo};
-use crate::theme::Theme;
+use crate::theme::{self, Theme};
 use crate::todo::{self, Task};
 
 mod archive;
@@ -121,6 +121,9 @@ pub struct App {
     /// palette). Once bound, the entry stays for the rest of the
     /// session and the overlay just re-displays the saved QR.
     share: Option<ShareInfo>,
+    /// Theme index captured when the theme picker opened, so cancel
+    /// can restore it.
+    theme_pick_orig: usize,
 }
 
 impl App {
@@ -165,6 +168,7 @@ impl App {
             command_palette: CommandPaletteState::default(),
             view_scroll: [Cell::new(0), Cell::new(0)],
             share: None,
+            theme_pick_orig: 0,
         };
         app.recompute_visible();
         app
@@ -299,6 +303,45 @@ impl App {
         let msg = self.prefs.cycle_theme();
         self.flash(msg);
         self.save_prefs();
+    }
+
+    /// Enter theme picker mode. Snapshot the current theme index so
+    /// cancel can restore it. j/k live-previews; Enter accepts; Esc
+    /// reverts.
+    pub fn enter_pick_theme(&mut self) {
+        self.theme_pick_orig = self.prefs.theme_idx();
+        self.mode = Mode::PickTheme;
+    }
+
+    /// Step through themes in `forward` (true = next) direction with
+    /// wrap-around. The theme is applied immediately for live preview.
+    pub fn pick_theme_step(&mut self, forward: bool) {
+        let all = theme::all();
+        let len = all.len();
+        if len <= 1 {
+            return;
+        }
+        let cur = self.prefs.theme_idx();
+        let next = if forward {
+            (cur + 1) % len
+        } else {
+            (cur + len - 1) % len
+        };
+        self.prefs.set_theme_idx(next);
+    }
+
+    /// Accept the previewed theme and persist to config.
+    pub fn pick_theme_accept(&mut self) {
+        self.mode = Mode::Normal;
+        self.save_prefs();
+        self.flash(format!("theme: {}", self.theme().name));
+    }
+
+    /// Cancel the picker and restore the theme that was active when
+    /// the picker opened.
+    pub fn pick_theme_cancel(&mut self) {
+        self.prefs.set_theme_idx(self.theme_pick_orig);
+        self.mode = Mode::Normal;
     }
 
     pub fn cycle_density(&mut self) {

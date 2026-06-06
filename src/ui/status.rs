@@ -24,6 +24,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         Mode::PromptSaveFilter => "SAVE FILTER".into(),
         Mode::CommandPalette => "COMMAND".into(),
         Mode::Share => "SHARE".into(),
+        Mode::PickTheme => "PICK THEME".into(),
     };
     if matches!(app.view, View::Archive) {
         mode_label = "ARCHIVE".into();

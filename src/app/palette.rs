@@ -173,8 +173,13 @@ pub const ENTRIES: &[PaletteEntry] = &[
         action: Action::ToggleRightPane,
     },
     PaletteEntry {
-        label: "cycle theme",
+        label: "pick theme",
         keys: "T",
+        action: Action::OpenThemePicker,
+    },
+    PaletteEntry {
+        label: "cycle theme",
+        keys: "",
         action: Action::CycleTheme,
     },
     PaletteEntry {
@@ -514,6 +519,7 @@ mod tests {
             Action::CopyBody,
             Action::EscapeStack,
             Action::OpenShare,
+            Action::OpenThemePicker,
         ];
         for a in required {
             assert!(actions.contains(&a), "missing palette entry for {a:?}");
