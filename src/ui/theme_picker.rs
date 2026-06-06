@@ -30,11 +30,8 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
 
     let bg = Style::default().bg(theme.panel).fg(theme.fg);
 
-    let [list_area, footer_area] = Layout::vertical([
-        Constraint::Min(1),
-        Constraint::Length(1),
-    ])
-    .areas(inner);
+    let [list_area, footer_area] =
+        Layout::vertical([Constraint::Min(1), Constraint::Length(1)]).areas(inner);
 
     let cur = app.prefs.theme_idx();
 
@@ -58,7 +55,11 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                     Style::default()
                         .fg(theme.fg)
                         .bg(row_bg)
-                        .add_modifier(if is_sel { Modifier::BOLD } else { Modifier::empty() }),
+                        .add_modifier(if is_sel {
+                            Modifier::BOLD
+                        } else {
+                            Modifier::empty()
+                        }),
                 ),
             ])
             .style(Style::default().bg(row_bg))
@@ -71,23 +72,17 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         Span::raw("  "),
         Span::styled(
             "j/k",
-            Style::default()
-                .fg(theme.dim)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(theme.dim).add_modifier(Modifier::BOLD),
         ),
         Span::styled(" navigate · ", Style::default().fg(theme.dim)),
         Span::styled(
             "Enter",
-            Style::default()
-                .fg(theme.dim)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(theme.dim).add_modifier(Modifier::BOLD),
         ),
         Span::styled(" select · ", Style::default().fg(theme.dim)),
         Span::styled(
             "Esc",
-            Style::default()
-                .fg(theme.dim)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(theme.dim).add_modifier(Modifier::BOLD),
         ),
         Span::styled(" cancel", Style::default().fg(theme.dim)),
     ])
