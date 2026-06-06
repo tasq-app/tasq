@@ -534,6 +534,64 @@ mod tests {
     }
 
     #[test]
+    fn unarchive_recomplete_does_not_duplicate_recurring_successor() {
+        // The reported bug: complete a daily recurring task (spawns the next
+        // instance), archive the completed row, unarchive it (comes back
+        // pending), then complete it again. The already-live successor must
+        // not be duplicated.
+        let dir = std::env::temp_dir().join(format!(
+            "tuxedo-archive-test-{}-{}",
+            std::process::id(),
+            "rec-roundtrip"
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let todo_path = dir.join("todo.txt");
+        let raw = "Water plants due:2026-05-06 rec:1d\n";
+        std::fs::write(&todo_path, raw).unwrap();
+        let mut app = App::new(
+            todo_path,
+            raw.to_string(),
+            "2026-05-06".into(),
+            Config::default(),
+        );
+
+        // Complete → spawns the successor (due 2026-05-07).
+        app.toggle_complete(0);
+        assert_eq!(app.tasks.len(), 2);
+
+        // Archive the completed row.
+        app.archive_completed();
+        assert_eq!(app.tasks.len(), 1, "only the successor remains live");
+        assert_eq!(app.archive.len(), 1);
+
+        // Unarchive it: comes back un-completed and rejoins the live list.
+        app.unarchive(0);
+        assert_eq!(app.tasks.len(), 2, "unarchived row rejoins live tasks");
+        let idx = app
+            .tasks
+            .iter()
+            .position(|t| !t.done && t.due.as_deref() == Some("2026-05-06"))
+            .expect("unarchived occurrence should be present and pending");
+
+        // Re-complete the unarchived occurrence: successor already live.
+        app.toggle_complete(idx);
+        assert_eq!(
+            app.tasks.len(),
+            2,
+            "re-completing must not duplicate the next instance"
+        );
+        let next_count = app
+            .tasks
+            .iter()
+            .filter(|t| !t.done && t.due.as_deref() == Some("2026-05-07"))
+            .count();
+        assert_eq!(next_count, 1, "exactly one successor for 2026-05-07");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn persist_reports_write_failure() {
         let mut app = build_app("a\n");
         let missing_parent = std::env::temp_dir()

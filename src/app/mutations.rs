@@ -38,6 +38,18 @@ impl App {
                         &spec,
                         &self.today,
                     )?;
+                    // A single occurrence yields at most one live successor.
+                    // If an equivalent pending task already exists — e.g. this
+                    // occurrence was un-completed (via unarchive or a toggle)
+                    // after it had already spawned, then re-completed — skip
+                    // the spawn so we don't leave a duplicate next instance.
+                    let identity = recurrence_identity(&next_raw);
+                    let already_live = self.tasks.iter().enumerate().any(|(i, t)| {
+                        i != abs && !t.done && recurrence_identity(&t.raw) == identity
+                    });
+                    if already_live {
+                        return None;
+                    }
                     let parsed = todo::parse_line(&next_raw).ok()?;
                     // Vec only grew between check_external_changes and here
                     // (mark_done replaced one entry in place), so abs+1 is
@@ -218,6 +230,20 @@ impl App {
             Err(TagError::Parse(e)) => self.flash(format!("invalid: {e}")),
         }
     }
+}
+
+/// Identity of a recurring task for duplicate-spawn detection: the body
+/// (leading `x`, done/created dates, and priority stripped by
+/// `body_after_priority`) with the `due:` token removed and whitespace
+/// normalized. Two occurrences of the same recurrence share this identity
+/// regardless of their due dates, so it tells us whether a live successor is
+/// already present before spawning another.
+fn recurrence_identity(raw: &str) -> String {
+    todo::body_after_priority(raw)
+        .split_whitespace()
+        .filter(|tok| !tok.starts_with("due:"))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// Build the raw line for the next occurrence of a recurring task.
@@ -412,6 +438,33 @@ mod tests {
         app.undo();
         assert_eq!(app.tasks.len(), 1, "undo must remove the spawn too");
         assert!(!app.tasks[0].done, "undo must un-complete the original");
+    }
+
+    #[test]
+    fn toggle_complete_does_not_respawn_when_live_successor_exists() {
+        // Re-completing a recurring occurrence whose successor is already live
+        // must NOT spawn a second copy. Reproduces the archive round-trip bug:
+        // complete (spawns next) → un-complete (successor stays) → re-complete.
+        let mut app = build_app("Water plants due:2026-05-15 rec:1d\n");
+        app.today = "2026-05-15".to_string();
+        app.toggle_complete(0);
+        assert_eq!(app.tasks.len(), 2, "first completion spawns the successor");
+        // Un-complete the original (mirrors what unarchive does to it).
+        app.toggle_complete(0);
+        assert_eq!(
+            app.tasks.len(),
+            2,
+            "un-completing must not remove the spawn"
+        );
+        assert!(!app.tasks[0].done);
+        // Re-complete: the successor already exists, so no second spawn.
+        app.toggle_complete(0);
+        assert_eq!(
+            app.tasks.len(),
+            2,
+            "re-completing must not create a duplicate successor"
+        );
+        assert_eq!(app.flash_active(), Some("completed"));
     }
 
     #[test]
