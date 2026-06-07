@@ -93,8 +93,17 @@ fn main() -> Result<()> {
     }
 
     let terminal = ratatui::init();
+    // Give the window/tab a consistent `tuxedo <path>` title across terminals
+    // and operating systems, shortening long paths to fit a fixed budget.
+    let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
+    let title = ui::title::terminal_title(&path, home.as_deref(), ui::title::DEFAULT_BUDGET);
+    let _ =
+        ratatui::crossterm::execute!(io::stdout(), ratatui::crossterm::terminal::SetTitle(title));
     let result = run(terminal, &mut app_state);
     ratatui::restore();
+    // Clear the title on exit so the shell retitles on its next prompt rather
+    // than leaving `tuxedo …` behind.
+    let _ = ratatui::crossterm::execute!(io::stdout(), ratatui::crossterm::terminal::SetTitle(""));
     // Print the file path *after* restoring the terminal so the message
     // survives in the user's scrollback rather than being eaten by the
     // alt-screen.

@@ -21,6 +21,7 @@ pub mod share;
 pub mod status;
 pub mod task_row;
 pub mod theme_picker;
+pub mod title;
 
 // Pane and overlay sizing. Promoted out of inline literals so the three
 // `MIN_BODY_W` references below stay in sync, and so tweaking a sidebar
