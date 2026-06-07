@@ -20,7 +20,13 @@ use tuxedo::{clipboard, todo, ui, update};
 const EVENT_POLL: Duration = Duration::from_millis(250);
 
 fn main() -> Result<()> {
-    let arg = std::env::args().nth(1);
+    let argv: Vec<String> = std::env::args().skip(1).collect();
+    // A recognized subcommand (possibly preceded by `-f`/`--json`) runs the
+    // one-shot CLI and exits; otherwise we fall through to the TUI.
+    if let Some(code) = tuxedo::cmd::run(&argv)? {
+        std::process::exit(code);
+    }
+    let arg = argv.first().cloned();
     let path = match arg.as_deref() {
         Some("--help") | Some("-h") => {
             print_usage();
@@ -69,7 +75,8 @@ fn main() -> Result<()> {
             Vec::new()
         }
     };
-    let mut app_state = App::new(path.clone(), body, today, cfg);
+    let done = cli::done_path(&path);
+    let mut app_state = App::new_with_done(path.clone(), done, body, today, cfg);
     app_state.config_path = Config::path();
     // Surface theme-load problems on the first frame. Flash is single-line,
     // so collapse multiple warnings to a count and let the user investigate
@@ -96,23 +103,45 @@ fn main() -> Result<()> {
 }
 
 fn print_usage() {
-    println!("usage: tuxedo [FILE]");
+    println!("usage: tuxedo [FILE]                 launch the TUI");
+    println!("       tuxedo <command> [args]       run a one-shot command");
     println!("       tuxedo update");
     println!();
-    println!("Without FILE, opens ./todo.txt if present, otherwise a sample");
-    println!("todo.txt in the system temp dir.");
+    println!("Without FILE or a command, opens ./todo.txt if present, otherwise");
+    println!("a sample todo.txt in the system temp dir, in the interactive TUI.");
     println!();
     println!("Inside the TUI, press `s` to expose a phone-friendly capture");
     println!("endpoint on your LAN and show a QR code for it. Captures land");
     println!("in a sibling inbox.txt that the TUI merges on the next poll.");
     println!();
-    println!("Commands:");
-    println!("  update         print instructions for upgrading tuxedo");
+    println!("Commands (task numbers are 1-based file lines, as shown by `list`):");
+    println!("  add, a TEXT...            add a task (natural-language dates supported)");
+    println!("  append, app N TEXT...     append text to task N");
+    println!("  prepend, prep N TEXT...   prepend text to task N");
+    println!("  replace N TEXT...         replace task N");
+    println!("  pri, p N PRIORITY         set priority A-Z on task N");
+    println!("  depri, dp N...            remove priority from task N");
+    println!("  done, do N...             mark task N complete");
+    println!("  del, rm N [TERM]          delete task N (prompts; -f to force), or remove TERM");
+    println!("  archive                   move completed tasks to done.txt");
+    println!("  list, ls [TERM...]        list tasks (TERM: +project @context or text)");
+    println!("  listall, lsa [TERM...]    list todo.txt and done.txt");
+    println!("  listpri, lsp [PRIORITY]   list prioritized tasks");
+    println!("  listproj, lsprj           list +projects");
+    println!("  listcon, lsc              list @contexts");
+    println!("  update                    print instructions for upgrading tuxedo");
     println!();
     println!("Options:");
-    println!("  -h, --help     show this message and exit");
-    println!("  -V, --version  print version and exit");
-    println!("      --sample   open the sample todo.txt in the system temp dir");
+    println!("  -f, --force      skip confirmation prompts (e.g. for del)");
+    println!("      --json       machine-readable output for the commands above");
+    println!("  -h, --help       show this message and exit");
+    println!("  -V, --version    print version and exit");
+    println!("      --sample     open the sample todo.txt in the TUI");
+    println!();
+    println!("Environment:");
+    println!("  TODO_DIR     directory holding todo.txt / done.txt");
+    println!("  TODO_FILE    path to the todo file (default $TODO_DIR/todo.txt)");
+    println!("  DONE_FILE    path to the archive file (default sibling done.txt)");
 }
 
 fn run(mut terminal: DefaultTerminal, app: &mut App) -> Result<()> {
@@ -1132,12 +1161,12 @@ mod tests {
             let deadline = Instant::now() + Duration::from_secs(2);
             while Instant::now() < deadline {
                 let _ = app.poll_archive();
-                if !app.archive.is_empty() {
+                if !app.archive().is_empty() {
                     break;
                 }
                 std::thread::sleep(Duration::from_millis(1));
             }
-            assert!(!app.archive.is_empty(), "archive failed to load in time");
+            assert!(!app.archive().is_empty(), "archive failed to load in time");
         }
         app
     }
@@ -1161,7 +1190,7 @@ mod tests {
         let mut app = build_app_with_archive("a\n", Some("x 2026-05-02 2026-04-02 done one\n"));
         app.set_view(View::Archive);
         apply_action(&mut app, Action::ToggleComplete);
-        assert_eq!(app.archive.len(), 0, "task must leave the archive");
+        assert_eq!(app.archive().len(), 0, "task must leave the archive");
         assert!(
             app.tasks()
                 .iter()
@@ -1175,7 +1204,7 @@ mod tests {
         let mut app = build_app_with_archive("a\n", Some("x 2026-05-02 2026-04-02 done one\n"));
         app.set_view(View::Archive);
         apply_action(&mut app, Action::Delete);
-        assert_eq!(app.archive.len(), 0);
+        assert_eq!(app.archive().len(), 0);
         assert_eq!(app.tasks().len(), 1, "todo.txt must be untouched");
     }
 
@@ -1187,6 +1216,6 @@ mod tests {
         assert_eq!(app.flash_active(), Some("read-only in archive"));
         apply_action(&mut app, Action::CyclePriority);
         assert_eq!(app.flash_active(), Some("read-only in archive"));
-        assert!(app.archive.tasks()[0].done);
+        assert!(app.archive().tasks()[0].done);
     }
 }

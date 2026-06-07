@@ -51,14 +51,14 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
 
     let mut right_parts = Vec::new();
     if matches!(app.view, View::Archive) {
-        right_parts.push(format!("{} archived", app.archive.len()));
+        right_parts.push(format!("{} archived", app.archive().len()));
     } else {
         right_parts.push(format!("{} open", app.visible_indices().len()));
     }
     if !app.selection.is_empty() {
         right_parts.push(format!("{} selected", app.selection.len()));
     }
-    right_parts.push(app.today.clone());
+    right_parts.push(app.today().to_string());
     right_parts.push(concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")).to_string());
     // Track where the update suffix would slot in so we can paint it in the
     // accent color (the rest of the right text is dim).

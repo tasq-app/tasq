@@ -70,7 +70,7 @@ impl App {
         };
         let prefix_lc = tok.prefix.to_lowercase();
         let mut seen: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
-        for t in &self.tasks {
+        for t in self.store.tasks() {
             let source = match tok.kind {
                 TokenKind::Project => &t.projects,
                 TokenKind::Context => &t.contexts,
@@ -111,7 +111,7 @@ impl App {
         }
         let mut text = trimmed.to_string();
         if !starts_with_priority(&text) && !starts_with_iso_date(&text) && !text.starts_with("x ") {
-            text = format!("{} {}", self.today, text);
+            text = format!("{} {}", self.store.today(), text);
         }
         Some(todo::parse_line(&text))
     }

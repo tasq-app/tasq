@@ -25,7 +25,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         header::HeaderProps {
             title: Some("done.txt"),
             // file: "completed",
-            count: app.archive.len(),
+            count: app.archive().len(),
             sort: "completion-date",
             filter: None,
         },
@@ -87,7 +87,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             last_date = Some(date);
         }
 
-        let task = &app.archive.tasks()[abs];
+        let task = &app.archive().tasks()[abs];
         let opts = task_row::RowOpts {
             idx_label: i,
             cursor: i == app.cursor && cursor_active,
@@ -96,7 +96,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             selected: false,
             show_line_num: app.prefs.layout.line_num,
             match_term: None,
-            today: &app.today,
+            today: app.today(),
             hidden_keys: &app.prefs.hidden_keys,
         };
         if i == app.cursor {

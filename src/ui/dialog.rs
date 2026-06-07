@@ -760,7 +760,7 @@ fn render_calendar(frame: &mut Frame, dlg: Rect, screen: Rect, app: &App) {
 
     use chrono::{Datelike, NaiveDate};
     let focused = state.focused;
-    let today = NaiveDate::parse_from_str(&app.today, "%Y-%m-%d").ok();
+    let today = NaiveDate::parse_from_str(app.today(), "%Y-%m-%d").ok();
     let first_of_month =
         NaiveDate::from_ymd_opt(focused.year(), focused.month(), 1).unwrap_or(focused);
     // Sunday-leading week: weekday().num_days_from_sunday() ∈ 0..7.
@@ -980,7 +980,7 @@ fn render_recurrence_builder(frame: &mut Frame, dlg: Rect, screen: Rect, app: &A
                 }),
         ),
     ];
-    let next = crate::app::recurrence_next_preview(state, &app.today)
+    let next = crate::app::recurrence_next_preview(state, app.today())
         .map(format_focused)
         .unwrap_or_else(|| "—".into());
     let next_label = format!("next: {next}");

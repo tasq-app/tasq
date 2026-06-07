@@ -1,20 +1,20 @@
 use super::App;
 use super::types::Mode;
-use super::visibility::unique_values;
+use crate::core::filter::unique_values;
 
 impl App {
     /// Enter project-picker mode. Seeds the filter from the cursor task's
     /// first project (falling back to the current filter, then alphabetical
     /// first). Inside the picker, j/k cycle through projects.
     pub fn enter_pick_project(&mut self) {
-        let all = unique_values(&self.tasks, |t| &t.projects);
+        let all = unique_values(self.store.tasks(), |t| &t.projects);
         if all.is_empty() {
             self.flash("no projects");
             return;
         }
         let seed = self
             .cur_abs()
-            .and_then(|i| self.tasks[i].projects.first().cloned())
+            .and_then(|i| self.store.tasks()[i].projects.first().cloned())
             .filter(|p| all.contains(p))
             .or_else(|| self.filter.project.clone())
             .filter(|p| all.contains(p))
@@ -27,14 +27,14 @@ impl App {
     }
 
     pub fn enter_pick_context(&mut self) {
-        let all = unique_values(&self.tasks, |t| &t.contexts);
+        let all = unique_values(self.store.tasks(), |t| &t.contexts);
         if all.is_empty() {
             self.flash("no contexts");
             return;
         }
         let seed = self
             .cur_abs()
-            .and_then(|i| self.tasks[i].contexts.first().cloned())
+            .and_then(|i| self.store.tasks()[i].contexts.first().cloned())
             .filter(|c| all.contains(c))
             .or_else(|| self.filter.context.clone())
             .filter(|c| all.contains(c))
@@ -102,7 +102,7 @@ impl App {
     pub fn pick_step(&mut self, forward: bool) {
         match self.mode {
             Mode::PickProject => {
-                let all = unique_values(&self.tasks, |t| &t.projects);
+                let all = unique_values(self.store.tasks(), |t| &t.projects);
                 if all.is_empty() {
                     return;
                 }
@@ -112,7 +112,7 @@ impl App {
                 self.flash_pick_project();
             }
             Mode::PickContext => {
-                let all = unique_values(&self.tasks, |t| &t.contexts);
+                let all = unique_values(self.store.tasks(), |t| &t.contexts);
                 if all.is_empty() {
                     return;
                 }
@@ -141,7 +141,7 @@ impl App {
     }
 
     fn flash_pick_project(&mut self) {
-        let all = unique_values(&self.tasks, |t| &t.projects);
+        let all = unique_values(self.store.tasks(), |t| &t.projects);
         if let Some(cur) = self.filter.project.clone() {
             let pos = position_of(&all, &cur);
             self.flash(format!("+{}  ({}/{})", cur, pos + 1, all.len()));
@@ -149,7 +149,7 @@ impl App {
     }
 
     fn flash_pick_context(&mut self) {
-        let all = unique_values(&self.tasks, |t| &t.contexts);
+        let all = unique_values(self.store.tasks(), |t| &t.contexts);
         if let Some(cur) = self.filter.context.clone() {
             let pos = position_of(&all, &cur);
             self.flash(format!("@{}  ({}/{})", cur, pos + 1, all.len()));

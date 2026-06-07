@@ -34,7 +34,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         },
     );
 
-    if app.tasks.is_empty() {
+    if app.tasks().is_empty() {
         crate::ui::empty::render(frame, body_area, app);
         return;
     }
@@ -67,7 +67,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                 last_group = Some(gk);
             }
 
-            let task = &app.tasks[abs];
+            let task = &app.tasks()[abs];
             let opts = task_row::RowOpts {
                 idx_label: i,
                 cursor: i == app.cursor && app.mode != Mode::Help && app.mode != Mode::Settings,
@@ -80,7 +80,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                 } else {
                     Some(&app.filter.search)
                 },
-                today: &app.today,
+                today: app.today(),
                 hidden_keys: &app.prefs.hidden_keys,
             };
             if i == app.cursor {

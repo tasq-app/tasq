@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
 
-use super::App;
-use super::types::UNDO_LIMIT;
+use super::Store;
+use super::outcome::{Reconcile, UndoOutcome};
+use crate::app::UNDO_LIMIT;
 use crate::todo::Task;
 
 #[derive(Debug, Default, Clone)]
@@ -34,21 +35,25 @@ impl History {
     }
 }
 
-impl App {
-    pub(super) fn push_history(&mut self) {
+impl Store {
+    pub(crate) fn push_history(&mut self) {
         self.history.push(self.tasks.clone());
     }
 
-    pub fn undo(&mut self) {
-        if !self.check_external_changes() {
-            return;
+    pub fn undo(&mut self) -> UndoOutcome {
+        match self.reconcile() {
+            Reconcile::Unchanged => {}
+            other => return UndoOutcome::Aborted(other),
         }
-        if let Some(prev) = self.history.pop() {
-            self.tasks = prev;
-            self.flash("undo");
-            self.persist();
-            self.recompute_visible();
-            self.clamp_cursor();
+        match self.history.pop() {
+            Some(prev) => {
+                self.tasks = prev;
+                match self.persist() {
+                    Ok(()) => UndoOutcome::Undone,
+                    Err(e) => UndoOutcome::Error(e),
+                }
+            }
+            None => UndoOutcome::Nothing,
         }
     }
 }
@@ -56,14 +61,14 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::test_support::build_app;
+    use crate::core::test_support::build_store;
 
     #[test]
     fn history_evicts_fifo_at_undo_limit() {
-        let mut app = build_app("a\n");
+        let mut store = build_store("a\n");
         for _ in 0..(UNDO_LIMIT + 5) {
-            app.push_history();
+            store.push_history();
         }
-        assert_eq!(app.history.len(), UNDO_LIMIT);
+        assert_eq!(store.history.len(), UNDO_LIMIT);
     }
 }

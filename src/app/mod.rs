@@ -3,19 +3,18 @@ use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, TryRecvError};
 
 use crate::config::Config;
+use crate::core::Store;
+use crate::core::outcome::{DrainReport, Reconcile};
 use crate::serve::{self, ShareInfo};
 use crate::theme::{self, Theme};
-use crate::todo::{self, Task};
+use crate::todo::Task;
 
-mod archive;
 mod autocomplete;
 mod bulk;
 mod chord;
 mod draft;
 mod draft_overlay;
-mod external;
 mod flash;
-mod history;
 mod mutations;
 pub mod palette;
 mod picker;
@@ -28,7 +27,9 @@ mod visibility;
 #[cfg(test)]
 pub(crate) mod test_support;
 
-pub use archive::Archive;
+pub use crate::core::Archive;
+pub use crate::core::History;
+pub use crate::core::filter::{ListDueBucket, ordered_unique};
 pub use autocomplete::{ActiveToken, TokenKind, active_token};
 pub use chord::Chord;
 pub use draft::{DraftCursor, DraftState};
@@ -38,7 +39,6 @@ pub use draft_overlay::{
     format_rec_value, recurrence_next_preview,
 };
 pub use flash::Flash;
-pub use history::History;
 pub use palette::CommandPaletteState;
 pub use prefs::{Layout, Prefs};
 pub use selection::Selection;
@@ -46,13 +46,14 @@ pub use types::{
     AUTOCOMPLETE_CAP, AddOutcome, Density, FLASH_TTL, Filter, LEADER_WINDOW, Mode, SavedFilter,
     Sort, UNDO_LIMIT, View,
 };
-pub use visibility::{GroupKey, ListDueBucket, ordered_unique};
+pub use visibility::GroupKey;
 
 pub struct App {
-    /// Crate-private: external mutation would bypass `push_history`,
-    /// `persist`, and `recompute_visible`. Read via `tasks()` / `task_raw()`;
-    /// mutate via the methods on `App` (add_from_draft, complete, delete, …).
-    pub(crate) tasks: Vec<Task>,
+    /// The headless durable store: tasks, archive, history, persistence, and
+    /// `today`. Mutate via the methods on `App` (which map store outcomes to
+    /// flash messages and refresh the visible cache); read via `tasks()`,
+    /// `archive()`, `task_raw()`, etc.
+    pub(crate) store: Store,
     /// Crate-private: writing here would not invalidate `visible_cache`.
     /// Read via `view()`; mutate via `set_view()`.
     pub(crate) view: View,
@@ -68,7 +69,6 @@ pub struct App {
     pub(crate) filter: Filter,
     pub draft: DraftState,
     pub selection: Selection,
-    history: History,
     flash_state: Flash,
     pub chord: Chord,
     pub file_path: PathBuf,
@@ -77,7 +77,6 @@ pub struct App {
     /// without the renderer having to reach into the environment itself.
     /// `None` in tests/examples that don't care about the value.
     pub config_path: Option<PathBuf>,
-    pub today: String,
     pub should_quit: bool,
     visible_cache: Vec<usize>,
     /// Parallel to `visible_cache`: `visible_groups[i]` is the group key for
@@ -85,12 +84,6 @@ pub struct App {
     /// `Sort::File`; priority/due bucket keys under other List sorts; date
     /// keys for Archive. Renderers read this to draw section headers.
     visible_groups: Vec<crate::app::visibility::GroupKey>,
-    /// Snapshot of the file body the last time we read or wrote it.
-    /// Used by `check_external_changes` to detect edits made outside the TUI.
-    last_disk: String,
-    /// Sibling `done.txt`. Holds tasks the user has archived; populated
-    /// off-thread at startup so the first frame doesn't wait on this I/O.
-    pub archive: Archive,
     /// Latest known release tag, populated asynchronously by the update
     /// checker. `None` while we haven't heard back (or the check is disabled,
     /// e.g. in tests). The UI compares this against `CARGO_PKG_VERSION` to
@@ -127,9 +120,25 @@ pub struct App {
 }
 
 impl App {
+    /// Construct an App whose archive is the sibling `done.txt` of `file_path`.
     pub fn new(file_path: PathBuf, body: String, today: String, cfg: Config) -> Self {
-        let tasks = todo::parse_file(&body);
-        let archive = Archive::spawn(&file_path);
+        let store = Store::new(file_path.clone(), body, today);
+        Self::from_store(store, file_path, cfg)
+    }
+
+    /// Like [`App::new`] but with an explicit `done.txt` path (e.g. `DONE_FILE`).
+    pub fn new_with_done(
+        file_path: PathBuf,
+        done_path: PathBuf,
+        body: String,
+        today: String,
+        cfg: Config,
+    ) -> Self {
+        let store = Store::new_with_done(file_path.clone(), done_path, body, today);
+        Self::from_store(store, file_path, cfg)
+    }
+
+    fn from_store(store: Store, file_path: PathBuf, cfg: Config) -> Self {
         // Read saved filters before `cfg` is moved into `Prefs::from_config`.
         let saved_filters = cfg
             .filters
@@ -140,7 +149,7 @@ impl App {
             })
             .collect();
         let mut app = Self {
-            tasks,
+            store,
             view: View::List,
             mode: Mode::Normal,
             prefs: Prefs::from_config(cfg),
@@ -149,17 +158,13 @@ impl App {
             filter: Filter::default(),
             draft: DraftState::default(),
             selection: Selection::default(),
-            history: History::default(),
             flash_state: Flash::default(),
             chord: Chord::default(),
             file_path,
             config_path: None,
-            today,
             should_quit: false,
             visible_cache: Vec::new(),
             visible_groups: Vec::new(),
-            last_disk: body,
-            archive,
             latest_version: None,
             update_check: None,
             saved_filters,
@@ -360,20 +365,30 @@ impl App {
     /// Read-only view of the parsed task list. Mutations go through
     /// dedicated methods so history/persist/visible-cache stay coherent.
     pub fn tasks(&self) -> &[Task] {
-        &self.tasks
+        self.store.tasks()
+    }
+
+    /// Read-only view of the archived (`done.txt`) tasks.
+    pub fn archive(&self) -> &Archive {
+        self.store.archive()
+    }
+
+    /// The cached "today" (ISO `YYYY-MM-DD`) the store resolves dates against.
+    pub fn today(&self) -> &str {
+        self.store.today()
     }
 
     /// True when at least one task is marked done. Used by the binary to
     /// decide whether `A` archives or just toggles the archive view.
     pub fn has_completed_tasks(&self) -> bool {
-        self.tasks.iter().any(|t| t.done)
+        self.store.has_completed()
     }
 
     /// Cloned `raw` for the task at `abs`, or `None` if out of range.
     /// Returning an owned `String` so the caller can hold it across `&mut self`
     /// calls (the common shape for "load draft from current task").
     pub fn task_raw(&self, abs: usize) -> Option<String> {
-        self.tasks.get(abs).map(|t| t.raw.clone())
+        self.store.task_raw(abs)
     }
 
     /// Task under the cursor, resolved against the active view's source:
@@ -381,9 +396,21 @@ impl App {
     pub fn cur_task(&self) -> Option<&Task> {
         let i = self.cur_abs()?;
         match self.view {
-            View::Archive => self.archive.tasks().get(i),
-            _ => self.tasks.get(i),
+            View::Archive => self.store.archive().tasks().get(i),
+            _ => self.store.tasks().get(i),
         }
+    }
+
+    /// Pump archive state (startup loader + external `done.txt` edits). Returns
+    /// true when the visible archive changed, so the caller redraws. Refreshes
+    /// the visible cache when the Archive view is active.
+    pub fn poll_archive(&mut self) -> bool {
+        let changed = self.store.poll_archive();
+        if changed && matches!(self.view, View::Archive) {
+            self.recompute_visible();
+            self.clamp_cursor();
+        }
+        changed
     }
 
     /// Index of the task under the cursor *into `self.tasks`*. Returns `None`
@@ -458,12 +485,12 @@ impl App {
     /// Returns `true` iff the date actually advanced — callers use this to
     /// trigger a redraw.
     pub fn refresh_today(&mut self, now: String) -> bool {
-        if self.today == now {
-            return false;
+        if self.store.set_today(now) {
+            self.recompute_visible();
+            true
+        } else {
+            false
         }
-        self.today = now;
-        self.recompute_visible();
-        true
     }
 
     /// Drop every filter component (project + context + search).
@@ -474,5 +501,75 @@ impl App {
         self.filter.clear();
         self.cursor = 0;
         self.recompute_visible();
+    }
+
+    // ---- shared helpers for the mutation wrappers -----------------------
+
+    /// After a successful mutation that returned an absolute task index,
+    /// rebuild the visible cache and move the cursor to follow that task.
+    pub(crate) fn after_mutation(&mut self, follow_abs: usize) {
+        self.recompute_visible();
+        self.follow_cursor(follow_abs);
+    }
+
+    /// Handle a store reconcile that reloaded the file from disk: reset
+    /// transient input state and refresh the view, matching the old
+    /// `apply_external_state` behavior.
+    pub(crate) fn on_reload(&mut self) {
+        self.selection.clear();
+        self.selection.exit_edit();
+        self.recompute_visible();
+        self.clamp_cursor();
+        self.flash("file changed on disk — reloaded");
+    }
+
+    /// Map a store reconcile result to the matching flash + view refresh for a
+    /// mutation that produced no change of its own (used on the abort paths).
+    pub(crate) fn handle_reconcile_abort(&mut self, r: Reconcile) {
+        match r {
+            Reconcile::Reloaded => self.on_reload(),
+            Reconcile::ReadError => self.flash("read failed"),
+            Reconcile::Unchanged => {}
+        }
+    }
+
+    /// Surface a [`DrainReport`] from `Store::drain_inbox` as a flash, matching
+    /// the wording the inline drain used to emit, and refresh the view when
+    /// tasks were merged.
+    pub(crate) fn apply_drain(&mut self, report: DrainReport) {
+        if report.merged > 0 {
+            self.recompute_visible();
+            self.clamp_cursor();
+        }
+        if let Some(err) = report.error {
+            self.flash(err);
+        } else if report.merged > 0 {
+            if report.skipped > 0 {
+                self.flash(format!(
+                    "merged {} from inbox ({} skipped)",
+                    report.merged, report.skipped
+                ));
+            } else {
+                self.flash(format!("merged {} from inbox", report.merged));
+            }
+        } else if report.skipped > 0 {
+            self.flash(format!(
+                "inbox: {} unparseable, nothing merged",
+                report.skipped
+            ));
+        }
+    }
+
+    /// Reconcile against disk and drain the inbox. Returns `true` when it is
+    /// safe to proceed (disk unchanged); `false` when the file was reloaded or
+    /// unreadable. The TUI run loop and `handle_key` call this each tick.
+    pub fn check_external_changes(&mut self) -> bool {
+        let reconcile = self.store.reconcile();
+        if matches!(reconcile, Reconcile::Reloaded) {
+            self.on_reload();
+        }
+        let report = self.store.drain_inbox();
+        self.apply_drain(report);
+        matches!(reconcile, Reconcile::Unchanged)
     }
 }

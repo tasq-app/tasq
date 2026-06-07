@@ -405,7 +405,7 @@ impl App {
         };
         let focused = existing
             .and_then(|v| NaiveDate::parse_from_str(&v, "%Y-%m-%d").ok())
-            .or_else(|| NaiveDate::parse_from_str(&self.today, "%Y-%m-%d").ok())
+            .or_else(|| NaiveDate::parse_from_str(self.store.today(), "%Y-%m-%d").ok())
             .unwrap_or_else(|| NaiveDate::from_ymd_opt(2026, 1, 1).expect("static date"));
         self.draft
             .set_overlay(Some(DraftOverlay::Calendar(CalendarState {
@@ -439,7 +439,7 @@ impl App {
     }
 
     pub fn calendar_set_relative(&mut self, days: i64) {
-        let Some(today) = NaiveDate::parse_from_str(&self.today, "%Y-%m-%d").ok() else {
+        let Some(today) = NaiveDate::parse_from_str(self.store.today(), "%Y-%m-%d").ok() else {
             return;
         };
         let Some(DraftOverlay::Calendar(s)) = self.draft.overlay_mut() else {
