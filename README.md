@@ -51,13 +51,61 @@ brew install webstonehq/tap/tuxedo
 
 ## Themes
 
-`T` cycles through five built-in themes, including Terminal, which respects your terminal palette.
+`T` opens a picker over five built-in themes, including Terminal, which respects your terminal palette.
 
 | Muted Slate (default) | Dawn |
 | --- | --- |
 | ![muted slate](docs/screenshots/theme-muted-slate.svg) | ![dawn](docs/screenshots/theme-dawn.svg) |
 | **Nord** | **Matrix** |
 | ![nord](docs/screenshots/theme-nord.svg) | ![matrix](docs/screenshots/theme-matrix.svg) |
+
+### Custom themes
+
+Beyond the built-ins, tuxedo loads any `*.toml` file you drop in
+`${XDG_CONFIG_HOME:-$HOME/.config}/tuxedo/themes/`. Each one joins the `T`
+picker in sorted filename order. Ready-made themes live in
+[`docs/themes/`](docs/themes) — copy one in and press `T`:
+
+```sh
+mkdir -p ~/.config/tuxedo/themes
+curl -o ~/.config/tuxedo/themes/gruvbox-dark-soft.toml \
+  https://raw.githubusercontent.com/webstonehq/tuxedo/main/docs/themes/gruvbox-dark-soft.toml
+```
+
+<details>
+<summary>Theme file format and field reference</summary>
+
+A theme file is one `key = value` per line. `name` is the label shown in the
+picker; every other field is a `#rrggbb` color. All fields are required: a file
+missing one, carrying an unparseable color, or whose `name` collides with
+another theme is skipped with a warning at startup.
+
+| Field | Colors |
+| --- | --- |
+| `name` | label shown in the `T` picker (the only non-color field) |
+| `bg` | window background |
+| `panel` | filter and detail panel background |
+| `border` | panel and modal borders |
+| `fg` | primary text |
+| `dim` | secondary / muted text |
+| `accent` | logo, headings, hints, and selection markers |
+| `cursor` | current row, and the highlighted row in the `T` picker |
+| `selection` | set to the same value as `selected` |
+| `statusbar` | status bar background |
+| `status_fg` | status bar text |
+| `mode_fg` / `mode_bg` | mode chip text / background |
+| `pri_a` `pri_b` `pri_c` `pri_d` | priorities A through D |
+| `pri_other` | priorities E through Z |
+| `project` | `+project` tags |
+| `context` | `@context` tags |
+| `due` | `due:` date |
+| `overdue` | past-due date |
+| `today` | date due today |
+| `done` | completed tasks |
+| `selected` | selected-row background (visual mode) and the active filter |
+| `matched` | search-match highlight |
+
+</details>
 
 ## Install
 
@@ -248,7 +296,7 @@ config-file flag; configure paths with the environment variables above.
 | --- | --- |
 | `[` | toggle filter sidebar |
 | `]` | toggle detail sidebar |
-| `T` | cycle theme |
+| `T` | open theme picker |
 | `D` | cycle density: compact → comfortable → cozy |
 | `L` | toggle line numbers |
 
