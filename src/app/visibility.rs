@@ -208,16 +208,20 @@ mod tests {
         let raw = "a due:2026-05-04\n\
                    b due:2026-05-06\n\
                    c due:2026-05-08\n\
-                   d\n";
+                   d due:2026-05-15\n\
+                   e due:2026-05-25\n\
+                   f\n";
         let mut app = build_app(raw);
         app.prefs.sort = Sort::Due;
         app.recompute_visible();
         let groups = app.visible_groups();
-        assert_eq!(groups.len(), 4);
+        assert_eq!(groups.len(), 6);
         assert_eq!(groups[0], GroupKey::ListDue(ListDueBucket::Overdue));
         assert_eq!(groups[1], GroupKey::ListDue(ListDueBucket::Today));
-        assert_eq!(groups[2], GroupKey::ListDue(ListDueBucket::Upcoming));
-        assert_eq!(groups[3], GroupKey::ListDue(ListDueBucket::NoDue));
+        assert_eq!(groups[2], GroupKey::ListDue(ListDueBucket::ThisWeek));
+        assert_eq!(groups[3], GroupKey::ListDue(ListDueBucket::NextWeek));
+        assert_eq!(groups[4], GroupKey::ListDue(ListDueBucket::Later));
+        assert_eq!(groups[5], GroupKey::ListDue(ListDueBucket::NoDue));
     }
 
     #[test]

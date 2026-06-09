@@ -180,7 +180,9 @@ fn due_bucket_color(theme: &Theme, b: ListDueBucket) -> Color {
     match b {
         ListDueBucket::Overdue => theme.overdue,
         ListDueBucket::Today => theme.today,
-        ListDueBucket::Upcoming => theme.accent,
+        ListDueBucket::ThisWeek => theme.accent,
+        ListDueBucket::NextWeek => theme.accent,
+        ListDueBucket::Later => theme.accent,
         ListDueBucket::NoDue => theme.dim,
     }
 }
