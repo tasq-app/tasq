@@ -163,16 +163,23 @@ fn group_header<'a>(theme: &Theme, gk: &GroupKey, count: usize) -> Line<'a> {
         GroupKey::ArchiveDate(d) => (d.clone(), theme.accent),
         GroupKey::None => (String::new(), theme.fg),
     };
+
+    let char_count = count.to_string().len() + label.len();
+    let divider_length = 80 - char_count;
+
     Line::from(vec![
         Span::raw(" "),
+        Span::styled(format!("({})", count), Style::default().fg(theme.dim)),
+        Span::raw("  "),
         Span::styled(
             label,
             Style::default().fg(color).add_modifier(Modifier::BOLD),
         ),
         Span::raw("  "),
-        Span::styled(format!("{}", count), Style::default().fg(theme.dim)),
-        Span::raw("  "),
-        Span::styled("─".repeat(80), Style::default().fg(theme.border)),
+        Span::styled(
+            "─".repeat(divider_length),
+            Style::default().fg(theme.border),
+        ),
     ])
 }
 
