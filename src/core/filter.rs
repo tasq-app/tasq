@@ -7,6 +7,8 @@
 
 use std::cmp::Ordering;
 
+use chrono::{Datelike, Days, NaiveDate};
+
 use crate::app::{Filter, Sort};
 use crate::search::subseq_match_ci;
 use crate::threshold;
@@ -18,7 +20,9 @@ use crate::todo::{self, Task};
 pub enum ListDueBucket {
     Overdue,
     Today,
-    Upcoming,
+    ThisWeek,
+    NextWeek,
+    Later,
     NoDue,
 }
 
@@ -27,20 +31,44 @@ impl ListDueBucket {
         match self {
             ListDueBucket::Overdue => "OVERDUE",
             ListDueBucket::Today => "TODAY",
-            ListDueBucket::Upcoming => "UPCOMING",
+            ListDueBucket::ThisWeek => "THIS WEEK",
+            ListDueBucket::NextWeek => "NEXT WEEK",
+            ListDueBucket::Later => "LATER",
             ListDueBucket::NoDue => "NO DUE DATE",
         }
     }
 }
 
+pub fn get_week_cutoff(today: &str) -> Option<(String, String)> {
+    let today = NaiveDate::parse_from_str(today, "%Y-%m-%d").ok()?;
+    let weekday = today.weekday();
+
+    let days_since_sunday = weekday.num_days_from_sunday();
+    let days_til_saturday = 6 - days_since_sunday;
+
+    let this_saturday = today.checked_add_days(Days::new(days_til_saturday as u64))?;
+    let next_saturday = today.checked_add_days(Days::new((days_til_saturday + 7) as u64))?;
+
+    Some((this_saturday.to_string(), next_saturday.to_string()))
+}
+
+/// If the date cannot be parsed we assign to Later
 pub fn due_bucket(task: &Task, today: &str) -> ListDueBucket {
     match task.due.as_deref() {
         None => ListDueBucket::NoDue,
-        Some(d) => match d.cmp(today) {
-            Ordering::Less => ListDueBucket::Overdue,
-            Ordering::Equal => ListDueBucket::Today,
-            Ordering::Greater => ListDueBucket::Upcoming,
-        },
+        Some(d) => {
+            let Some((this_week, next_week)) = get_week_cutoff(today) else {
+                return ListDueBucket::Later;
+            };
+
+            match d.cmp(today) {
+                Ordering::Less => ListDueBucket::Overdue,
+                Ordering::Equal => ListDueBucket::Today,
+                Ordering::Greater if d <= this_week.as_str() => ListDueBucket::ThisWeek,
+                Ordering::Greater if d <= next_week.as_str() => ListDueBucket::NextWeek,
+                Ordering::Greater => ListDueBucket::Later,
+            }
+        }
     }
 }
 
