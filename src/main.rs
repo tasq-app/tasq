@@ -353,7 +353,7 @@ fn handle_insert(app: &mut App, key: KeyEvent) {
     if app.autocomplete_visible() {
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         match key.code {
-            KeyCode::Tab => {
+            KeyCode::Tab | KeyCode::Enter => {
                 app.autocomplete_accept();
                 return;
             }
