@@ -272,7 +272,7 @@ config-file flag; configure paths with the environment variables above.
 | Key | Action |
 | --- | --- |
 | `n` | add task |
-| `e` / `i` | edit current task |
+| `e` / `i` | edit current task (opens in Normal mode — see [Edit dialog](#edit-dialog)) |
 | `x` | toggle complete |
 | `dd` | delete task |
 | `p` | cycle priority A → B → C → · |
@@ -281,6 +281,24 @@ config-file flag; configure paths with the environment variables above.
 | `yy` | copy current line to clipboard |
 | `yb` | copy current body only (no priority, dates, projects, contexts, `key:value`) |
 | `u` | undo (50 levels) |
+
+### Edit dialog
+
+The edit dialog (`e` / `i`) uses vim-style modal editing. It opens in **Normal
+mode** so you can navigate before changing anything. The add prompt (`n`) opens
+directly in **Insert mode** — start typing immediately.
+
+| Key | Action |
+| --- | --- |
+| `h` / `←` | move cursor left |
+| `l` / `→` | move cursor right |
+| `x` | delete character under cursor |
+| `i` | enter Insert mode before cursor |
+| `a` | enter Insert mode after cursor |
+| `A` | enter Insert mode at end of line |
+| `Esc` (in Insert) | return to Normal mode |
+| `Esc` (in Normal) | cancel and close |
+| `Enter` (in Insert) | save |
 
 ### Filtering, sort, view
 
