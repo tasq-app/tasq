@@ -351,33 +351,16 @@ fn handle_insert(app: &mut App, key: KeyEvent) {
     // project/context). Esc with the popup open dismisses the popup but leaves
     // Insert mode intact; a second Esc cancels the add (handled below).
     if app.autocomplete_visible() {
-        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         match key.code {
             KeyCode::Tab | KeyCode::Enter => {
                 app.autocomplete_accept();
                 return;
             }
-            KeyCode::Up => {
-                app.autocomplete_step(false);
-                return;
+            _ => {
+                if handle_autocomplete_keys(app, key) {
+                    return;
+                }
             }
-            KeyCode::Down => {
-                app.autocomplete_step(true);
-                return;
-            }
-            KeyCode::Char('n') if ctrl => {
-                app.autocomplete_step(true);
-                return;
-            }
-            KeyCode::Char('p') if ctrl => {
-                app.autocomplete_step(false);
-                return;
-            }
-            KeyCode::Esc => {
-                app.draft.suppress_autocomplete();
-                return;
-            }
-            _ => {}
         }
     }
 
@@ -605,7 +588,48 @@ fn handle_command_palette(app: &mut App, key: KeyEvent) {
     }
 }
 
+fn handle_autocomplete_keys(app: &mut App, key: KeyEvent) -> bool {
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+    match key.code {
+        KeyCode::Up => {
+            app.autocomplete_step(false);
+            true
+        }
+        KeyCode::Down => {
+            app.autocomplete_step(true);
+            true
+        }
+        KeyCode::Char('n') if ctrl => {
+            app.autocomplete_step(true);
+            true
+        }
+        KeyCode::Char('p') if ctrl => {
+            app.autocomplete_step(false);
+            true
+        }
+        KeyCode::Esc => {
+            app.draft.suppress_autocomplete();
+            true
+        }
+        _ => false,
+    }
+}
+
 fn handle_prompt(app: &mut App, key: KeyEvent) {
+    if app.autocomplete_visible() {
+        match key.code {
+            KeyCode::Tab => {
+                app.autocomplete_accept();
+                return;
+            }
+            _ => {
+                if handle_autocomplete_keys(app, key) {
+                    return;
+                }
+            }
+        }
+    }
+
     match key.code {
         KeyCode::Esc => {
             app.mode = Mode::Normal;

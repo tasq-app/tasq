@@ -30,7 +30,7 @@ pub(crate) mod test_support;
 pub use crate::core::Archive;
 pub use crate::core::History;
 pub use crate::core::filter::{ListDueBucket, ordered_unique};
-pub use autocomplete::{ActiveToken, TokenKind, active_token};
+pub use autocomplete::{ActiveToken, AutocompleteTarget, TokenKind, active_token};
 pub use chord::Chord;
 pub use draft::{DraftCursor, DraftState};
 pub use draft_overlay::{

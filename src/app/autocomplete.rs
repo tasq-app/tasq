@@ -1,6 +1,6 @@
 use super::App;
 use super::draft::prev_char_boundary;
-use super::types::AUTOCOMPLETE_CAP;
+use super::types::{AUTOCOMPLETE_CAP, Mode};
 use crate::todo::{self, Task, starts_with_iso_date, starts_with_priority};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -17,6 +17,14 @@ pub struct ActiveToken<'a> {
     pub kind: TokenKind,
     pub prefix: &'a str,
     pub start: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AutocompleteTarget<'a> {
+    pub kind: TokenKind,
+    pub prefix: &'a str,
+    pub replace_start: usize,
+    pub replace_end: usize,
 }
 
 /// Find the autocomplete token at `cursor`. Walks back through non-whitespace
@@ -53,6 +61,45 @@ pub fn active_token(draft: &str, cursor: usize) -> Option<ActiveToken<'_>> {
 }
 
 impl App {
+    /// Retrieve the autocomplete target (token kind, prefix, and replacement range)
+    /// based on the current app mode.
+    pub fn autocomplete_target(&self) -> Option<AutocompleteTarget<'_>> {
+        match self.mode {
+            Mode::PromptProject | Mode::PromptContext => {
+                let kind = if self.mode == Mode::PromptProject {
+                    TokenKind::Project
+                } else {
+                    TokenKind::Context
+                };
+                let text = self.draft.text();
+                let cursor = self.draft.cursor().min(text.len());
+                Some(AutocompleteTarget {
+                    kind,
+                    prefix: &text[..cursor],
+                    replace_start: 0,
+                    replace_end: text.len(),
+                })
+            }
+            _ => {
+                let tok = active_token(self.draft.text(), self.draft.cursor())?;
+                let token_start = tok.start;
+                let after_sigil = &self.draft.text()[token_start + 1..];
+                let end_offset = after_sigil
+                    .char_indices()
+                    .find(|(_, c)| c.is_whitespace())
+                    .map(|(i, _)| i)
+                    .unwrap_or(after_sigil.len());
+                let end = token_start + 1 + end_offset;
+                Some(AutocompleteTarget {
+                    kind: tok.kind,
+                    prefix: tok.prefix,
+                    replace_start: token_start + 1,
+                    replace_end: end,
+                })
+            }
+        }
+    }
+
     /// Whether the autocomplete popup should render and consume keys. False
     /// when there's no active token, the corpus has no matches, or the user
     /// has explicitly dismissed the popup with Esc.
@@ -65,13 +112,13 @@ impl App {
     /// matching the prefix. Sorted prefix-matches-first then contains-only,
     /// each group alphabetical, capped at 8.
     pub fn autocomplete_matches(&self) -> Vec<&str> {
-        let Some(tok) = active_token(self.draft.text(), self.draft.cursor()) else {
+        let Some(target) = self.autocomplete_target() else {
             return Vec::new();
         };
-        let prefix_lc = tok.prefix.to_lowercase();
+        let prefix_lc = target.prefix.to_lowercase();
         let mut seen: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
         for t in self.store.tasks() {
-            let source = match tok.kind {
+            let source = match target.kind {
                 TokenKind::Project => &t.projects,
                 TokenKind::Context => &t.contexts,
             };
@@ -121,7 +168,7 @@ impl App {
     /// the cursor (sigil to next whitespace), so accepting `work` while the
     /// cursor sits inside `+wor` produces `+work`, not `+workr`.
     pub fn autocomplete_accept(&mut self) {
-        let Some(tok) = active_token(self.draft.text(), self.draft.cursor()) else {
+        let Some(target) = self.autocomplete_target() else {
             return;
         };
         let matches = self.autocomplete_matches();
@@ -130,15 +177,7 @@ impl App {
         }
         let idx = self.draft.autocomplete_index().min(matches.len() - 1);
         let chosen = matches[idx].to_string();
-        let token_start = tok.start;
-        let after_sigil = &self.draft.text()[token_start + 1..];
-        let end_offset = after_sigil
-            .char_indices()
-            .find(|(_, c)| c.is_whitespace())
-            .map(|(i, _)| i)
-            .unwrap_or(after_sigil.len());
-        let end = token_start + 1 + end_offset;
-        self.draft.replace_token(token_start + 1, end, &chosen);
+        self.draft.replace_token(target.replace_start, target.replace_end, &chosen);
     }
 }
 
@@ -454,5 +493,29 @@ mod tests {
         app.autocomplete_step(true); // selected = 1 → "beta"
         app.autocomplete_accept();
         assert_eq!(app.draft.text(), "X +beta");
+    }
+
+    #[test]
+    fn autocomplete_prompt_project_mode() {
+        let mut app = build_app("a +work\nb +health\n");
+        app.mode = Mode::PromptProject;
+        app.draft_set("hea".into());
+        assert!(app.autocomplete_visible());
+        assert_eq!(app.autocomplete_matches(), vec!["health"]);
+
+        app.autocomplete_accept();
+        assert_eq!(app.draft.text(), "health");
+    }
+
+    #[test]
+    fn autocomplete_prompt_context_mode() {
+        let mut app = build_app("a @work\nb @health\n");
+        app.mode = Mode::PromptContext;
+        app.draft_set("wor".into());
+        assert!(app.autocomplete_visible());
+        assert_eq!(app.autocomplete_matches(), vec!["work"]);
+
+        app.autocomplete_accept();
+        assert_eq!(app.draft.text(), "work");
     }
 }
