@@ -157,6 +157,56 @@ impl DraftState {
         self.cursor = DraftCursor::at_end(&self.text);
     }
 
+    /// Move to the start of the next word (`w`).
+    pub fn move_word_forward(&mut self) {
+        let s = &self.text;
+        let mut pos = self.cursor.byte();
+        while pos < s.len() && !s.as_bytes()[pos].is_ascii_whitespace() {
+            pos = next_char_boundary(s, pos);
+        }
+        while pos < s.len() && s.as_bytes()[pos].is_ascii_whitespace() {
+            pos = next_char_boundary(s, pos);
+        }
+        self.cursor = DraftCursor(pos);
+    }
+
+    /// Move to the start of the current or previous word (`b`).
+    pub fn move_word_backward(&mut self) {
+        let s = &self.text;
+        let pos = self.cursor.byte();
+        if pos == 0 {
+            return;
+        }
+        let mut p = prev_char_boundary(s, pos);
+        while p > 0 && s.as_bytes()[p].is_ascii_whitespace() {
+            p = prev_char_boundary(s, p);
+        }
+        while p > 0 && !s.as_bytes()[prev_char_boundary(s, p)].is_ascii_whitespace() {
+            p = prev_char_boundary(s, p);
+        }
+        self.cursor = DraftCursor(p);
+    }
+
+    /// Move to the end of the current or next word (`e`).
+    pub fn move_word_end(&mut self) {
+        let s = &self.text;
+        let mut pos = self.cursor.byte();
+        // Step off the current position first
+        if pos < s.len() {
+            pos = next_char_boundary(s, pos);
+        }
+        while pos < s.len() && s.as_bytes()[pos].is_ascii_whitespace() {
+            pos = next_char_boundary(s, pos);
+        }
+        while pos < s.len() && {
+            let next = next_char_boundary(s, pos);
+            next < s.len() && !s.as_bytes()[next].is_ascii_whitespace()
+        } {
+            pos = next_char_boundary(s, pos);
+        }
+        self.cursor = DraftCursor(pos);
+    }
+
     /// Cycle the selected autocomplete match. `n` is the current match-list length.
     /// No-op when `n == 0`.
     pub fn step_autocomplete(&mut self, n: usize, forward: bool) {
@@ -234,6 +284,18 @@ impl App {
 
     pub fn draft_end(&mut self) {
         self.draft.move_end();
+    }
+
+    pub fn draft_word_forward(&mut self) {
+        self.draft.move_word_forward();
+    }
+
+    pub fn draft_word_backward(&mut self) {
+        self.draft.move_word_backward();
+    }
+
+    pub fn draft_word_end(&mut self) {
+        self.draft.move_word_end();
     }
 }
 

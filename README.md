@@ -292,6 +292,9 @@ directly in **Insert mode** — start typing immediately.
 | --- | --- |
 | `h` / `←` | move cursor left |
 | `l` / `→` | move cursor right |
+| `w` | jump to start of next word |
+| `b` | jump to start of previous word |
+| `e` | jump to end of current word |
 | `x` | delete character under cursor |
 | `i` | enter Insert mode before cursor |
 | `a` | enter Insert mode after cursor |
