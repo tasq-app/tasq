@@ -5,7 +5,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
 use crate::app::{
-    self, App, BuilderField, CalendarTarget, DraftOverlay, Mode, REC_UNIT_ORDER, TokenKind,
+    App, BuilderField, CalendarTarget, DraftOverlay, Mode, REC_UNIT_ORDER, TokenKind,
 };
 use crate::theme::Theme;
 
@@ -491,7 +491,7 @@ pub fn render_autocomplete(frame: &mut Frame, dlg: Rect, screen: Rect, app: &App
         return;
     }
     let theme = app.theme();
-    let kind = match app::active_token(app.draft.text(), app.draft.cursor()) {
+    let kind = match app.autocomplete_target() {
         Some(t) => t.kind,
         None => return,
     };
@@ -1481,6 +1481,83 @@ mod tests {
         assert!(
             !popup.contains("uniqueprojname"),
             "context popup must not list projects\n{popup}"
+        );
+    }
+
+    fn build_prompt_app(seed: &str, draft: &str, mode: Mode) -> App {
+        let path = std::env::temp_dir().join(format!(
+            "tuxedo-prompt-dialog-test-{}-{}.txt",
+            std::process::id(),
+            seed.len(),
+        ));
+        std::fs::write(&path, seed).unwrap();
+        let mut app = App::new(
+            path,
+            seed.to_string(),
+            "2026-05-06".to_string(),
+            Config::default(),
+        );
+        app.mode = mode;
+        app.draft_set(draft.to_string());
+        app
+    }
+
+    fn prompt_popup_region_text(buf: &Buffer) -> String {
+        let rows = buf.area.height;
+        let cols = buf.area.width;
+        let dlg_h: u16 = 5; // PROMPT_H
+        let dlg_y = (rows.saturating_sub(dlg_h)) / 2;
+        let popup_top = dlg_y + dlg_h;
+        let popup_bottom = (popup_top + 8).min(rows);
+        let mut out = String::new();
+        for y in popup_top..popup_bottom {
+            for x in 0..cols {
+                out.push_str(buf[(x, y)].symbol());
+            }
+            out.push('\n');
+        }
+        out
+    }
+
+    #[test]
+    fn prompt_autocomplete_popup_renders_project_matches() {
+        let app = build_prompt_app(
+            "(A) 2026-05-01 a +work\n(A) 2026-05-01 b +health\n",
+            "hea",
+            Mode::PromptProject,
+        );
+        let backend = TestBackend::new(80, 30);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|f| crate::ui::draw(f, &app)).unwrap();
+        let popup = prompt_popup_region_text(terminal.backend().buffer());
+        assert!(
+            popup.contains("health"),
+            "expected 'health' in popup\n{popup}"
+        );
+        assert!(
+            !popup.contains("work"),
+            "expected 'work' not to be in popup (doesn't match 'hea')\n{popup}"
+        );
+    }
+
+    #[test]
+    fn prompt_autocomplete_popup_renders_context_matches() {
+        let app = build_prompt_app(
+            "(A) 2026-05-01 a @work\n(A) 2026-05-01 b @health\n",
+            "hea",
+            Mode::PromptContext,
+        );
+        let backend = TestBackend::new(80, 30);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|f| crate::ui::draw(f, &app)).unwrap();
+        let popup = prompt_popup_region_text(terminal.backend().buffer());
+        assert!(
+            popup.contains("health"),
+            "expected 'health' in popup\n{popup}"
+        );
+        assert!(
+            !popup.contains("work"),
+            "expected 'work' not to be in popup (doesn't match 'hea')\n{popup}"
         );
     }
 }

@@ -135,6 +135,9 @@ pub fn draw(frame: &mut Frame, app: &App) {
             let r = centered_in(area, w, PROMPT_H);
             frame.render_widget(Clear, r);
             dialog::render_prompt(frame, r, app);
+            if matches!(app.mode, Mode::PromptProject | Mode::PromptContext) {
+                dialog::render_autocomplete(frame, r, area, app);
+            }
         }
         Mode::CommandPalette => {
             let h: u16 = area.height.saturating_sub(4).min(PALETTE_MAX_H);
