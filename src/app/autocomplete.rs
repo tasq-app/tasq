@@ -177,7 +177,8 @@ impl App {
         }
         let idx = self.draft.autocomplete_index().min(matches.len() - 1);
         let chosen = matches[idx].to_string();
-        self.draft.replace_token(target.replace_start, target.replace_end, &chosen);
+        self.draft
+            .replace_token(target.replace_start, target.replace_end, &chosen);
     }
 }
 
