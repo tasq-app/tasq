@@ -47,6 +47,16 @@ impl Store {
             ..Default::default()
         };
 
+        // Fast path: if neither the inbox nor a recovered staging file
+        // exists, there's nothing to drain — skip the lock entirely so the
+        // common case (no capture activity) doesn't litter a lock file next
+        // to todo.txt. A POST that creates inbox.txt between this check and
+        // the next tick is benign: it takes the lock itself when appending,
+        // and the next drain picks the line up.
+        if !inbox_path.exists() && !staging.exists() {
+            return DrainReport::default();
+        }
+
         // Coordinate with `tuxedo serve`'s POST handler (and other tuxedo
         // instances). The lock spans the rename + read + cleanup.
         let _lock = match inbox::acquire_lock(&self.file_path) {
@@ -253,6 +263,17 @@ mod tests {
         let report = store.drain_inbox();
         assert!(report.is_noop());
         assert_eq!(store.tasks().len(), 1);
+    }
+
+    #[test]
+    fn drain_with_no_inbox_does_not_create_lock_file() {
+        let (mut store, dir, _) = build_store_with_dir("a\n");
+        let report = store.drain_inbox();
+        assert!(report.is_noop());
+        assert!(
+            !dir.join(inbox::LOCK_FILENAME).exists(),
+            "drain with no inbox must not leave a lock file behind",
+        );
     }
 
     #[test]
