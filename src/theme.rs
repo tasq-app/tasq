@@ -172,7 +172,7 @@ pub const TERMINAL: Theme = Theme {
     bg: Color::Reset,
     panel: Color::Reset,
     border: Color::DarkGray,
-    fg: Color::Reset,
+    fg: Color::Rgb(220, 220, 220),
     dim: Color::DarkGray,
     accent: Color::Cyan,
     cursor: Color::DarkGray,
@@ -538,7 +538,7 @@ matched = #b58900
     fn terminal_theme_uses_terminal_palette() {
         assert_eq!(TERMINAL.bg, Color::Reset);
         assert_eq!(TERMINAL.panel, Color::Reset);
-        assert_eq!(TERMINAL.fg, Color::Reset);
+        assert_eq!(TERMINAL.fg, Color::Rgb(220, 220, 220));
         assert_eq!(TERMINAL.pri_a, Color::Red);
         assert!(
             BUILT_IN.iter().any(|t| t.name == TERMINAL.name),
