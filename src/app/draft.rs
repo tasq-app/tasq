@@ -1,6 +1,14 @@
 use super::App;
 use super::draft_overlay::DraftOverlay;
 
+/// Sub-mode for the edit/add dialog, mirroring vim's modal editing model.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DialogInputMode {
+    #[default]
+    Insert,
+    Normal,
+}
+
 /// Byte offset within a draft `String`. Construction enforces UTF-8 char-boundary
 /// landing, so cursor positions can't be left mid-codepoint by direct assignment.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -39,6 +47,7 @@ pub struct DraftState {
     /// priority chooser). At most one at a time. `None` is the default — the
     /// user is just editing text.
     overlay: Option<DraftOverlay>,
+    input_mode: DialogInputMode,
 }
 
 impl DraftState {
@@ -70,11 +79,20 @@ impl DraftState {
         self.overlay = overlay;
     }
 
+    pub fn input_mode(&self) -> DialogInputMode {
+        self.input_mode
+    }
+
+    pub fn set_input_mode(&mut self, mode: DialogInputMode) {
+        self.input_mode = mode;
+    }
+
     pub fn clear(&mut self) {
         self.text.clear();
         self.cursor = DraftCursor::zero();
         self.reset_autocomplete();
         self.overlay = None;
+        self.input_mode = DialogInputMode::Insert;
     }
 
     /// Replace the text and park the cursor at the end. Used when entering
@@ -84,6 +102,7 @@ impl DraftState {
         self.text = s;
         self.reset_autocomplete();
         self.overlay = None;
+        self.input_mode = DialogInputMode::Normal;
     }
 
     pub fn insert_char(&mut self, c: char) {
@@ -136,6 +155,73 @@ impl DraftState {
 
     pub fn move_end(&mut self) {
         self.cursor = DraftCursor::at_end(&self.text);
+    }
+
+    /// Move to the start of the next word (`w`).
+    pub fn move_word_forward(&mut self) {
+        let s = &self.text;
+        let mut pos = self.cursor.byte();
+        while pos < s.len() && !s.as_bytes()[pos].is_ascii_whitespace() {
+            pos = next_char_boundary(s, pos);
+        }
+        while pos < s.len() && s.as_bytes()[pos].is_ascii_whitespace() {
+            pos = next_char_boundary(s, pos);
+        }
+        self.cursor = DraftCursor(pos);
+    }
+
+    /// Move to the start of the current or previous word (`b`).
+    pub fn move_word_backward(&mut self) {
+        let s = &self.text;
+        let pos = self.cursor.byte();
+        if pos == 0 {
+            return;
+        }
+        let mut p = prev_char_boundary(s, pos);
+        while p > 0 && s.as_bytes()[p].is_ascii_whitespace() {
+            p = prev_char_boundary(s, p);
+        }
+        while p > 0 && !s.as_bytes()[prev_char_boundary(s, p)].is_ascii_whitespace() {
+            p = prev_char_boundary(s, p);
+        }
+        self.cursor = DraftCursor(p);
+    }
+
+    /// Delete from the cursor to the start of the next word (`dw`/`cw`).
+    pub fn delete_word_forward(&mut self) {
+        let start = self.cursor.byte();
+        let s = &self.text;
+        let mut end = start;
+        while end < s.len() && !s.as_bytes()[end].is_ascii_whitespace() {
+            end = next_char_boundary(s, end);
+        }
+        while end < s.len() && s.as_bytes()[end].is_ascii_whitespace() {
+            end = next_char_boundary(s, end);
+        }
+        if end > start {
+            self.text.drain(start..end);
+            self.reset_autocomplete();
+        }
+    }
+
+    /// Move to the end of the current or next word (`e`).
+    pub fn move_word_end(&mut self) {
+        let s = &self.text;
+        let mut pos = self.cursor.byte();
+        // Step off the current position first
+        if pos < s.len() {
+            pos = next_char_boundary(s, pos);
+        }
+        while pos < s.len() && s.as_bytes()[pos].is_ascii_whitespace() {
+            pos = next_char_boundary(s, pos);
+        }
+        while pos < s.len() && {
+            let next = next_char_boundary(s, pos);
+            next < s.len() && !s.as_bytes()[next].is_ascii_whitespace()
+        } {
+            pos = next_char_boundary(s, pos);
+        }
+        self.cursor = DraftCursor(pos);
     }
 
     /// Cycle the selected autocomplete match. `n` is the current match-list length.
@@ -215,6 +301,22 @@ impl App {
 
     pub fn draft_end(&mut self) {
         self.draft.move_end();
+    }
+
+    pub fn draft_word_forward(&mut self) {
+        self.draft.move_word_forward();
+    }
+
+    pub fn draft_word_backward(&mut self) {
+        self.draft.move_word_backward();
+    }
+
+    pub fn draft_word_end(&mut self) {
+        self.draft.move_word_end();
+    }
+
+    pub fn draft_delete_word_forward(&mut self) {
+        self.draft.delete_word_forward();
     }
 }
 
