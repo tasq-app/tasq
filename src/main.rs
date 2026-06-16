@@ -1282,10 +1282,7 @@ mod tests {
         assert_eq!(app.tasks()[0].due.as_deref(), Some("2026-06-30"));
         assert_eq!(app.mode, tuxedo::app::Mode::Normal);
 
-        assert_eq!(
-            resolve(&mut app, key('r')),
-            Some(Action::Reschedule),
-        );
+        assert_eq!(resolve(&mut app, key('r')), Some(Action::Reschedule),);
         apply_action(&mut app, Action::Reschedule);
         assert_eq!(app.mode, Mode::Insert);
 
@@ -1310,10 +1307,7 @@ mod tests {
         assert_eq!(app.tasks()[0].due.as_deref(), None);
         assert_eq!(app.mode, tuxedo::app::Mode::Normal);
 
-        assert_eq!(
-            resolve(&mut app, key('r')),
-            Some(Action::Reschedule),
-        );
+        assert_eq!(resolve(&mut app, key('r')), Some(Action::Reschedule),);
         apply_action(&mut app, Action::Reschedule);
         assert_eq!(app.mode, Mode::Insert);
 

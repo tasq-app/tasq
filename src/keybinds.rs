@@ -52,7 +52,7 @@ impl KeyBindings {
                 section = Some(name.to_ascii_lowercase());
                 continue;
             }
-            if !section.as_deref().is_none_or(|name| name == "normal") {
+            if section.as_deref().is_some_and(|name| name != "normal") {
                 continue;
             }
             let Some((name, value)) = line.split_once('=') else {
@@ -93,11 +93,12 @@ impl KeyBindings {
             }
         }
         for binding in &self.normal {
-            if binding.second.is_some() && binding.first.matches(key) {
-                if let Some(leader) = binding.first.leader_char() {
-                    chord.arm(leader);
-                    return Some(ResolvedKey::Pending);
-                }
+            if binding.second.is_some()
+                && binding.first.matches(key)
+                && let Some(leader) = binding.first.leader_char()
+            {
+                chord.arm(leader);
+                return Some(ResolvedKey::Pending);
             }
         }
         None

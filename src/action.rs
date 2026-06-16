@@ -70,6 +70,7 @@ impl Action {
             "begin_edit" | "edit" => Some(Self::BeginEdit),
             "toggle_complete" => Some(Self::ToggleComplete),
             "delete" => Some(Self::Delete),
+            "reschedule" => Some(Self::Reschedule),
             "cycle_priority" => Some(Self::CyclePriority),
             "begin_search" | "search" => Some(Self::BeginSearch),
             "open_help" | "help" => Some(Self::OpenHelp),
@@ -103,5 +104,30 @@ impl Action {
             "open_theme_picker" | "theme_picker" => Some(Self::OpenThemePicker),
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reschedule_is_rebindable() {
+        assert_eq!(
+            Action::from_keybind_name("reschedule"),
+            Some(Action::Reschedule)
+        );
+    }
+
+    #[test]
+    fn open_theme_picker_is_rebindable() {
+        assert_eq!(
+            Action::from_keybind_name("open_theme_picker"),
+            Some(Action::OpenThemePicker)
+        );
+        assert_eq!(
+            Action::from_keybind_name("theme_picker"),
+            Some(Action::OpenThemePicker)
+        );
     }
 }
