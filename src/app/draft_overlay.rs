@@ -255,9 +255,12 @@ impl App {
     }
 
     /// Validate that the slash menu's anchor is still consistent with the
-    /// current buffer. If the `/` was deleted or the cursor moved before it,
-    /// drop the menu. Called after every text-edit key in handle_insert so
-    /// the popup goes away when the user backspaces over its trigger.
+    /// current buffer. Drops the menu when the `/` was deleted, the cursor
+    /// moved before it, or a space was typed after it (a slash command is a
+    /// single whitespace-delimited token, so `Option A / B` is prose, not a
+    /// command). Called after every text-edit key in handle_insert so the
+    /// popup goes away when the user backspaces over its trigger or types past
+    /// it.
     pub fn slash_menu_revalidate(&mut self) {
         let Some(DraftOverlay::SlashMenu(state)) = self.draft.overlay() else {
             return;
@@ -265,8 +268,19 @@ impl App {
         let anchor = state.anchor;
         let text = self.draft.text();
         let still_slash = text.as_bytes().get(anchor) == Some(&b'/');
-        let cursor_ok = self.draft.cursor() > anchor;
-        if !still_slash || !cursor_ok {
+        let cursor = self.draft.cursor();
+        let cursor_ok = cursor > anchor;
+        // A slash command is a single whitespace-delimited token. If a space
+        // appears after the `/` (e.g. prose like "Option A / B"), it isn't a
+        // command — drop the menu so Enter saves the todo instead of being
+        // swallowed by `slash_accept`.
+        let filter_has_space = still_slash
+            && cursor_ok
+            && cursor <= text.len()
+            && text[anchor + 1..cursor]
+                .bytes()
+                .any(|b| b.is_ascii_whitespace());
+        if !still_slash || !cursor_ok || filter_has_space {
             self.draft.set_overlay(None);
         }
     }
@@ -1084,6 +1098,23 @@ mod tests {
         app.draft_backspace();
         app.slash_menu_revalidate();
         assert!(app.draft.overlay().is_none());
+    }
+
+    #[test]
+    fn slash_menu_closes_when_space_typed_after_slash() {
+        // Prose like "Option A / B" has a space before the `/` (which opens the
+        // menu) but is not a command. Typing a space after the `/` must drop the
+        // menu so Enter saves the todo instead of being swallowed by the menu.
+        let mut app = build_app("");
+        app.draft_set("Option A ".into());
+        app.draft_insert_char('/');
+        app.maybe_open_slash_menu();
+        assert!(app.draft.overlay().is_some());
+        app.draft_insert_char(' ');
+        app.slash_menu_revalidate();
+        assert!(app.draft.overlay().is_none());
+        // The typed text is preserved — revalidate only closes the menu.
+        assert_eq!(app.draft.text(), "Option A / ");
     }
 
     #[test]
