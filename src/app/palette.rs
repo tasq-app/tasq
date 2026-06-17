@@ -23,9 +23,14 @@ pub const ENTRIES: &[PaletteEntry] = &[
         action: Action::BeginAdd,
     },
     PaletteEntry {
-        label: "edit current task",
-        keys: "e / i",
+        label: "edit current task (normal mode)",
+        keys: "e",
         action: Action::BeginEdit,
+    },
+    PaletteEntry {
+        label: "edit current task (insert mode)",
+        keys: "i",
+        action: Action::BeginEditInsert,
     },
     PaletteEntry {
         label: "toggle complete",
@@ -495,6 +500,7 @@ mod tests {
             Action::HalfPageUp,
             Action::BeginAdd,
             Action::BeginEdit,
+            Action::BeginEditInsert,
             Action::ToggleComplete,
             Action::Delete,
             Action::CyclePriority,

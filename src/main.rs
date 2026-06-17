@@ -728,7 +728,8 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('r') => Action::Reschedule,
         KeyCode::Char('a') => Action::ToggleArchiveView,
         KeyCode::Char('l') => Action::GoList,
-        KeyCode::Char('e' | 'i') => Action::BeginEdit,
+        KeyCode::Char('e') => Action::BeginEdit,
+        KeyCode::Char('i') => Action::BeginEditInsert,
         KeyCode::Char('x') => Action::ToggleComplete,
         // 'dd' chord. First press arms; second fires.
         KeyCode::Char('d') if app.chord.toggle('d') => Action::Delete,
@@ -813,6 +814,7 @@ fn apply_action(app: &mut App, action: Action) {
             }
             Action::BeginAdd
             | Action::BeginEdit
+            | Action::BeginEditInsert
             | Action::CyclePriority
             | Action::ToggleVisual
             | Action::ToggleSelected
@@ -863,6 +865,15 @@ fn apply_action(app: &mut App, action: Action) {
             {
                 app.selection.enter_edit(abs);
                 app.draft_set(raw);
+                app.mode = Mode::Insert;
+            }
+        }
+        Action::BeginEditInsert => {
+            if let Some(abs) = app.cur_abs()
+                && let Some(raw) = app.task_raw(abs)
+            {
+                app.selection.enter_edit(abs);
+                app.draft_set_insert(raw);
                 app.mode = Mode::Insert;
             }
         }
@@ -1022,7 +1033,7 @@ fn apply_action(app: &mut App, action: Action) {
                 && let Some(raw) = app.task_raw(abs)
             {
                 app.selection.enter_edit(abs);
-                app.draft_set(raw);
+                app.draft_set_insert(raw);
                 app.mode = Mode::Insert;
                 app.open_calendar(CalendarTarget::Due);
             }

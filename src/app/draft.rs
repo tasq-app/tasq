@@ -96,13 +96,15 @@ impl DraftState {
     }
 
     /// Replace the text and park the cursor at the end. Used when entering
-    /// edit mode or otherwise seeding the input from existing text.
-    pub fn set(&mut self, s: String) {
+    /// edit mode or otherwise seeding the input from existing text. The input
+    /// sub-mode is the caller's choice — `App::draft_set` (`e`) lands in
+    /// Normal mode, `App::draft_set_insert` (`i`) lands in Insert mode.
+    pub fn set(&mut self, s: String, mode: DialogInputMode) {
         self.cursor = DraftCursor::at_end(&s);
         self.text = s;
         self.reset_autocomplete();
         self.overlay = None;
-        self.input_mode = DialogInputMode::Normal;
+        self.input_mode = mode;
     }
 
     pub fn insert_char(&mut self, c: char) {
@@ -271,8 +273,16 @@ impl App {
         self.draft.clear();
     }
 
+    /// Seed the edit dialog and open it in Normal mode (`e`), so vim users can
+    /// navigate before changing anything.
     pub fn draft_set(&mut self, s: String) {
-        self.draft.set(s);
+        self.draft.set(s, DialogInputMode::Normal);
+    }
+
+    /// Seed the edit dialog and open it in Insert mode (`i`), for immediate
+    /// typing without the vim modal step.
+    pub fn draft_set_insert(&mut self, s: String) {
+        self.draft.set(s, DialogInputMode::Insert);
     }
 
     pub fn draft_insert_char(&mut self, c: char) {
@@ -339,7 +349,24 @@ fn next_char_boundary(s: &str, i: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
+    use super::DialogInputMode;
     use crate::app::test_support::build_app;
+
+    #[test]
+    fn draft_set_opens_in_normal_mode() {
+        // `e` seeds the edit dialog in Normal mode for vim-style navigation.
+        let mut app = build_app("");
+        app.draft_set("hello".into());
+        assert_eq!(app.draft.input_mode(), DialogInputMode::Normal);
+    }
+
+    #[test]
+    fn draft_set_insert_opens_in_insert_mode() {
+        // `i` seeds the edit dialog in Insert mode for immediate typing.
+        let mut app = build_app("");
+        app.draft_set_insert("hello".into());
+        assert_eq!(app.draft.input_mode(), DialogInputMode::Insert);
+    }
 
     #[test]
     fn draft_left_right_navigates_within_text() {
