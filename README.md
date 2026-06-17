@@ -176,8 +176,10 @@ Both the TUI and the CLI resolve the todo file the same way, in order:
 2. `$TODO_FILE`, if set.
 3. `$TODO_DIR/todo.txt`, if `$TODO_DIR` is set.
 4. `./todo.txt` in the current directory, if it exists.
-5. Otherwise a sample todo.txt in the system temp directory, so you can poke
-   around without committing to a path.
+5. Otherwise the TUI shows a first-run prompt — press `c` to create
+   `./todo.txt` here, or `s` to open a sample todo.txt in the system temp
+   directory so you can poke around without committing to a path. (The
+   one-shot CLI is non-interactive and uses the sample directly.)
 
 The archive file is `$DONE_FILE` if set, otherwise a sibling `done.txt` next
 to the todo file. The file (and any missing parent directories) is created on
@@ -278,7 +280,8 @@ half_page_up   = "Ctrl-u"
 
 # Editing
 begin_add            = "n"
-begin_edit           = ["e", "i"]
+begin_edit           = "e"
+begin_edit_insert    = "i"
 toggle_complete      = "x"
 delete               = "dd"
 reschedule           = "r"
@@ -348,7 +351,8 @@ chords like `ZZ`, modifier forms like `Ctrl-n` / `Alt-x`, named keys like
 | Key | Action |
 | --- | --- |
 | `n` | add task |
-| `e` / `i` | edit current task (opens in Normal mode — see [Edit dialog](#edit-dialog)) |
+| `e` | edit current task in Normal mode (see [Edit dialog](#edit-dialog)) |
+| `i` | edit current task in Insert mode (see [Edit dialog](#edit-dialog)) |
 | `x` | toggle complete |
 | `dd` | delete task |
 | `p` | cycle priority A → B → C → · |
@@ -360,9 +364,12 @@ chords like `ZZ`, modifier forms like `Ctrl-n` / `Alt-x`, named keys like
 
 ### Edit dialog
 
-The edit dialog (`e` / `i`) uses vim-style modal editing. It opens in **Normal
-mode** so you can navigate before changing anything. The add prompt (`n`) opens
-directly in **Insert mode** — start typing immediately.
+The edit dialog uses vim-style modal editing. Press `i` to edit the current task
+starting in **Insert mode** — start typing immediately. Press `e` to start in
+**Normal mode** so you can navigate before changing anything. The add prompt
+(`n`) also opens directly in Insert mode.
+
+The modal keys below apply in Normal mode:
 
 | Key | Action |
 | --- | --- |
