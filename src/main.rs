@@ -215,7 +215,6 @@ fn run(mut terminal: DefaultTerminal, app: &mut App, keybinds: &KeyBindings) -> 
                 // otherwise the screen stays stale until the next keystroke.
                 Event::Resize(_, _) => {
                     dirty = true;
-                    continue;
                 }
                 _ => {}
             }
