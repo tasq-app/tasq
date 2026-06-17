@@ -1,5 +1,6 @@
 ---
 source: tests/snapshots.rs
+assertion_line: 226
 expression: buffer_to_text(&buf)
 ---
  FILTERS                   ▶▮◀ /tmp/tuxedo-snapshot.txt  •  15 tas DETAIL                           
@@ -12,12 +13,13 @@ expression: buffer_to_text(&buf)
    +learning        │ > █                                                      │                    
    +personal        │──────────────────────────────────────────────────────────│                    
    +travel          │ ▶ new task                                             n │                    
-                    │   edit current task                                e / i │1 Finish Q2 board   
- CONTEXTS           │   toggle complete                                      x │aptop               
-   @errands         │   delete task                                         dd │6                   
-   @home            │   cycle priority                                       p │                    
-   @laptop          │   add project to current task                          + │                    
-   @phone           │   add or remove context on current task                c │                    
+                    │   edit current task (normal mode)                      e │1 Finish Q2 board   
+ CONTEXTS           │   edit current task (insert mode)                      i │aptop               
+   @errands         │   toggle complete                                      x │6                   
+   @home            │   delete task                                         dd │                    
+   @laptop          │   cycle priority                                       p │                    
+   @phone           │   add project to current task                          + │                    
+                    │   add or remove context on current task                c │                    
                     │   copy line to clipboard                              yy │                    
                     │   copy body to clipboard                              yb │                    
                     │   undo                                                 u │                    
@@ -25,7 +27,6 @@ expression: buffer_to_text(&buf)
                     │   cursor up                                        k / ↑ │                    
                     │   jump to first task                                  gg │                    
                     │   jump to last task                                    G │                    
-                    │   page down                                       Ctrl-d │                    
                     │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
                     └──────────────────────────────────────────────────────────┘                    
                                                                                                     

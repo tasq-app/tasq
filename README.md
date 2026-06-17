@@ -278,7 +278,8 @@ half_page_up   = "Ctrl-u"
 
 # Editing
 begin_add            = "n"
-begin_edit           = ["e", "i"]
+begin_edit           = "e"
+begin_edit_insert    = "i"
 toggle_complete      = "x"
 delete               = "dd"
 reschedule           = "r"
@@ -348,7 +349,8 @@ chords like `ZZ`, modifier forms like `Ctrl-n` / `Alt-x`, named keys like
 | Key | Action |
 | --- | --- |
 | `n` | add task |
-| `e` / `i` | edit current task (opens in Normal mode — see [Edit dialog](#edit-dialog)) |
+| `e` | edit current task in Normal mode (see [Edit dialog](#edit-dialog)) |
+| `i` | edit current task in Insert mode (see [Edit dialog](#edit-dialog)) |
 | `x` | toggle complete |
 | `dd` | delete task |
 | `p` | cycle priority A → B → C → · |
@@ -360,9 +362,12 @@ chords like `ZZ`, modifier forms like `Ctrl-n` / `Alt-x`, named keys like
 
 ### Edit dialog
 
-The edit dialog (`e` / `i`) uses vim-style modal editing. It opens in **Normal
-mode** so you can navigate before changing anything. The add prompt (`n`) opens
-directly in **Insert mode** — start typing immediately.
+The edit dialog uses vim-style modal editing. Press `i` to edit the current task
+starting in **Insert mode** — start typing immediately. Press `e` to start in
+**Normal mode** so you can navigate before changing anything. The add prompt
+(`n`) also opens directly in Insert mode.
+
+The modal keys below apply in Normal mode:
 
 | Key | Action |
 | --- | --- |
