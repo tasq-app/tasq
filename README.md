@@ -5,7 +5,7 @@ Vim-style bindings, atomic writes, instant external-edit detection, and five
 hand-tuned themes — all in a single static binary.
 
 ```sh
-brew install webstonehq/tap/tuxedo
+brew install tuxedo
 ```
 
 [![CI](https://github.com/webstonehq/tuxedo/actions/workflows/ci.yml/badge.svg)](https://github.com/webstonehq/tuxedo/actions/workflows/ci.yml)
@@ -121,7 +121,7 @@ another theme is skipped with a warning at startup.
 ### Homebrew (macOS, Linux)
 
 ```sh
-brew install webstonehq/tap/tuxedo
+brew install tuxedo
 ```
 
 ### Prebuilt binaries
