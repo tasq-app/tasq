@@ -1,0 +1,38 @@
+# Catppuccin Frappé theme for Tuxedo
+# Original Catppuccin palette: https://catppuccin.com
+# Tuxedo theme adaptation by github.com/jman223
+
+name = "Catppuccin Frappé"
+
+bg = "#303446"
+panel = "#292c3c"
+border = "#51576d"
+
+fg = "#c6d0f5"
+dim = "#838ba7"
+accent = "#ca9ee6"
+
+cursor = "#414559"
+selection = "#51576d"
+selected = "#51576d"
+
+statusbar = "#232634"
+status_fg = "#c6d0f5"
+mode_fg = "#232634"
+mode_bg = "#ca9ee6"
+
+pri_a = "#e78284"
+pri_b = "#ef9f76"
+pri_c = "#e5c890"
+pri_d = "#a6d189"
+pri_other = "#8caaee"
+
+project = "#8caaee"
+context = "#81c8be"
+
+due = "#e5c890"
+overdue = "#e78284"
+today = "#ef9f76"
+
+done = "#737994"
+matched = "#f4b8e4"
