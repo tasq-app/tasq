@@ -108,7 +108,7 @@ pub fn parse_line(raw: &str) -> Result<Task, ParseError> {
         due,
         rec,
         threshold,
-        notes
+        notes,
     })
 }
 
@@ -196,8 +196,7 @@ fn find_quoted_kv(s: &str, key: &str) -> Vec<String> {
             return vec![];
         }
     }
-    if !is_valid_key(key)
-    {
+    if !is_valid_key(key) {
         return vec![];
     }
     let v_st = st + culprit.len();
@@ -205,10 +204,7 @@ fn find_quoted_kv(s: &str, key: &str) -> Vec<String> {
     let Some(end) = rest.find('"') else {
         return vec![];
     };
-    let v = rest[..end].to_string();
-    return v.split(". ")
-        .map(str::to_owned)
-        .collect()
+    rest[..end].split(". ").map(str::to_owned).collect()
 }
 
 fn is_valid_key(k: &str) -> bool {
@@ -431,15 +427,15 @@ pub fn body_after_quoted_kv(raw: &str) -> String {
     while let Some(st) = body.find(r#":""#) {
         let before = &body[..st];
         let after = &body[st + 2..];
-        let st_key = before.rfind(char::is_whitespace)
+        let st_key = before
+            .rfind(char::is_whitespace)
             .map(|i| i + 1)
             .unwrap_or(0);
         if let Some(second_aps) = after.find('"') {
-            let after = after[second_aps+ 1..].trim_start();
+            let after = after[second_aps + 1..].trim_start();
             body = format!("{}{}", &before[..st_key], after);
-        }
-        else {
-                break;
+        } else {
+            break;
         }
     }
     body.trim().to_string()
