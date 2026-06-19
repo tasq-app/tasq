@@ -15,6 +15,8 @@ brew install tuxedo
 
 ![tuxedo demo](docs/demo.gif)
 
+For a more in-depth walkthrough, please watch [this video](https://www.youtube.com/watch?v=mT1tg6SQ_Ag) by [@IogaMaster](https://github.com/IogaMaster).
+
 ## Highlights
 
 - **Pure todo.txt.** Reads and writes the [standard format](https://github.com/todotxt/todo.txt) — every line is plain text you can edit with anything else.
