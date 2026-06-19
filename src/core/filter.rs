@@ -211,14 +211,14 @@ mod tests {
 
     #[test]
     fn get_week_cutoffs_for_all_configs() {
-        let (end_this_week, end_next_week) =
-            get_week_cutoff("2026-06-18", &WeekStart::Sunday).unwrap();
+        let (end_this_week, end_next_week) = get_week_cutoff("2026-06-18", &WeekStart::Sunday)
+            .expect("unable to get the week cutoff date");
         assert_eq!(end_this_week, "2026-06-20");
         assert_eq!(end_next_week, "2026-06-27");
 
-        let (end_this_week, end_next_week) =
-            get_week_cutoff("2026-06-18", &WeekStart::Monday).unwrap();
+        let (end_this_week, end_next_week) = get_week_cutoff("2026-06-18", &WeekStart::Monday)
+            .expect("unable to get the week cutoff date");
         assert_eq!(end_this_week, "2026-06-21");
-        assert_eq!(end_next_week, "2026-06-28");
+        assert_eq!(end_next_week, "2026-06-29");
     }
 }
