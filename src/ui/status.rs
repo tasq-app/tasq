@@ -40,7 +40,9 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
 
     let hint = match app.mode {
         Mode::Insert => match app.draft.input_mode() {
-            DialogInputMode::Normal => "h/l navigate · w/b/e word · i/a insert · Enter save · Esc cancel",
+            DialogInputMode::Normal => {
+                "h/l navigate · w/b/e word · i/a insert · Enter save · Esc cancel"
+            }
             DialogInputMode::Insert => "Enter save · Esc normal",
         },
         Mode::Visual => "space toggle · x complete · dd delete · Esc cancel",
