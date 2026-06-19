@@ -825,6 +825,7 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('H') => Action::ToggleShowDone,
         KeyCode::Char('F') => Action::ToggleShowFuture,
         KeyCode::Esc => Action::EscapeStack,
+        KeyCode::Char('W') => Action::ChangeWeekStart,
         _ => return None,
     })
 }
@@ -1074,6 +1075,10 @@ fn apply_action(app: &mut App, action: Action) {
                 app.mode = Mode::Insert;
                 app.open_calendar(CalendarTarget::Due);
             }
+        }
+        Action::ChangeWeekStart => {
+            app.toggle_week_start_date();
+            app.recompute_visible();
         }
     }
 }
@@ -1488,5 +1493,11 @@ mod tests {
         assert!(app.draft.overlay().is_none());
         let task = app.tasks().last().expect("task added");
         assert_eq!(task.due.as_deref(), Some("2026-06-07"));
+    }
+
+    #[test]
+    fn capital_w_toggles_week_start() {
+        let mut app = build_app();
+        assert_eq!(resolve(&mut app, key('W')), Some(Action::ChangeWeekStart));
     }
 }

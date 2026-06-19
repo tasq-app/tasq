@@ -5,6 +5,7 @@
 
 use super::App;
 use super::types::AddOutcome;
+use crate::app::WeekStart;
 use crate::core::AddOutcome as CoreAdd;
 use crate::core::{
     ArchiveDeleteOutcome, ArchiveOutcome, CompleteOutcome, DeleteOutcome, EditOutcome,
@@ -216,11 +217,23 @@ impl App {
             ArchiveDeleteOutcome::Error(e) => self.flash(format!("delete failed: {e}")),
         }
     }
+
+    pub fn toggle_week_start_date(&mut self) {
+        let week_start = match self.week_start {
+            WeekStart::Sunday => WeekStart::Monday,
+            WeekStart::Monday => WeekStart::Sunday,
+        };
+
+        self.week_start = week_start
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::app::test_support::{build_app, test_path};
+    use crate::app::{
+        WeekStart,
+        test_support::{build_app, test_path},
+    };
 
     #[test]
     fn open_file_rebinds_path_body_and_resets_cursor() {
@@ -328,5 +341,14 @@ mod tests {
         assert_eq!(app.tasks().len(), 1);
         assert!(app.tasks()[0].raw.ends_with("Buy milk"));
         assert_eq!(app.flash_active(), Some("added"));
+    }
+
+    #[test]
+    fn test_toggling_week_start() {
+        let mut app = build_app("");
+        app.toggle_week_start_date();
+        assert_eq!(app.week_start, WeekStart::Monday);
+        app.toggle_week_start_date();
+        assert_eq!(app.week_start, WeekStart::Sunday);
     }
 }
