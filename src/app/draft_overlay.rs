@@ -565,10 +565,10 @@ impl App {
                 .unwrap_or("");
             NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()
         };
-        if let Some(date) = parsed_date {
-            if let Some(DraftOverlay::Calendar(s)) = self.draft.overlay_mut() {
-                s.focused = date;
-            }
+        if let Some(date) = parsed_date
+            && let Some(DraftOverlay::Calendar(s)) = self.draft.overlay_mut()
+        {
+            s.focused = date;
         }
     }
 }
