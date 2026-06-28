@@ -104,11 +104,20 @@ pub fn finalize_line(text: &str, today_str: &str) -> Result<todo::Task, todo::Pa
         return Ok(task);
     }
 
-    let body = todo::strip_priority(text);
+    // A creation date is only worth inserting when `today_str` is itself a
+    // valid ISO date. Callers may hand us a malformed `today` (see the
+    // defensive fallback in `Store::add_with`); splicing it in would push a
+    // bogus token into the body, so leave the line untouched instead.
+    if NaiveDate::parse_from_str(today_str, "%Y-%m-%d").is_err() {
+        return Ok(task);
+    }
+
+    let stripped = todo::strip_priority(text);
+    let body = stripped.trim_start();
     if todo::starts_with_iso_date(body) {
         return Ok(task);
     }
-    let prefix = &text[..text.len() - body.len()];
+    let prefix = &text[..text.len() - stripped.len()];
     todo::parse_line(&format!("{prefix}{today_str} {body}"))
 }
 
@@ -260,6 +269,14 @@ mod tests {
     }
 
     #[test]
+    fn finalize_normalizes_extra_space_after_priority() {
+        let task = finalize_line("(A)  urgent", "2026-05-13").unwrap();
+        assert_eq!(task.raw, "(A) 2026-05-13 urgent");
+        assert_eq!(task.priority, Some('A'));
+        assert_eq!(task.created_date.as_deref(), Some("2026-05-13"));
+    }
+
+    #[test]
     fn finalize_keeps_existing_date_after_priority() {
         let task = finalize_line("(C) 2026-04-01 already dated", "2026-05-13").unwrap();
         assert_eq!(task.raw, "(C) 2026-04-01 already dated");
@@ -279,6 +296,21 @@ mod tests {
         assert_eq!(task.raw, "(A) 1234-56-78 order parts");
         assert_eq!(task.priority, Some('A'));
         assert!(task.created_date.is_none());
+    }
+
+    #[test]
+    fn finalize_skips_injection_when_today_invalid() {
+        // A malformed `today` must not be spliced into the body. Priority-led
+        // lines (the path this change touches) and bare bodies alike are left
+        // verbatim rather than gaining a bogus token.
+        let task = finalize_line("(A) task", "not-a-date").unwrap();
+        assert_eq!(task.raw, "(A) task");
+        assert_eq!(task.priority, Some('A'));
+        assert!(task.created_date.is_none());
+
+        let bare = finalize_line("task", "not-a-date").unwrap();
+        assert_eq!(bare.raw, "task");
+        assert!(bare.created_date.is_none());
     }
 
     #[test]
