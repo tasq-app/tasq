@@ -74,7 +74,7 @@ fn sibling(todo_path: &Path, name: &str) -> PathBuf {
 }
 
 /// Full save pipeline for one free-text line: natural-language rewrite,
-/// creation-date prepend, validation. Returns the parsed [`todo::Task`]
+/// creation-date insertion, validation. Returns the parsed [`todo::Task`]
 /// ready to push onto `App::tasks`. Used by the inbox drain and the
 /// `tuxedo serve` POST handler.
 pub fn canonicalize_line(text: &str, today: NaiveDate) -> Result<todo::Task, todo::ParseError> {
