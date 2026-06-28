@@ -105,6 +105,9 @@ pub fn finalize_line(text: &str, today_str: &str) -> Result<todo::Task, todo::Pa
     }
 
     let body = todo::strip_priority(text);
+    if todo::starts_with_iso_date(body) {
+        return Ok(task);
+    }
     let prefix = &text[..text.len() - body.len()];
     todo::parse_line(&format!("{prefix}{today_str} {body}"))
 }
@@ -264,10 +267,18 @@ mod tests {
     }
 
     #[test]
-    fn finalize_treats_invalid_date_as_body() {
+    fn finalize_leaves_date_shaped_invalid_prefix_untouched() {
         let task = finalize_line("9999-99-99 bogus", "2026-05-13").unwrap();
-        assert_eq!(task.raw, "2026-05-13 9999-99-99 bogus");
-        assert_eq!(task.created_date.as_deref(), Some("2026-05-13"));
+        assert_eq!(task.raw, "9999-99-99 bogus");
+        assert!(task.created_date.is_none());
+    }
+
+    #[test]
+    fn finalize_leaves_invalid_date_after_priority_untouched() {
+        let task = finalize_line("(A) 1234-56-78 order parts", "2026-05-13").unwrap();
+        assert_eq!(task.raw, "(A) 1234-56-78 order parts");
+        assert_eq!(task.priority, Some('A'));
+        assert!(task.created_date.is_none());
     }
 
     #[test]
