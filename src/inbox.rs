@@ -92,10 +92,12 @@ pub fn canonicalize_line(text: &str, today: NaiveDate) -> Result<todo::Task, tod
 }
 
 /// The post-NL half of [`canonicalize_line`]: skip the natural-language
-/// rewrite (the caller has already produced canonical form) and just
-/// prepend a creation date if missing, then validate. The add-prompt's
-/// second-Enter save path uses this directly — the draft buffer is
-/// already canonical after the first-Enter preview.
+/// rewrite (the caller has already produced canonical form), then give the
+/// line a creation date if it lacks one. A done line, or one that already
+/// carries a creation date, is returned unchanged; otherwise today's date is
+/// inserted after any leading priority token and the result validated. The
+/// add-prompt's second-Enter save path uses this directly, since the draft
+/// buffer is already canonical after the first-Enter preview.
 pub fn finalize_line(text: &str, today_str: &str) -> Result<todo::Task, todo::ParseError> {
     let text = text.trim();
     let mut task = todo::parse_line(text)?;
