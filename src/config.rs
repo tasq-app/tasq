@@ -12,6 +12,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::app::WeekStart;
 use crate::app::{Density, Sort};
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -44,6 +45,7 @@ pub struct Config {
     /// task rows (list + archive). The line is stored on disk untouched;
     /// this only affects display. Serialized as `hide_keys = a, b, c`.
     pub hidden_keys: Vec<String>,
+    pub week_start: Option<WeekStart>,
 }
 
 impl Config {
@@ -154,6 +156,7 @@ fn parse(s: &str) -> Config {
                     .map(str::to_string)
                     .collect();
             }
+            "week_start" => c.week_start = v.parse().ok(),
             // Saved searches: `filter.<name> = <query>`. The name is the
             // (trimmed) text after the `filter.` prefix; the query is the
             // (unquoted) value, which may itself contain `=`. A repeated
@@ -217,6 +220,9 @@ fn serialize(c: &Config) -> String {
     if !c.hidden_keys.is_empty() {
         let _ = writeln!(out, "hide_keys = {}", c.hidden_keys.join(", "));
     }
+    if let Some(v) = c.week_start {
+        let _ = writeln!(out, "week_start = {v}");
+    }
     out
 }
 
@@ -260,6 +266,7 @@ mod tests {
                 ("waiting".into(), "@waiting due=2026".into()),
             ],
             hidden_keys: vec!["uid".into(), "sync".into()],
+            week_start: Some(WeekStart::Sunday),
         };
         let s = serialize(&c);
         let parsed = parse(&s);
@@ -413,6 +420,7 @@ mod tests {
             share_port: None,
             filters: vec![("errand".into(), "@errand".into())],
             hidden_keys: vec!["uid".into()],
+            week_start: Some(WeekStart::Sunday),
         };
         written.save_to(&path).expect("save should succeed");
         assert!(path.exists());

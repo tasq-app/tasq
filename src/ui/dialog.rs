@@ -5,7 +5,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
 use crate::app::{
-    App, BuilderField, CalendarTarget, DraftOverlay, Mode, REC_UNIT_ORDER, TokenKind,
+    App, BuilderField, CalendarTarget, DraftOverlay, Mode, REC_UNIT_ORDER, TokenKind, WeekStart,
 };
 use crate::theme::Theme;
 
@@ -80,6 +80,18 @@ pub(crate) fn classify_draft(s: &str) -> Vec<(std::ops::Range<usize>, SegmentKin
         }
         let start = i;
         while i < bytes.len() && !bytes[i].is_ascii_whitespace() {
+            // Detect a key-value pair with a quoted value, e.g. `note:"this is a note"`.
+            if i + 1 < bytes.len() && bytes[i] == b':' && bytes[i + 1] == b'"' {
+                let init_i = i + 2;
+                let mut j = init_i;
+                while j < bytes.len() && bytes[j] != b'"' {
+                    j += 1;
+                }
+                if j < bytes.len() {
+                    i = j + 1;
+                    break;
+                }
+            }
             i += 1;
         }
         let word = &s[start..i];
@@ -781,11 +793,18 @@ fn render_calendar(frame: &mut Frame, dlg: Rect, screen: Rect, app: &App) {
     .style(Style::default().bg(theme.panel));
     lines.push(header);
     // Weekday row.
-    let dow = Line::from(vec![
-        Span::raw("  "),
-        Span::styled("  S   M   T   W   T   F   S  ", Style::default().fg(theme.dim)),
-    ])
-    .style(Style::default().bg(theme.panel));
+    let dow_header = if app.week_start == WeekStart::Sunday {
+        Span::styled(
+            "  S  M   T   W   T   F   S  ",
+            Style::default().fg(theme.dim),
+        )
+    } else {
+        Span::styled(
+            "  M   T   W   T   F   S   S  ",
+            Style::default().fg(theme.dim),
+        )
+    };
+    let dow = Line::from(vec![Span::raw("  "), dow_header]).style(Style::default().bg(theme.panel));
     lines.push(dow);
     // Up to 6 week rows. Break before any all-blank row so February-style
     // months don't leave a trailing empty week.
@@ -800,7 +819,11 @@ fn render_calendar(frame: &mut Frame, dlg: Rect, screen: Rect, app: &App) {
             if pos < 0 || pos >= days_in_month as i64 {
                 spans.push(Span::styled("    ", Style::default().bg(theme.panel)));
             } else {
-                let n = (pos + 1) as u32;
+                let n = if app.week_start == WeekStart::Monday {
+                    (pos + 1) as u32
+                } else {
+                    (pos) as u32
+                };
                 let cell = NaiveDate::from_ymd_opt(focused.year(), focused.month(), n);
                 let is_today = today == cell;
                 let is_focus = focused.day() == n;

@@ -56,6 +56,7 @@ pub enum Action {
     OpenShare,
     /// Open the theme picker dialog (j/k to preview, Enter to accept).
     OpenThemePicker,
+    ChangeWeekStart,
 }
 
 impl Action {
@@ -106,6 +107,7 @@ impl Action {
             "escape_stack" | "escape" => Some(Self::EscapeStack),
             "open_share" | "share" => Some(Self::OpenShare),
             "open_theme_picker" | "theme_picker" => Some(Self::OpenThemePicker),
+            "change_week_start" => Some(Self::ChangeWeekStart),
             _ => None,
         }
     }
