@@ -610,6 +610,24 @@ impl App {
         }
     }
 
+    /// Apply a freshly loaded [`Config`] at runtime — used by the hot-reload
+    /// watcher. Rebuilds `prefs` and `saved_filters` from the new config
+    /// values, then refreshes the visible task cache so theme/density/sort/
+    /// layout changes take effect immediately.
+    pub fn reload_config(&mut self, new_cfg: Config) {
+        self.prefs = Prefs::from_config(new_cfg.clone());
+        self.saved_filters = new_cfg
+            .filters
+            .iter()
+            .map(|(name, query)| SavedFilter {
+                name: name.clone(),
+                query: query.clone(),
+            })
+            .collect();
+        self.week_start = new_cfg.week_start.unwrap_or(WeekStart::Sunday);
+        self.recompute_visible();
+    }
+
     /// Reconcile against disk and drain the inbox. Returns `true` when it is
     /// safe to proceed (disk unchanged); `false` when the file was reloaded or
     /// unreadable. The TUI run loop and `handle_key` call this each tick.

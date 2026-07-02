@@ -72,21 +72,21 @@ impl Config {
         }
     }
 
-    /// Write a config file to an explicit path. Atomic via tmp-then-rename.
-    ///
-    /// The temp filename is unique per call (pid + monotonic counter) so
-    /// concurrent saves — multiple TUI instances, or parallel tests
-    /// sharing the user's XDG path — don't clobber each other's in-flight
-    /// tmp file. Each writer's rename either succeeds or fails on its own
-    /// tmp, instead of the second one hitting NotFound because the first
-    /// already renamed away the shared tmp.
+    /// Write a config file to an explicit path. Writes directly through a
+    /// symlink when the path is one (preserving the link), otherwise uses
+    /// atomic tmp-then-rename so concurrent writers don't clobber each other.
     pub fn save_to(&self, path: &Path) -> io::Result<()> {
+        let body = serialize(self);
+        if path.is_symlink() {
+            // Write directly through the symlink to preserve it.
+            return fs::write(path, body);
+        }
+        // Atomic write: tmp-then-rename.
         use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-        let body = serialize(self);
         let stem = path
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
@@ -107,6 +107,14 @@ impl Config {
     pub fn path() -> Option<PathBuf> {
         let base = crate::xdg::config_home()?;
         Some(Self::path_in(&base))
+    }
+
+    /// Load config from an explicit path, returning an error on read or parse
+    /// failure instead of silently defaulting. Used by the hot-reload watcher
+    /// so a corrupt file at runtime doesn't reset prefs to defaults.
+    pub fn load_strict(path: &Path) -> Result<Self, String> {
+        let s = fs::read_to_string(path).map_err(|e| format!("cannot read config: {e}"))?;
+        Ok(parse(&s))
     }
 
     /// Construct the config path under an explicit XDG-style base directory.

@@ -6,6 +6,7 @@ pub mod cli;
 pub mod clipboard;
 pub mod cmd;
 pub mod config;
+pub mod config_watcher;
 pub mod core;
 pub mod inbox;
 pub mod keybinds;

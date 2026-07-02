@@ -29,7 +29,7 @@ For a more in-depth walkthrough, please watch [this video](https://www.youtube.c
 - **Sibling-file archive.** `A` moves completed tasks to `done.txt` next to your file, atomically.
 - **Filter, sort, multi-select.** Cycle by `+project` or `@context`, sort by priority / due / file order, and bulk-complete or bulk-delete in visual mode.
 - **Saved searches.** Name the active `/`-search with `fs`, then recall it any time by cycling saved filters with `ff`. Stored as plain `filter.<name>` lines in the config — hand-editable like everything else.
-- **Five themes, three densities.** Cycle with `T` and `D`. Choices persist across runs.
+- **Five themes, three densities.** Cycle with `T` and `D`. Choices persist across runs and hot-reload when you edit `config.toml` externally.
 - **No daemon, no database, no cloud.** One file in, one file out.
 
 ## Screens
@@ -555,6 +555,11 @@ Persisted to `${XDG_CONFIG_HOME:-$HOME/.config}/tuxedo/config.toml`. Cycling
 theme, density, or sort, and toggling sidebars / line-numbers / done-visibility
 all update the file. Unknown keys are ignored, so older binaries don't break
 on newer files.
+
+**Hot-reload.** Edits to `config.toml` are picked up while the TUI is running —
+change the theme, density, sort, layout, saved filters, or any other field and
+the UI updates within ~200 ms. Parse failures (e.g. a typo mid-edit) leave the
+running config intact and flash a warning in the status bar.
 
 Two additional keys, `share_token` and `share_port`, are written by the
 [phone capture](#phone-capture) server on first use. Treat `share_token`

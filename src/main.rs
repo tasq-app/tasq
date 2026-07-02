@@ -1,6 +1,7 @@
 #![warn(clippy::unwrap_used)]
 
 use std::io;
+use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
@@ -13,6 +14,7 @@ use tuxedo::action::Action;
 use tuxedo::app::{AddOutcome, App, CalendarTarget, DialogInputMode, Mode, OverlayKind, View};
 use tuxedo::cli;
 use tuxedo::config::Config;
+use tuxedo::config_watcher;
 use tuxedo::keybinds::{KeyBindings, ResolvedKey};
 use tuxedo::theme;
 use tuxedo::ui::hyperlinks;
@@ -88,6 +90,11 @@ fn main() -> Result<()> {
     let mut app_state = App::new_with_done(path.clone(), done, body, today, cfg);
     app_state.config_path = Config::path();
     app_state.mode = start_mode;
+    // Start the config hot-reload watcher.
+    let config_rx = app_state
+        .config_path
+        .as_ref()
+        .and_then(|p| config_watcher::spawn(p.clone()));
     // Surface theme-load problems on the first frame. Flash is single-line,
     // so collapse multiple warnings to a count and let the user investigate
     // their themes directory.
@@ -108,7 +115,7 @@ fn main() -> Result<()> {
     let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
     let title = ui::title::terminal_title(&path, home.as_deref(), ui::title::DEFAULT_BUDGET);
     let _ = crossterm::execute!(io::stdout(), crossterm::terminal::SetTitle(title));
-    let result = run(terminal, &mut app_state, &keybinds);
+    let result = run(terminal, &mut app_state, &keybinds, config_rx);
     ratatui::restore();
     // Clear the title on exit so the shell retitles on its next prompt rather
     // than leaving `tuxedo …` behind.
@@ -167,7 +174,12 @@ fn print_usage() {
     println!("  DONE_FILE    path to the archive file (default sibling done.txt)");
 }
 
-fn run(mut terminal: DefaultTerminal, app: &mut App, keybinds: &KeyBindings) -> Result<()> {
+fn run(
+    mut terminal: DefaultTerminal,
+    app: &mut App,
+    keybinds: &KeyBindings,
+    config_rx: Option<mpsc::Receiver<()>>,
+) -> Result<()> {
     let mut dirty = true;
     while !app.should_quit {
         // Pick up midnight rollover so threshold-hidden tasks reveal
@@ -184,6 +196,12 @@ fn run(mut terminal: DefaultTerminal, app: &mut App, keybinds: &KeyBindings) -> 
         // Pick up the update-check result so the status-bar indicator can
         // appear without waiting for a keystroke.
         if app.poll_update_check() {
+            dirty = true;
+        }
+        // Poll the config hot-reload watcher. On signal, reload strictly
+        // and apply the new prefs. On parse failure the old config stays
+        // intact and a warning is flashed.
+        if poll_config_reload(app, &config_rx) {
             dirty = true;
         }
         if dirty {
@@ -232,6 +250,34 @@ fn run(mut terminal: DefaultTerminal, app: &mut App, keybinds: &KeyBindings) -> 
         }
     }
     Ok(())
+}
+
+/// Poll the config watcher channel. On signal, reload config strictly and
+/// apply it to the app. Returns `true` when a reload was attempted (whether
+/// successful or not) so the caller can trigger a redraw.
+fn poll_config_reload(app: &mut App, rx: &Option<mpsc::Receiver<()>>) -> bool {
+    let rx = match rx {
+        Some(r) => r,
+        None => return false,
+    };
+    match rx.try_recv() {
+        Ok(()) | Err(mpsc::TryRecvError::Disconnected) => {}
+        Err(mpsc::TryRecvError::Empty) => return false,
+    }
+    let Some(ref path) = app.config_path else {
+        return true;
+    };
+    match Config::load_strict(path) {
+        Ok(new_cfg) => {
+            app.reload_config(new_cfg);
+            app.flash("config reloaded");
+            true
+        }
+        Err(e) => {
+            app.flash(format!("config reload failed: {e}"));
+            true
+        }
+    }
 }
 
 fn next_timeout(app: &App) -> Duration {
