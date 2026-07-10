@@ -280,6 +280,9 @@ fn poll_config_reload(app: &mut App, rx: &Option<mpsc::Receiver<()>>) -> bool {
             app.flash(format!("config reload failed: {e}"));
             true
         }
+    }
+}
+
 fn open_path_in_editor(path: &std::path::Path) -> Result<()> {
     let editor = std::env::var("VISUAL")
         .or_else(|_| std::env::var("EDITOR"))
