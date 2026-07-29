@@ -37,9 +37,12 @@ impl App {
     }
 
     fn rebuild_list_cache(&mut self) {
-        let needle = (!self.filter.search.is_empty()).then_some(self.filter.search.as_str());
         let tasks = self.store.tasks();
         let today = self.store.today();
+        // Resolved once, not per task — a `due:` term can drive a
+        // business-day walk in `threshold::shift`.
+        let needle = (!self.filter.search.is_empty())
+            .then(|| filter::resolve_needle(&self.filter.search, today));
 
         let mut idxs: Vec<usize> = (0..tasks.len())
             .filter(|&i| {
@@ -49,7 +52,7 @@ impl App {
                     self.prefs.show_future,
                     today,
                     &self.filter,
-                    needle,
+                    needle.as_ref(),
                 )
             })
             .collect();
@@ -141,6 +144,15 @@ mod tests {
         app.filter.search = "2026".into();
         app.recompute_visible();
         assert_eq!(app.visible_indices().len(), 0);
+    }
+
+    #[test]
+    fn search_due_range_matches_by_due_field_not_literal_text() {
+        let mut app =
+            build_app("in range due:2026-05-10\nout of range due:2026-05-20\nno due date here\n");
+        app.filter.search = "due:+1w".into();
+        app.recompute_visible();
+        assert_eq!(app.visible_indices().len(), 1);
     }
 
     #[test]

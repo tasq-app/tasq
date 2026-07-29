@@ -75,7 +75,7 @@ const FORMAT: Section = (
         ("YYYY-MM-DD", "creation / done date"),
         ("+project", "project tag(s)"),
         ("@context", "context tag(s)"),
-        ("due:YYYY-MM-DD", "due date"),
+        ("due:YYYY-MM-DD", "due date (+1w = range)"),
         ("rec:Nu", "recur (u in d/w/m/y/b)"),
         ("rec:+Nu", "strict: anchor on due:"),
         ("x DATE BODY", "completed task prefix"),

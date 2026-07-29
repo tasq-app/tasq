@@ -5,6 +5,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 
 use crate::app::{App, GroupKey, ListDueBucket, Mode, View};
+use crate::core::filter;
 use crate::theme::Theme;
 use crate::ui::{header, keep_cursor_visible, task_row};
 
@@ -38,6 +39,14 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         crate::ui::empty::render(frame, body_area, app);
         return;
     }
+
+    // Highlight only the free-text part — a `due:` term filters by date and
+    // never appears verbatim in the body.
+    let resolved_needle = (!app.filter.search.is_empty())
+        .then(|| filter::resolve_needle(&app.filter.search, app.today()));
+    let match_term: Option<&str> = resolved_needle
+        .as_ref()
+        .and_then(|n| (!n.text.is_empty()).then_some(n.text.as_str()));
 
     let visible = app.visible_indices();
     let groups = app.visible_groups();
@@ -75,11 +84,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                 multi_checked: app.selection.is_selected(abs),
                 selected: app.selection.is_selected(abs),
                 show_line_num: app.prefs.layout.line_num,
-                match_term: if app.filter.search.is_empty() {
-                    None
-                } else {
-                    Some(&app.filter.search)
-                },
+                match_term,
                 today: app.today(),
                 hidden_keys: &app.prefs.hidden_keys,
             };
