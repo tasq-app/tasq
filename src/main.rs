@@ -316,6 +316,11 @@ fn next_timeout(app: &App) -> Duration {
     }
 }
 
+fn is_exit_key(key: KeyEvent) -> bool {
+    key.code == KeyCode::Char('q')
+        || (key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL)
+}
+
 fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     // Detect external edits before processing the key. On detection the
     // file is reloaded, the keystroke is consumed (re-press to act on the
@@ -345,6 +350,11 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
 /// without creating anything. Any other key is ignored so a stray press
 /// doesn't silently pick an option.
 fn handle_welcome(app: &mut App, key: KeyEvent) {
+    if is_exit_key(key) {
+        app.should_quit = true;
+        return;
+    }
+
     match key.code {
         KeyCode::Char('c') => match cli::ensure_file(app.file_path.clone()) {
             Ok(_) => app.mode = Mode::Normal,
@@ -359,7 +369,7 @@ fn handle_welcome(app: &mut App, key: KeyEvent) {
             }
             Err(e) => app.flash(format!("could not open sample: {e}")),
         },
-        KeyCode::Char('q') | KeyCode::Esc => app.should_quit = true,
+        KeyCode::Esc => app.should_quit = true,
         _ => {}
     }
 }
@@ -780,19 +790,13 @@ fn handle_search(app: &mut App, key: KeyEvent) {
 }
 
 fn handle_help(app: &mut App, key: KeyEvent) {
-    if matches!(
-        key.code,
-        KeyCode::Esc | KeyCode::Char('?') | KeyCode::Char('q')
-    ) {
+    if is_exit_key(key) || matches!(key.code, KeyCode::Esc | KeyCode::Char('?')) {
         app.mode = Mode::Normal;
     }
 }
 
 fn handle_settings(app: &mut App, key: KeyEvent) {
-    if matches!(
-        key.code,
-        KeyCode::Esc | KeyCode::Char(',') | KeyCode::Char('q')
-    ) {
+    if is_exit_key(key) || matches!(key.code, KeyCode::Esc | KeyCode::Char(',')) {
         app.mode = Mode::Normal;
     }
 }
@@ -948,6 +952,10 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         None => {}
     }
 
+    if is_exit_key(key) {
+        return Some(Action::Quit);
+    }
+
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
     if ctrl {
         return match key.code {
@@ -958,7 +966,6 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         };
     }
     Some(match key.code {
-        KeyCode::Char('q') => Action::Quit,
         KeyCode::Char('j') | KeyCode::Down => Action::CursorDown,
         KeyCode::Char('k') | KeyCode::Up => Action::CursorUp,
         KeyCode::Char('G') => Action::CursorBottom,
