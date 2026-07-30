@@ -19,7 +19,7 @@ pub const HEIGHT: u16 = 16;
 const CHOICES: &[(&str, &str)] = &[
     ("c", "create ./todo.txt here"),
     ("s", "open the sample"),
-    ("q", "quit"),
+    ("q / Ctrl-c", "quit"),
 ];
 
 /// Render the welcome box, filling `area`. The caller is responsible for
@@ -58,7 +58,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         lines.push(Line::from(vec![
             Span::raw("   "),
             Span::styled(
-                pad_key(k, 4),
+                pad_key(k, 12),
                 Style::default()
                     .fg(theme.context)
                     .add_modifier(Modifier::BOLD),
