@@ -1,5 +1,6 @@
 ---
 source: tests/snapshots.rs
+assertion_line: 226
 expression: buffer_to_text(&buf)
 ---
  FILTERS                   ▶▮◀ /tmp/tuxedo-snapshot.txt  •  15 tas DETAIL                           
@@ -24,7 +25,7 @@ expression: buffer_to_text(&buf)
      │    yy                copy line to clipboard    : / Ctrl-P        command palette       │     
      │    yb                copy body only            s                 share capture QR      │     
      │    u                 undo                      ? / ,             help / settings       │     
-     │                                                q                 quit                  │     
+     │                                                q / Ctrl-c        quit                  │     
      │────────────────────────────────────────────────────────────────────────────────────────│     
      │  FORMAT                                                                                │     
      │    (A)               priority A-Z              due:YYYY-MM-DD    due date              │     

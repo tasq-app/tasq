@@ -1,5 +1,6 @@
 ---
 source: tests/snapshots.rs
+assertion_line: 226
 expression: buffer_to_text(&buf)
 ---
  FILTERS                   ▶▮◀ /tmp/tuxedo-snapshot.txt  •  0 task DETAIL                           
@@ -19,9 +20,9 @@ expression: buffer_to_text(&buf)
                       │                                                      │                      
                       │  no todo.txt in this folder yet                      │                      
                       │                                                      │                      
-                      │   c   create ./todo.txt here                         │                      
-                      │   s   open the sample                                │                      
-                      │   q   quit                                           │                      
+                      │   c           create ./todo.txt here                 │                      
+                      │   s           open the sample                        │                      
+                      │   q / Ctrl-c  quit                                   │                      
                       │                                                      │                      
                       │                                                      │                      
                       │                                                      │                      
