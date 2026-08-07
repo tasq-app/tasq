@@ -409,6 +409,10 @@ The modal keys below apply in Normal mode:
 | `o` | open the current task's existing `note:<path>` in `$VISUAL` / `$EDITOR` |
 | `O` | create the current task's note if needed, then open it |
 
+While a `+project` or `@context` filter is active, `n` seeds the add prompt
+with the matching tags so a task added under a filter stays in view —
+backspace to drop them. A `/`-search filter seeds nothing.
+
 ### Layout & theme
 
 | Key | Action |

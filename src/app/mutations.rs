@@ -59,7 +59,11 @@ impl App {
 
     pub fn add_from_draft(&mut self) -> AddOutcome {
         let text = self.draft.text().trim().to_string();
-        if text.is_empty() {
+        // A draft still holding nothing but the filter seed carries no task —
+        // treat it as empty so `n` + Enter under a filter stays the silent
+        // no-op it is without one. Inert when nothing is filtered: `tag_seed`
+        // is empty and `text` is already known not to be.
+        if text.is_empty() || text == self.filter.tag_seed().trim_end() {
             return AddOutcome::Empty;
         }
 
@@ -463,6 +467,29 @@ mod tests {
         assert_eq!(app.tasks().len(), 1);
         assert!(app.tasks()[0].raw.ends_with("Buy milk"));
         assert_eq!(app.flash_active(), Some("added"));
+    }
+
+    #[test]
+    fn add_from_draft_ignores_untouched_filter_seed() {
+        let mut app = build_app("a +work\n");
+        app.set_project_filter(Some("work".to_string()));
+        app.draft_set(app.filter().tag_seed());
+        let outcome = app.add_from_draft();
+        assert_eq!(outcome, crate::app::AddOutcome::Empty);
+        assert_eq!(app.tasks().len(), 1, "no bodyless +work task may be saved");
+        assert_eq!(app.flash_active(), None, "the no-op must stay silent");
+    }
+
+    #[test]
+    fn add_from_draft_saves_a_body_typed_after_the_seed() {
+        let mut app = build_app("a +work\n");
+        app.set_project_filter(Some("work".to_string()));
+        app.draft_set(format!("{}Buy milk", app.filter().tag_seed()));
+        let outcome = app.add_from_draft();
+        assert_eq!(outcome, crate::app::AddOutcome::Saved);
+        assert_eq!(app.tasks().len(), 2);
+        assert_eq!(app.tasks()[1].projects, vec!["work"]);
+        assert!(app.tasks()[1].raw.ends_with("+work Buy milk"));
     }
 
     #[test]

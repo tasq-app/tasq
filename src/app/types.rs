@@ -147,6 +147,16 @@ impl Filter {
         self.project.is_some() || self.context.is_some() || !self.search.is_empty()
     }
 
+    /// The active `+project` / `@context` tags as an add-prompt prefix, with
+    /// a trailing space; empty when neither is set. A task added under a
+    /// filter that doesn't carry its tags drops out of the view the moment it
+    /// saves. `search` contributes nothing — it is a needle, not a tag.
+    pub fn tag_seed(&self) -> String {
+        let project = self.project.as_deref().map(|p| format!("+{p} "));
+        let context = self.context.as_deref().map(|c| format!("@{c} "));
+        project.unwrap_or_default() + &context.unwrap_or_default()
+    }
+
     /// Drop every filter component back to its empty state.
     pub fn clear(&mut self) {
         self.project = None;
@@ -162,4 +172,38 @@ impl Filter {
 pub struct SavedFilter {
     pub name: String,
     pub query: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Filter;
+
+    #[test]
+    fn tag_seed_is_empty_without_project_or_context() {
+        let filter = Filter {
+            search: "milk".to_string(),
+            ..Filter::default()
+        };
+        assert_eq!(filter.tag_seed(), "", "a search needle is not a tag");
+    }
+
+    #[test]
+    fn tag_seed_leads_with_project_then_context() {
+        let filter = Filter {
+            project: Some("work".to_string()),
+            context: Some("home".to_string()),
+            search: String::new(),
+        };
+        // Trailing space: the seed is a prefix the body gets typed after.
+        assert_eq!(filter.tag_seed(), "+work @home ");
+    }
+
+    #[test]
+    fn tag_seed_covers_a_single_active_filter() {
+        let filter = Filter {
+            context: Some("home".to_string()),
+            ..Filter::default()
+        };
+        assert_eq!(filter.tag_seed(), "@home ");
+    }
 }
