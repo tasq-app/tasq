@@ -1441,7 +1441,11 @@ mod tests {
             theme_before,
             "`T` must cycle the theme, per the settings screen's own hint"
         );
-        assert_eq!(app.mode, Mode::Settings, "adjusting a setting must not close the dialog");
+        assert_eq!(
+            app.mode,
+            Mode::Settings,
+            "adjusting a setting must not close the dialog"
+        );
 
         let show_done_before = app.prefs.show_done;
         handle_settings(&mut app, key('H'));
@@ -1487,7 +1491,7 @@ mod tests {
         let previewed = app.prefs.theme_idx();
 
         let (tx, rx) = mpsc::channel();
-        tx.send(()).unwrap();
+        tx.send(()).expect("test channel receiver is alive");
         let rx = Some(rx);
 
         assert!(
