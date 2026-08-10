@@ -49,6 +49,11 @@ pub struct Config {
     /// this only affects display. Serialized as `hide_keys = a, b, c`.
     pub hidden_keys: Vec<String>,
     pub week_start: Option<WeekStart>,
+    /// Whether typing `rec:` (or picking `/rec`) inside the create/edit
+    /// dialog opens the recurrence builder overlay. `false` keeps the
+    /// dialog a single plain text field — `rec:` is typed by hand. Defaults
+    /// to `true`. Serialized as `recurrence_builder = false`.
+    pub recurrence_builder: Option<bool>,
 }
 
 impl Config {
@@ -169,6 +174,7 @@ fn parse(s: &str) -> Config {
                     .collect();
             }
             "week_start" => c.week_start = v.parse().ok(),
+            "recurrence_builder" => c.recurrence_builder = parse_bool(v),
             // Saved searches: `filter.<name> = <query>`. The name is the
             // (trimmed) text after the `filter.` prefix; the query is the
             // (unquoted) value, which may itself contain `=`. A repeated
@@ -238,6 +244,9 @@ fn serialize(c: &Config) -> String {
     if let Some(v) = c.week_start {
         let _ = writeln!(out, "week_start = {v}");
     }
+    if let Some(v) = c.recurrence_builder {
+        let _ = writeln!(out, "recurrence_builder = {v}");
+    }
     out
 }
 
@@ -283,6 +292,7 @@ mod tests {
             notes_dir: Some("~/notes".into()),
             hidden_keys: vec!["uid".into(), "sync".into()],
             week_start: Some(WeekStart::Sunday),
+            recurrence_builder: Some(false),
         };
 
         let s = serialize(&c);
@@ -439,6 +449,7 @@ mod tests {
             notes_dir: Some("/tmp/notes".into()),
             hidden_keys: vec!["uid".into()],
             week_start: Some(WeekStart::Sunday),
+            recurrence_builder: Some(false),
         };
         written.save_to(&path).expect("save should succeed");
         assert!(path.exists());

@@ -9,13 +9,14 @@ use crate::theme::Theme;
 
 type Section = (&'static str, &'static [(&'static str, &'static str)]);
 
+// Opposed key pairs share a row. The overlay is height-bound (it fills a
+// 32-row terminal exactly), so pairing is what buys the room for RECURRENCE
+// without pushing FORMAT off the bottom.
 const NAVIGATION: Section = (
     "NAVIGATION",
     &[
-        ("j / ↓", "next task"),
-        ("k / ↑", "previous task"),
-        ("gg", "first task"),
-        ("G", "last task"),
+        ("j / k  (↓ / ↑)", "next / previous task"),
+        ("gg / G", "first / last task"),
         ("Ctrl-d / Ctrl-u", "page down / up"),
     ],
 );
@@ -24,17 +25,26 @@ const EDITING: Section = (
     "EDITING",
     &[
         ("n", "new task"),
-        ("e", "edit line (normal)"),
-        ("i", "edit line (insert)"),
+        ("e / i", "edit (normal / insert)"),
         ("r", "reschedule task"),
         ("x", "toggle complete"),
         ("dd", "delete task"),
         ("p", "cycle priority A→B→C→·"),
         ("c", "add/remove context"),
         ("+", "add project"),
-        ("yy", "copy line to clipboard"),
-        ("yb", "copy body only"),
+        ("yy / yb", "copy line / body"),
         ("u", "undo"),
+    ],
+);
+
+/// Motions inside the `↻ REPEAT` overlay that `rec:` opens in the create/edit
+/// dialog. Rebindable under `[recurrence]` in `keybinds.toml`.
+const RECURRENCE: Section = (
+    "RECURRENCE (rec:)",
+    &[
+        ("j / k / Tab", "next / prev field"),
+        ("h / l / + / -", "change value"),
+        ("Enter / Esc", "save / cancel"),
     ],
 );
 
@@ -52,7 +62,7 @@ const VIEW: Section = (
         ("H", "show done in list"),
         ("F", "show future in list"),
         ("[ / ]", "toggle filter / detail"),
-        ("T", "cycle theme"),
+        ("T", "theme picker"),
         ("D", "cycle density"),
         ("L", "toggle line numbers"),
     ],
@@ -106,7 +116,12 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     // Keybindings (top, two columns) — divider — Format (bottom, two columns).
     // Each half splits sections across left/right; the last section in each
     // column drops its trailing blank so the divider lands tight.
-    let kb_lines = two_columns(theme, inner.width, &[NAVIGATION, EDITING], &[VIEW, SYSTEM]);
+    let kb_lines = two_columns(
+        theme,
+        inner.width,
+        &[NAVIGATION, EDITING, RECURRENCE],
+        &[VIEW, SYSTEM],
+    );
     let kb_height = u16::try_from(kb_lines.len()).unwrap_or(u16::MAX);
 
     let (fmt_left, fmt_right) = FORMAT.1.split_at(FORMAT.1.len().div_ceil(2));

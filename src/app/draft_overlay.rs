@@ -246,7 +246,11 @@ impl App {
                         self.open_calendar_anchored(CalendarTarget::Threshold, Some(key_start));
                     }
                     KvKind::Rec => {
-                        self.open_recurrence_builder_anchored(Some(key_start));
+                        // Opt-out: with the builder disabled, `rec:` stays a
+                        // plain typed token and no overlay steals the keys.
+                        if self.prefs.recurrence_builder {
+                            self.open_recurrence_builder_anchored(Some(key_start));
+                        }
                     }
                 }
                 return;
@@ -373,14 +377,24 @@ impl App {
         match kind {
             SlashKind::Due => self.open_calendar(CalendarTarget::Due),
             SlashKind::Threshold => self.open_calendar(CalendarTarget::Threshold),
-            SlashKind::Recurrence => self.open_recurrence_builder(),
+            // With the builder disabled the entry still does something useful:
+            // drop the bare `rec:` key in so the value can be typed by hand.
+            SlashKind::Recurrence => {
+                if self.prefs.recurrence_builder {
+                    self.open_recurrence_builder();
+                } else {
+                    self.insert_token_at_cursor("rec:");
+                }
+            }
             SlashKind::Priority => self.open_priority_chooser(),
-            SlashKind::Project => self.insert_sigil_at_cursor('+'),
-            SlashKind::Context => self.insert_sigil_at_cursor('@'),
+            SlashKind::Project => self.insert_token_at_cursor("+"),
+            SlashKind::Context => self.insert_token_at_cursor("@"),
         }
     }
 
-    fn insert_sigil_at_cursor(&mut self, sigil: char) {
+    /// Insert `token` at the cursor, prefixing a space when the preceding
+    /// char isn't whitespace so the token stays whitespace-delimited.
+    fn insert_token_at_cursor(&mut self, token: &str) {
         let pos = self.draft.cursor();
         let needs_space = pos > 0
             && self
@@ -391,9 +405,9 @@ impl App {
                 .copied()
                 .is_some_and(|b| !b.is_ascii_whitespace());
         let insert = if needs_space {
-            format!(" {sigil}")
+            format!(" {token}")
         } else {
-            sigil.to_string()
+            token.to_string()
         };
         self.draft.replace_token(pos, pos, &insert);
     }
@@ -1379,6 +1393,69 @@ mod tests {
         );
         app.recurrence_accept();
         assert_eq!(app.draft.text(), "Submit timesheet rec:+3b");
+    }
+
+    /// A config with the recurrence builder opted out of.
+    fn no_builder_app(raw: &str) -> App {
+        let cfg = crate::config::Config {
+            recurrence_builder: Some(false),
+            ..Default::default()
+        };
+        crate::app::test_support::build_app_with_config(raw, cfg)
+    }
+
+    #[test]
+    fn rec_colon_opens_builder_by_default() {
+        let mut app = build_app("");
+        app.draft_set("Water plants rec".into());
+        app.draft_insert_char(':');
+        app.maybe_open_kv_overlay();
+        assert!(matches!(
+            app.draft.overlay(),
+            Some(DraftOverlay::RecurrenceBuilder(_))
+        ));
+    }
+
+    #[test]
+    fn rec_colon_stays_plain_text_when_builder_disabled() {
+        let mut app = no_builder_app("");
+        app.draft_set("Water plants rec".into());
+        app.draft_insert_char(':');
+        app.maybe_open_kv_overlay();
+        assert!(
+            app.draft.overlay().is_none(),
+            "no overlay may steal the keys when the builder is disabled"
+        );
+        assert_eq!(app.draft.text(), "Water plants rec:");
+    }
+
+    #[test]
+    fn disabling_recurrence_builder_leaves_due_calendar_alone() {
+        // The opt-out is scoped to recurrence; `due:` still opens its picker.
+        let mut app = no_builder_app("");
+        app.draft_set("Water plants due".into());
+        app.draft_insert_char(':');
+        app.maybe_open_kv_overlay();
+        assert!(matches!(
+            app.draft.overlay(),
+            Some(DraftOverlay::Calendar(_))
+        ));
+    }
+
+    #[test]
+    fn slash_rec_inserts_bare_key_when_builder_disabled() {
+        // The menu entry stays useful: it drops `rec:` in to be typed by hand.
+        let mut app = no_builder_app("");
+        app.draft_set("Water plants".into());
+        app.draft_insert_char(' ');
+        app.draft_insert_char('/');
+        app.maybe_open_slash_menu();
+        for c in ['r', 'e', 'c'] {
+            app.draft_insert_char(c);
+        }
+        app.slash_accept();
+        assert!(app.draft.overlay().is_none());
+        assert_eq!(app.draft.text(), "Water plants rec:");
     }
 
     #[test]

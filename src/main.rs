@@ -10,7 +10,7 @@ use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, Ke
 
 use std::io::Write;
 
-use tuxedo::action::Action;
+use tuxedo::action::{Action, RecAction};
 use tuxedo::app::{AddOutcome, App, CalendarTarget, DialogInputMode, Mode, OverlayKind, View};
 use tuxedo::cli;
 use tuxedo::config::Config;
@@ -258,7 +258,16 @@ fn run(
 /// Poll the config watcher channel. On signal, reload config strictly and
 /// apply it to the app. Returns `true` when a reload was attempted (whether
 /// successful or not) so the caller can trigger a redraw.
+///
+/// Deferred while `Mode::PickTheme` is open: its live preview
+/// (`pick_theme_step`) mutates `prefs.theme_idx` in memory without saving,
+/// so an unrelated reload landing mid-preview would silently clobber it
+/// back to whatever's on disk. The signal stays queued in `rx` and is
+/// applied on the first poll after the picker closes.
 fn poll_config_reload(app: &mut App, rx: &Option<mpsc::Receiver<()>>) -> bool {
+    if app.mode == Mode::PickTheme {
+        return false;
+    }
     let rx = match rx {
         Some(r) => r,
         None => return false,
@@ -324,7 +333,7 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         return;
     }
     match app.mode {
-        Mode::Insert => handle_insert(app, key),
+        Mode::Insert => handle_insert(app, key, keybinds),
         Mode::Search => handle_search(app, key),
         Mode::Help => handle_help(app, key),
         Mode::Settings => handle_settings(app, key),
@@ -574,7 +583,7 @@ fn handle_insert_normal(app: &mut App, key: KeyEvent) {
     }
 }
 
-fn handle_insert(app: &mut App, key: KeyEvent) {
+fn handle_insert(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     if app.draft.input_mode() == DialogInputMode::Normal {
         handle_insert_normal(app, key);
         return;
@@ -591,7 +600,7 @@ fn handle_insert(app: &mut App, key: KeyEvent) {
             return;
         }
         Some(OverlayKind::RecurrenceBuilder) => {
-            handle_insert_rec_builder(app, key);
+            handle_insert_rec_builder(app, key, keybinds);
             return;
         }
         Some(OverlayKind::PriorityChooser) => {
@@ -734,19 +743,41 @@ fn handle_insert_calendar(app: &mut App, key: KeyEvent) {
     }
 }
 
-fn handle_insert_rec_builder(app: &mut App, key: KeyEvent) {
-    match key.code {
-        KeyCode::Char('h') | KeyCode::Left => app.recurrence_focus(-1),
-        KeyCode::Char('l') | KeyCode::Right => app.recurrence_focus(1),
-        KeyCode::Char('j') | KeyCode::Down => app.recurrence_focus(1),
-        KeyCode::Char('k') | KeyCode::Up => app.recurrence_focus(-1),
+fn handle_insert_rec_builder(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    // Custom `[recurrence]` bindings win over the built-ins, matching how
+    // `[normal]` is layered in `resolve_normal_key`.
+    if let Some(action) = keybinds.resolve_recurrence(key) {
+        apply_rec_action(app, action);
+        return;
+    }
+    let action = match key.code {
+        // Horizontal keys change the focused field's *value*: both the unit
+        // and the mode render as horizontal segmented controls, so Left/Right
+        // moving along them is the affordance the layout already suggests.
+        KeyCode::Char('h') | KeyCode::Left => RecAction::ValuePrev,
+        KeyCode::Char('l') | KeyCode::Right => RecAction::ValueNext,
+        // Vertical keys (and Tab) move *between* fields.
+        KeyCode::Char('j') | KeyCode::Down | KeyCode::Tab => RecAction::FocusNext,
+        KeyCode::Char('k') | KeyCode::Up | KeyCode::BackTab => RecAction::FocusPrev,
         // `=` is the unshifted `+` on US keyboards — accept both so users
         // don't have to chord Shift to bump the interval.
-        KeyCode::Char('+') | KeyCode::Char('=') => app.recurrence_adjust(1),
-        KeyCode::Char('-') | KeyCode::Char('_') => app.recurrence_adjust(-1),
-        KeyCode::Enter => app.recurrence_accept(),
-        KeyCode::Esc => app.recurrence_cancel(),
-        _ => {}
+        KeyCode::Char('+') | KeyCode::Char('=') => RecAction::ValueNext,
+        KeyCode::Char('-') | KeyCode::Char('_') => RecAction::ValuePrev,
+        KeyCode::Enter => RecAction::Accept,
+        KeyCode::Esc => RecAction::Cancel,
+        _ => return,
+    };
+    apply_rec_action(app, action);
+}
+
+fn apply_rec_action(app: &mut App, action: RecAction) {
+    match action {
+        RecAction::FocusNext => app.recurrence_focus(1),
+        RecAction::FocusPrev => app.recurrence_focus(-1),
+        RecAction::ValueNext => app.recurrence_adjust(1),
+        RecAction::ValuePrev => app.recurrence_adjust(-1),
+        RecAction::Accept => app.recurrence_accept(),
+        RecAction::Cancel => app.recurrence_cancel(),
     }
 }
 
@@ -789,11 +820,17 @@ fn handle_help(app: &mut App, key: KeyEvent) {
 }
 
 fn handle_settings(app: &mut App, key: KeyEvent) {
-    if matches!(
-        key.code,
-        KeyCode::Esc | KeyCode::Char(',') | KeyCode::Char('q')
-    ) {
-        app.mode = Mode::Normal;
+    match key.code {
+        KeyCode::Esc | KeyCode::Char(',') | KeyCode::Char('q') => app.mode = Mode::Normal,
+        KeyCode::Char('T') => apply_action(app, Action::CycleTheme),
+        KeyCode::Char('D') => apply_action(app, Action::CycleDensity),
+        KeyCode::Char('L') => apply_action(app, Action::ToggleLineNum),
+        KeyCode::Char('[') => apply_action(app, Action::ToggleLeftPane),
+        KeyCode::Char(']') => apply_action(app, Action::ToggleRightPane),
+        KeyCode::Char('H') => apply_action(app, Action::ToggleShowDone),
+        KeyCode::Char('F') => apply_action(app, Action::ToggleShowFuture),
+        KeyCode::Char('S') => apply_action(app, Action::CycleSort),
+        _ => {}
     }
 }
 
@@ -809,7 +846,7 @@ fn handle_pick(app: &mut App, key: KeyEvent) {
 
 fn handle_pick_theme(app: &mut App, key: KeyEvent) {
     match key.code {
-        KeyCode::Char('j') | KeyCode::Down => app.pick_theme_step(true),
+        KeyCode::Char('j') | KeyCode::Down | KeyCode::Char('T') => app.pick_theme_step(true),
         KeyCode::Char('k') | KeyCode::Up => app.pick_theme_step(false),
         KeyCode::Enter => app.pick_theme_accept(),
         KeyCode::Esc => app.pick_theme_cancel(),
@@ -1392,6 +1429,84 @@ mod tests {
         assert!(!path.exists(), "Esc must not create a file");
     }
 
+    #[test]
+    fn settings_hinted_keys_apply_and_dialog_stays_open() {
+        let mut app = build_app();
+        app.mode = Mode::Settings;
+
+        let theme_before = app.prefs.theme_idx();
+        handle_settings(&mut app, key('T'));
+        assert_ne!(
+            app.prefs.theme_idx(),
+            theme_before,
+            "`T` must cycle the theme, per the settings screen's own hint"
+        );
+        assert_eq!(app.mode, Mode::Settings, "adjusting a setting must not close the dialog");
+
+        let show_done_before = app.prefs.show_done;
+        handle_settings(&mut app, key('H'));
+        assert_ne!(
+            app.prefs.show_done, show_done_before,
+            "`H` must toggle show-done, per the settings screen's own hint"
+        );
+        assert_eq!(app.mode, Mode::Settings);
+
+        handle_settings(&mut app, key('q'));
+        assert_eq!(app.mode, Mode::Normal, "`q` must still close the dialog");
+    }
+
+    #[test]
+    fn pick_theme_t_cycles_like_j_and_esc_still_cancels() {
+        let mut app = build_app();
+        app.enter_pick_theme();
+        assert_eq!(app.mode, Mode::PickTheme);
+
+        let orig = app.prefs.theme_idx();
+        handle_pick_theme(&mut app, key('T'));
+        assert_ne!(
+            app.prefs.theme_idx(),
+            orig,
+            "`T` must step to the next theme, same as `j`, not just close the dialog"
+        );
+        assert_eq!(app.mode, Mode::PickTheme, "`T` must not close the dialog");
+
+        handle_pick_theme(&mut app, KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        assert_eq!(app.mode, Mode::Normal);
+        assert_eq!(
+            app.prefs.theme_idx(),
+            orig,
+            "Esc must still revert to the theme active when the picker opened"
+        );
+    }
+
+    #[test]
+    fn config_reload_is_deferred_while_pick_theme_is_open() {
+        let mut app = build_app();
+        app.enter_pick_theme();
+        app.pick_theme_step(true);
+        let previewed = app.prefs.theme_idx();
+
+        let (tx, rx) = mpsc::channel();
+        tx.send(()).unwrap();
+        let rx = Some(rx);
+
+        assert!(
+            !poll_config_reload(&mut app, &rx),
+            "a reload must not be applied while the picker's live preview is unsaved"
+        );
+        assert_eq!(
+            app.prefs.theme_idx(),
+            previewed,
+            "the deferred reload must not clobber the in-memory preview"
+        );
+
+        app.mode = Mode::Normal;
+        assert!(
+            poll_config_reload(&mut app, &rx),
+            "the queued signal must still be applied once the picker closes"
+        );
+    }
+
     fn build_app() -> App {
         let path = std::env::temp_dir().join(format!(
             "tuxedo-bindings-{}-{:?}.txt",
@@ -1713,6 +1828,84 @@ mod tests {
     }
 
     #[test]
+    fn rec_builder_hl_changes_value_and_jk_moves_focus() {
+        use tuxedo::app::BuilderField;
+
+        fn code(c: KeyCode) -> KeyEvent {
+            KeyEvent::new(c, KeyModifiers::NONE)
+        }
+
+        // Regression: h/l/j/k all called `recurrence_focus`, so no navigation
+        // key could change a field's value — only `+`/`-` did, and the hint
+        // advertising them was clipped off the bottom of the popup.
+        let binds = KeyBindings::default();
+        let mut app = build_app();
+        app.open_recurrence_builder();
+        assert_eq!(
+            app.recurrence_state().expect("builder open").field,
+            BuilderField::Interval
+        );
+
+        // Horizontal keys change the value and leave focus put.
+        handle_insert_rec_builder(&mut app, key('l'), &binds);
+        let s = app.recurrence_state().expect("builder open");
+        assert_eq!(s.field, BuilderField::Interval, "h/l must not move focus");
+        assert_eq!(s.interval, 2, "l must increment the interval");
+        handle_insert_rec_builder(&mut app, code(KeyCode::Left), &binds);
+        assert_eq!(app.recurrence_state().expect("builder open").interval, 1);
+
+        // Vertical keys move focus and leave the value put.
+        handle_insert_rec_builder(&mut app, key('j'), &binds);
+        let s = app.recurrence_state().expect("builder open");
+        assert_eq!(s.field, BuilderField::Unit, "j must move focus");
+        assert_eq!(s.interval, 1, "j must not change the interval");
+
+        // With Unit focused, horizontal now cycles the unit.
+        let before = app.recurrence_state().expect("builder open").unit;
+        handle_insert_rec_builder(&mut app, key('l'), &binds);
+        assert_ne!(
+            app.recurrence_state().expect("builder open").unit,
+            before,
+            "l must cycle the unit"
+        );
+
+        // Tab / k also move focus.
+        handle_insert_rec_builder(&mut app, code(KeyCode::Tab), &binds);
+        assert_eq!(
+            app.recurrence_state().expect("builder open").field,
+            BuilderField::Mode
+        );
+        handle_insert_rec_builder(&mut app, key('k'), &binds);
+        assert_eq!(
+            app.recurrence_state().expect("builder open").field,
+            BuilderField::Unit
+        );
+    }
+
+    #[test]
+    fn rec_builder_custom_binding_wins_over_builtin() {
+        use tuxedo::app::BuilderField;
+
+        // `[recurrence]` swaps the built-in meaning of `l`: it should move
+        // focus rather than change the value, proving custom bindings are
+        // consulted before the defaults.
+        let binds = KeyBindings::parse("[recurrence]\nfocus_next = \"l\"\n");
+        let mut app = build_app();
+        app.open_recurrence_builder();
+        handle_insert_rec_builder(&mut app, key('l'), &binds);
+        let s = app.recurrence_state().expect("builder open");
+        assert_eq!(s.field, BuilderField::Unit);
+        assert_eq!(s.interval, 1, "rebound l must not touch the interval");
+
+        // Keys the user did not rebind keep their built-in behavior.
+        handle_insert_rec_builder(&mut app, key('k'), &binds);
+        assert_eq!(
+            app.recurrence_state().expect("builder open").field,
+            BuilderField::Interval
+        );
+    }
+
+    #[test]
     fn ctrl_emacs_keys_resolve_to_edit_actions() {
         assert_eq!(resolve_edit_key(ctrl('a')), Some(EditAction::MoveHome));
         assert_eq!(resolve_edit_key(ctrl('e')), Some(EditAction::MoveEnd));
@@ -1782,7 +1975,7 @@ mod tests {
         app.draft_clear();
         app.draft_insert_char('a');
         app.draft_insert_char('b');
-        handle_insert(&mut app, ctrl('h'));
+        handle_insert(&mut app, ctrl('h'), &KeyBindings::default());
         assert_eq!(app.draft.text(), "a");
     }
 

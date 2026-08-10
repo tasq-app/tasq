@@ -371,7 +371,7 @@ impl App {
     }
 
     /// Enter theme picker mode. Snapshot the current theme index so
-    /// cancel can restore it. j/k live-previews; Enter accepts; Esc
+    /// cancel can restore it. j/k/T live-previews; Enter accepts; Esc
     /// reverts.
     pub fn enter_pick_theme(&mut self) {
         self.theme_pick_orig = self.prefs.theme_idx();
