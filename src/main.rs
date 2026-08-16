@@ -328,9 +328,11 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::Search => handle_search(app, key),
         Mode::Help => handle_help(app, key),
         Mode::Settings => handle_settings(app, key),
-        Mode::PromptProject | Mode::PromptContext | Mode::PromptSaveFilter => {
-            handle_prompt(app, key)
-        }
+        Mode::PromptProject
+        | Mode::PromptContext
+        | Mode::PromptRenameProject
+        | Mode::PromptRenameContext
+        | Mode::PromptSaveFilter => handle_prompt(app, key),
         Mode::PickProject | Mode::PickContext | Mode::PickSavedFilter => handle_pick(app, key),
         Mode::PickTheme => handle_pick_theme(app, key),
         Mode::CommandPalette => handle_command_palette(app, key),
@@ -801,6 +803,11 @@ fn handle_pick(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Char('j') | KeyCode::Down => app.pick_step(true),
         KeyCode::Char('k') | KeyCode::Up => app.pick_step(false),
+        KeyCode::Char('r') => match app.mode {
+            Mode::PickProject => app.begin_rename_project(),
+            Mode::PickContext => app.begin_rename_context(),
+            _ => {}
+        },
         KeyCode::Enter => app.pick_accept(),
         KeyCode::Esc => app.pick_cancel(),
         _ => {}
@@ -922,6 +929,8 @@ fn handle_prompt(app: &mut App, key: KeyEvent) {
                 Mode::PromptProject => app.add_project_to_current(&value),
                 Mode::PromptContext => app.toggle_context_on_current(&value),
                 Mode::PromptSaveFilter => app.save_current_filter_as(&value),
+                Mode::PromptRenameProject => app.rename_current_project_as(&value),
+                Mode::PromptRenameContext => app.rename_current_context_as(&value),
                 _ => {}
             }
         }

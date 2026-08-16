@@ -9,7 +9,7 @@ use crate::app::WeekStart;
 use crate::core::AddOutcome as CoreAdd;
 use crate::core::{
     ArchiveDeleteOutcome, ArchiveOutcome, CompleteOutcome, DeleteOutcome, EditOutcome,
-    PriorityOutcome, TagOutcome, UnarchiveOutcome, UndoOutcome,
+    PriorityOutcome, RenameOutcome, TagOutcome, UnarchiveOutcome, UndoOutcome,
 };
 use crate::nl;
 use crate::note;
@@ -132,6 +132,42 @@ impl App {
             TagOutcome::InvalidName => self.flash("invalid project name"),
             TagOutcome::Aborted(r) => self.handle_reconcile_abort(r),
             TagOutcome::Error(e) => self.flash(format!("invalid: {e}")),
+        }
+    }
+
+    pub fn rename_current_project_as(&mut self, new_name: &str) {
+        let Some(name) = self.filter.project.clone() else {
+            return;
+        };
+        match self.store.rename_project(&name, new_name) {
+            RenameOutcome::Done { renamed } => {
+                self.flash(format!("+{name} → +{new_name}  ({renamed})"));
+                self.filter.project = Some(new_name.to_string());
+                self.recompute_visible();
+                self.clamp_cursor();
+            }
+            RenameOutcome::NothingToRename | RenameOutcome::Unchanged => {}
+            RenameOutcome::InvalidName => self.flash("invalid project name"),
+            RenameOutcome::Aborted(r) => self.handle_reconcile_abort(r),
+            RenameOutcome::Error(e) => self.flash(format!("rename failed: {e}")),
+        }
+    }
+
+    pub fn rename_current_context_as(&mut self, new_name: &str) {
+        let Some(name) = self.filter.context.clone() else {
+            return;
+        };
+        match self.store.rename_context(&name, new_name) {
+            RenameOutcome::Done { renamed } => {
+                self.flash(format!("@{name} → @{new_name}  ({renamed})"));
+                self.filter.context = Some(new_name.to_string());
+                self.recompute_visible();
+                self.clamp_cursor();
+            }
+            RenameOutcome::NothingToRename | RenameOutcome::Unchanged => {}
+            RenameOutcome::InvalidName => self.flash("invalid context name"),
+            RenameOutcome::Aborted(r) => self.handle_reconcile_abort(r),
+            RenameOutcome::Error(e) => self.flash(format!("rename failed: {e}")),
         }
     }
 

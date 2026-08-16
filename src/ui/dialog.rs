@@ -424,6 +424,8 @@ pub fn render_prompt(frame: &mut Frame, area: Rect, app: &App) {
         Mode::PromptProject => ("+", " ADD PROJECT "),
         Mode::PromptContext => ("@", " TOGGLE CONTEXT "),
         Mode::PromptSaveFilter => ("✦", " SAVE FILTER AS "),
+        Mode::PromptRenameProject => ("✦", " RENAME PROJECT "),
+        Mode::PromptRenameContext => ("✦", " RENAME CONTEXT "),
         _ => return,
     };
     let block = Block::default()

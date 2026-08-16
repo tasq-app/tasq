@@ -46,6 +46,22 @@ impl App {
         self.flash_pick_context();
     }
 
+    pub fn begin_rename_context(&mut self) {
+        let Some(name) = self.filter.context.clone() else {
+            return;
+        };
+        self.draft_set(name);
+        self.mode = Mode::PromptRenameContext;
+    }
+
+    pub fn begin_rename_project(&mut self) {
+        let Some(name) = self.filter.project.clone() else {
+            return;
+        };
+        self.draft_set(name);
+        self.mode = Mode::PromptRenameProject;
+    }
+
     /// Enter saved-filter picker mode. Seeds to the saved filter whose query
     /// equals the active search (so reopening highlights the current one),
     /// else the first. Stashes the pre-picker search so `pick_cancel` can
