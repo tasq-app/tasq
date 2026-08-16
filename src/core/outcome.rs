@@ -124,6 +124,16 @@ pub enum TagOutcome {
 }
 
 #[derive(Debug)]
+pub enum RenameOutcome {
+    Done { renamed: usize },
+    Unchanged,
+    NothingToRename,
+    InvalidName,
+    Aborted(Reconcile),
+    Error(StoreError),
+}
+
+#[derive(Debug)]
 pub enum BulkCompleteOutcome {
     Done { completed: usize, spawned: usize },
     NothingToComplete,
