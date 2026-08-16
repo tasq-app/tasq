@@ -337,6 +337,46 @@ impl Task {
         Ok(true)
     }
 
+    /// Remove every `+name` token from the line. Returns `Ok(true)` if any
+    /// was removed, `Ok(false)` if the project was absent.
+    pub fn remove_project(&mut self, name: &str) -> Result<bool, TagError> {
+        if !is_valid_tag_name(name) {
+            return Err(TagError::Invalid);
+        }
+        if !self.projects.iter().any(|p| p == name) {
+            return Ok(false);
+        }
+        let needle = format!("+{name}");
+        let new_raw = self
+            .raw
+            .split_whitespace()
+            .filter(|tok| *tok != needle)
+            .collect::<Vec<_>>()
+            .join(" ");
+        self.replace_from_raw(&new_raw).map_err(TagError::Parse)?;
+        Ok(true)
+    }
+
+    /// Rename every `@name` token from the line. Returns `Ok(true)` if every
+    /// @name was renamed, `Ok(false)` if the context was absent.
+    pub fn rename_context(&mut self, name: &str, new_name: &str) -> Result<bool, TagError> {
+        if !self.remove_context(name)? {
+            return Ok(false);
+        };
+        self.add_context(new_name)?;
+        Ok(true)
+    }
+
+    /// Rename every `+name` token from the line. Returns `Ok(true)` if every
+    /// +name was renamed, `Ok(false)` if the project was absent.
+    pub fn rename_project(&mut self, name: &str, new_name: &str) -> Result<bool, TagError> {
+        if !self.remove_project(name)? {
+            return Ok(false);
+        };
+        self.add_project(new_name)?;
+        Ok(true)
+    }
+
     fn add_tag(
         &mut self,
         name: &str,
