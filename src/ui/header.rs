@@ -7,19 +7,21 @@ use ratatui::widgets::Paragraph;
 use crate::app::Filter;
 use crate::theme::Theme;
 
-/// Build the human-readable filter chip shown in the header. `+project` /
-/// `@context` / `/search` precedence matches what the sidebar shows. Returns
-/// `None` when no filter is active.
+/// Build the human-readable filter chip shown in the header. Project,
+/// context, and search combine as AND'd filters, so every active one must
+/// appear in the label. `None` when no filter is active.
 pub fn filter_label(filter: &Filter) -> Option<String> {
+    let mut parts: Vec<String> = Vec::new();
     if let Some(p) = &filter.project {
-        Some(format!("+{p}"))
-    } else if let Some(c) = &filter.context {
-        Some(format!("@{c}"))
-    } else if !filter.search.is_empty() {
-        Some(format!("/{}", filter.search))
-    } else {
-        None
+        parts.push(format!("+{p}"));
     }
+    if let Some(c) = &filter.context {
+        parts.push(format!("@{c}"));
+    }
+    if !filter.search.is_empty() {
+        parts.push(format!("/{}", filter.search));
+    }
+    (!parts.is_empty()).then(|| parts.join(" "))
 }
 
 /// Inputs for the top-of-screen header bar. Grouped into a struct so call
@@ -74,4 +76,54 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme, props: HeaderProps<'
     let line = Line::from(spans).style(Style::default().bg(theme.panel));
     let para = Paragraph::new(line).style(Style::default().bg(theme.panel));
     frame.render_widget(para, area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn filter(project: Option<&str>, context: Option<&str>, search: &str) -> Filter {
+        Filter {
+            project: project.map(String::from),
+            context: context.map(String::from),
+            search: search.to_string(),
+        }
+    }
+
+    #[test]
+    fn no_active_filter_has_no_label() {
+        assert_eq!(filter_label(&filter(None, None, "")), None);
+    }
+
+    #[test]
+    fn single_project_shows_just_the_project() {
+        assert_eq!(
+            filter_label(&filter(Some("shop"), None, "")),
+            Some("+shop".to_string())
+        );
+    }
+
+    #[test]
+    fn single_context_shows_just_the_context() {
+        assert_eq!(
+            filter_label(&filter(None, Some("home"), "")),
+            Some("@home".to_string())
+        );
+    }
+
+    #[test]
+    fn project_and_context_together_show_both() {
+        assert_eq!(
+            filter_label(&filter(Some("shop"), Some("home"), "")),
+            Some("+shop @home".to_string())
+        );
+    }
+
+    #[test]
+    fn project_context_and_search_all_show_together() {
+        assert_eq!(
+            filter_label(&filter(Some("shop"), Some("home"), "milk")),
+            Some("+shop @home /milk".to_string())
+        );
+    }
 }
