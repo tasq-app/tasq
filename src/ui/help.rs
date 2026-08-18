@@ -75,7 +75,7 @@ const SYSTEM: Section = (
         (": / Ctrl-P", "command palette"),
         ("s", "share capture QR"),
         ("? / ,", "help / settings"),
-        ("q", "quit"),
+        ("q / Ctrl-c", "quit"),
     ],
 );
 

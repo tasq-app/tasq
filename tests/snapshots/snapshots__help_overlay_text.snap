@@ -24,7 +24,7 @@ expression: buffer_to_text(&buf)
      │                                                : / Ctrl-P        command palette       │     
      │  RECURRENCE (rec:)                             s                 share capture QR      │     
      │    j / k / Tab       next / prev field         ? / ,             help / settings       │     
-     │    h / l / + / -     change value              q                 quit                  │     
+     │    h / l / + / -     change value              q / Ctrl-c        quit                  │     
      │    Enter / Esc       save / cancel                                                     │     
      │────────────────────────────────────────────────────────────────────────────────────────│     
      │  FORMAT                                                                                │     
