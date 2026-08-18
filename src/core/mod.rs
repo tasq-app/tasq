@@ -22,8 +22,8 @@ pub use archive::Archive;
 pub use history::History;
 pub use outcome::{
     AddOutcome, ArchiveDeleteOutcome, ArchiveOutcome, BulkCompleteOutcome, BulkDeleteOutcome,
-    CompleteOutcome, DeleteOutcome, DrainReport, EditOutcome, PriorityOutcome, Reconcile,
-    RenameOutcome, StoreError, TagOutcome, UnarchiveOutcome, UndoOutcome,
+    CompleteOutcome, DeleteOutcome, DrainReport, EditOutcome, MoveOutcome, PriorityOutcome,
+    Reconcile, RenameOutcome, StoreError, TagOutcome, UnarchiveOutcome, UndoOutcome,
 };
 
 /// The durable task store. Owns the live task list, the sibling `done.txt`

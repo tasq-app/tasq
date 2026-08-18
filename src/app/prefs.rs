@@ -39,6 +39,10 @@ pub struct Prefs {
     /// Config-only (no in-app toggle); see `Config::hidden_keys`.
     pub hidden_keys: Vec<String>,
     pub week_start: WeekStart,
+    /// Whether the create/edit dialog opens the recurrence builder overlay
+    /// for `rec:` / `/rec`. Config-only (no in-app toggle); see
+    /// `Config::recurrence_builder`.
+    pub recurrence_builder: bool,
 }
 
 impl Prefs {
@@ -62,6 +66,7 @@ impl Prefs {
             show_future: cfg.show_future.unwrap_or(false),
             hidden_keys: cfg.hidden_keys,
             week_start: cfg.week_start.unwrap_or(WeekStart::Sunday),
+            recurrence_builder: cfg.recurrence_builder.unwrap_or(true),
         }
     }
 

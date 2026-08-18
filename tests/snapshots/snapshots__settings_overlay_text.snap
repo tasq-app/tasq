@@ -19,7 +19,7 @@ expression: buffer_to_text(&buf)
    show future in list         off  (F to toggle)                                                   
                                                                                                     
  BEHAVIOR                                                                                           
-   default sort                priority (s to cycle)                                                
+   default sort                priority (S to cycle)                                                
                                                                                                     
  KEYBINDINGS                                                                                        
                                press ? for the full list                                            

@@ -288,6 +288,8 @@ toggle_complete      = "x"
 delete               = "dd"
 reschedule           = "r"
 cycle_priority       = "p"
+move_task_down       = "J"
+move_task_up         = "K"
 begin_prompt_context = "c"
 copy_line            = "yy"
 copy_body            = "yb"
@@ -338,6 +340,26 @@ palette where possible: `toggle_complete`, `pick_project`,
 chords like `ZZ`, modifier forms like `Ctrl-n` / `Alt-x`, named keys like
 `Esc`, `Enter`, `Tab`, arrows, `Page-Up`, `Page-Down`, or `F1` through `F24`.
 
+### Recurrence builder keys
+
+The **↻ REPEAT** overlay owns the keyboard while it is open, so its motions
+live in their own `[recurrence]` table and can reuse letters that mean
+something else in normal mode:
+
+```toml
+[recurrence]
+focus_next = ["j", "Down", "Tab"]        # move between interval / unit / mode
+focus_prev = ["k", "Up", "Shift-Tab"]
+value_next = ["l", "Right", "+", "="]    # change the focused field's value
+value_prev = ["h", "Left", "-", "_"]
+accept     = "Enter"                     # write the rec: token
+cancel     = "Esc"
+```
+
+`next_field` / `prev_field` / `increase` / `decrease` / `save` are accepted as
+aliases. Two-key chords are not — the overlay has no leader state to arm, so a
+chord here is ignored rather than bound to a key that could never fire.
+
 ### Navigation
 
 | Key | Action |
@@ -358,11 +380,15 @@ chords like `ZZ`, modifier forms like `Ctrl-n` / `Alt-x`, named keys like
 | `x` | toggle complete |
 | `dd` | delete task |
 | `p` | cycle priority A → B → C → · |
+| `J` / `K` | move task down / up within current sort ties |
 | `c` | add or remove a context |
 | `+` | add a project |
 | `yy` | copy current line to clipboard |
 | `yb` | copy current body only (no priority, dates, projects, contexts, `key:value`) |
 | `u` | undo (50 levels) |
+
+Movement preserves the active sort: priority mode requires matching priority and due date, due mode requires matching due date, and file mode allows unrestricted movement.
+Visual selections move in one undoable operation and must be fully visible within one sort tie.
 
 ### Edit dialog
 
@@ -586,6 +612,24 @@ task; `o` only opens an existing linked note.
 ```toml
 notes_dir = ~/notes
 ```
+
+### Recurrence builder
+
+Typing `rec:` in the create/edit dialog — or picking `/rec` from the slash
+menu — opens the **↻ REPEAT** builder over the dialog. `j`/`k` (or `Tab`)
+move between the interval, unit, and mode fields; `h`/`l` (or `+`/`-`) change
+the focused field's value; `Enter` writes the `rec:` token and `Esc` cancels.
+
+To skip the builder and type recurrence values by hand, set:
+
+```toml
+recurrence_builder = false
+```
+
+`rec:` then stays plain text, and `/rec` inserts a bare `rec:` key for you to
+complete. The setting is config-only (no in-app toggle) and hot-reloads like
+every other field. Other pickers are unaffected — `due:` and `t:` still open
+the calendar.
 
 ### Hiding `key:value` tags
 

@@ -71,7 +71,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let footer = Line::from(vec![
         Span::raw("  "),
         Span::styled(
-            "j/k",
+            "j/k/T",
             Style::default().fg(theme.dim).add_modifier(Modifier::BOLD),
         ),
         Span::styled(" navigate · ", Style::default().fg(theme.dim)),
