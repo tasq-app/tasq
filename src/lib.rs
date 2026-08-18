@@ -8,6 +8,7 @@ pub mod cmd;
 pub mod config;
 pub mod config_watcher;
 pub mod core;
+pub mod due_filter;
 pub mod inbox;
 pub mod keybinds;
 pub mod nl;

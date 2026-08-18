@@ -1,5 +1,6 @@
 ---
 source: tests/snapshots.rs
+assertion_line: 226
 expression: buffer_to_text(&buf)
 ---
  FILTERS                   ▶▮◀ /tmp/tuxedo-snapshot.txt  •  15 tas DETAIL                           
@@ -28,7 +29,7 @@ expression: buffer_to_text(&buf)
      │    Enter / Esc       save / cancel                                                     │     
      │────────────────────────────────────────────────────────────────────────────────────────│     
      │  FORMAT                                                                                │     
-     │    (A)               priority A-Z              due:YYYY-MM-DD    due date              │     
+     │    (A)               priority A-Z              due:YYYY-MM-DD    due date (+1w = range)│     
      │    YYYY-MM-DD        creation / done date      rec:Nu            recur (u in d/w/m/y/b)│     
      │    +project          project tag(s)            rec:+Nu           strict: anchor on due:│     
      └────────────────────────────────────────────────────────────────────────────────────────┘     

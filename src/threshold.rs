@@ -22,6 +22,14 @@ use chrono::{Datelike, Days, Months, NaiveDate, Weekday};
 
 use crate::recurrence::RecUnit;
 
+/// Business-day offsets beyond this are rejected by `parse_relative` rather
+/// than parsed. `advance_business`/`retreat_business` walk one calendar day
+/// at a time, so an unbounded `n` (e.g. `t:4000000000b`) turns a single parse
+/// into a multi-minute loop; this caps it (~1600 years of business days) far
+/// above anything a real threshold or `due:` range would use, while keeping
+/// the loop itself simple and correct for every start weekday.
+const MAX_BUSINESS_DAY_OFFSET: u32 = 500_000;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ThresholdSpec {
     Absolute(NaiveDate),
@@ -74,6 +82,9 @@ fn parse_relative(value: &str) -> Option<ThresholdSpec> {
         // Year deliberately omitted from the threshold grammar.
         _ => return None,
     };
+    if unit == RecUnit::BusinessDay && n > MAX_BUSINESS_DAY_OFFSET {
+        return None;
+    }
     Some(ThresholdSpec::Relative { before, n, unit })
 }
 
@@ -88,11 +99,23 @@ pub fn resolve(
 ) -> Option<NaiveDate> {
     match *spec {
         ThresholdSpec::Absolute(d) => Some(d),
-        ThresholdSpec::Relative { before, n, unit } => {
+        ThresholdSpec::Relative { .. } => {
             let anchor_str = due.or(created)?;
             let anchor = NaiveDate::parse_from_str(anchor_str, "%Y-%m-%d").ok()?;
-            shift(anchor, n, unit, before)
+            resolve_at(spec, anchor)
         }
+    }
+}
+
+/// Resolve `spec` against an explicit `anchor`, skipping `resolve`'s
+/// due-then-created anchor selection. The sanctioned entry point for callers
+/// (e.g. [`crate::due_filter`]) that already have their anchor in hand and
+/// don't need `t:`'s due/created fallback — `shift` itself stays private so
+/// `resolve`/`resolve_at` remain the only ways to turn a spec into a date.
+pub(crate) fn resolve_at(spec: &ThresholdSpec, anchor: NaiveDate) -> Option<NaiveDate> {
+    match *spec {
+        ThresholdSpec::Absolute(d) => Some(d),
+        ThresholdSpec::Relative { before, n, unit } => shift(anchor, n, unit, before),
     }
 }
 
@@ -269,6 +292,14 @@ mod tests {
                 unit: RecUnit::BusinessDay,
             }
         );
+    }
+
+    #[test]
+    fn rejects_implausibly_large_business_day_offset() {
+        // Business-day arithmetic walks one calendar day at a time; without a
+        // cap this would loop billions of times on a single parse.
+        assert!(parse_threshold("500001b").is_none());
+        assert!(parse_threshold("500000b").is_some());
     }
 
     #[test]

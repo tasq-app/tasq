@@ -420,7 +420,7 @@ The modal keys below apply in Normal mode:
 
 | Key | Action |
 | --- | --- |
-| `/` | search |
+| `/` | search (a `due:` term filters by date range; see [todo.txt format](#todotxt-format)) |
 | `fp` | filter by project (`j` / `k` cycles, `Esc` clears) |
 | `fc` | filter by context (`j` / `k` cycles, `Esc` clears) |
 | `ff` | pick a saved search (`j` / `k` cycles, `Enter` keeps, `Esc` reverts) |
@@ -486,6 +486,14 @@ Standard [todo.txt](https://github.com/todotxt/todo.txt) lines:
   note actions (`o` / `O`): relative paths resolve under `notes_dir`, then
   `$NOTES_DIR`, then `~/notes`. Keys you'd rather not see can be hidden from
   the rows via [`hide_keys`](#hiding-keyvalue-tags)
+- `due:` in the `/`-search box also accepts a range, using the same offset
+  grammar as `rec:` and `t:`: `due:+1w` matches anything due between today
+  and 7 days from now, `due:-3d` matches anything due between 3 days ago and
+  today (both bounds inclusive). The sign defaults to `+` when omitted, so
+  `due:1w` and `due:+1w` mean the same thing. Units are `d` (days), `b`
+  (business days), `w` (weeks), and `m` (months). Only the first `due:` term
+  in a search is used this way; the rest of the query is matched as free text
+  against the task body, same as before
 - `rec:[+]N{d,b,w,m,y}` — recurrence; on completion (`x`), tuxedo inserts
   a fresh copy of the task with `due:` advanced by `N` days, business
   days (Mon–Fri), weeks, months, or years. The `+` prefix means
