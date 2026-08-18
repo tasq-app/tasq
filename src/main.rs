@@ -1164,7 +1164,12 @@ fn apply_action(app: &mut App, action: Action) {
         Action::HalfPageUp => app.cursor = app.cursor.saturating_sub(10),
         Action::BeginAdd => {
             app.mode = Mode::Insert;
-            app.draft_clear();
+            // Seed from the active filter: a task added under `+work` almost
+            // always belongs to it, and without the tag it drops out of the
+            // view the moment it saves. The cursor parks after the seed, so
+            // an unwanted tag is a backspace away.
+            let seed = app.filter().tag_seed();
+            app.draft_set_insert(seed);
             app.selection.exit_edit();
         }
         Action::BeginEdit => {
@@ -2099,6 +2104,34 @@ mod tests {
         assert!(app.draft.overlay().is_none());
         let task = app.tasks().last().expect("task added");
         assert_eq!(task.due.as_deref(), Some("2026-06-07"));
+    }
+
+    #[test]
+    fn begin_add_seeds_draft_from_active_filter() {
+        let mut app = build_app();
+        app.set_project_filter(Some("work".to_string()));
+        app.set_context_filter(Some("home".to_string()));
+        apply_action(&mut app, Action::BeginAdd);
+        assert_eq!(app.mode, Mode::Insert);
+        assert_eq!(app.draft.text(), "+work @home ");
+        assert_eq!(
+            app.draft.cursor(),
+            "+work @home ".len(),
+            "cursor parks after the seed so the body types straight in"
+        );
+        for c in "Buy milk".chars() {
+            app.draft_insert_char(c);
+        }
+        assert_eq!(app.draft.text(), "+work @home Buy milk");
+    }
+
+    #[test]
+    fn begin_add_leaves_draft_empty_without_a_filter() {
+        let mut app = build_app();
+        apply_action(&mut app, Action::BeginAdd);
+        assert_eq!(app.mode, Mode::Insert);
+        assert_eq!(app.draft.text(), "");
+        assert_eq!(app.draft.cursor(), 0);
     }
 
     #[test]
