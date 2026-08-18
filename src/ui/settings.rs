@@ -79,7 +79,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         ("BEHAVIOR", None),
         (
             "  default sort",
-            Some(format!("{} (s to cycle)", app.sort_label())),
+            Some(format!("{} (S to cycle)", app.sort_label())),
         ),
         ("", Some("".into())),
         ("KEYBINDINGS", None),

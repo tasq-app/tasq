@@ -1,17 +1,23 @@
-//! User-configurable normal-mode keybindings.
+//! User-configurable keybindings.
 //!
 //! Path: `${XDG_CONFIG_HOME:-$HOME/.config}/tuxedo/keybinds.toml`
 //!
 //! Format: a `[normal]` table whose keys are `Action` names in snake_case and
 //! whose values are a string or array of strings, for example:
 //! `open_help = "F1"` or `begin_add = ["N", "Ctrl-n"]`.
+//!
+//! A `[recurrence]` table binds motions inside the `↻ REPEAT` overlay to
+//! [`RecAction`] names, e.g. `focus_next = ["j", "Tab"]`. Overlay keys are a
+//! separate namespace: the overlay owns the keyboard while open, so letters
+//! may be reused without colliding with `[normal]`. Two-key chords are
+//! normal-mode only — a chord in `[recurrence]` is ignored.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use crate::action::Action;
+use crate::action::{Action, RecAction};
 use crate::app::Chord;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -22,7 +28,8 @@ pub enum ResolvedKey {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct KeyBindings {
-    normal: Vec<Binding>,
+    normal: Vec<Binding<Action>>,
+    recurrence: Vec<Binding<RecAction>>,
 }
 
 impl KeyBindings {
@@ -52,19 +59,39 @@ impl KeyBindings {
                 section = Some(name.to_ascii_lowercase());
                 continue;
             }
-            if section.as_deref().is_some_and(|name| name != "normal") {
-                continue;
-            }
+            // No table header yet means `[normal]`, preserving the original
+            // header-less format.
+            let table = section.as_deref().unwrap_or("normal");
             let Some((name, value)) = line.split_once('=') else {
                 continue;
             };
-            let Some(action) = Action::from_keybind_name(name) else {
-                continue;
-            };
-            for key_text in parse_value_strings(value) {
-                if let Some(binding) = Binding::parse(action, &key_text) {
-                    bindings.push_normal(binding);
+            match table {
+                "normal" => {
+                    let Some(action) = Action::from_keybind_name(name) else {
+                        continue;
+                    };
+                    for key_text in parse_value_strings(value) {
+                        if let Some(binding) = Binding::parse(action, &key_text) {
+                            bindings.push_normal(binding);
+                        }
+                    }
                 }
+                "recurrence" => {
+                    let Some(action) = RecAction::from_keybind_name(name) else {
+                        continue;
+                    };
+                    for key_text in parse_value_strings(value) {
+                        // Overlay keys are single presses — a chord here would
+                        // have no leader state to arm, so drop it rather than
+                        // bind something that could never fire.
+                        if let Some(binding) = Binding::parse(action, &key_text)
+                            && binding.second.is_none()
+                        {
+                            bindings.push_recurrence(binding);
+                        }
+                    }
+                }
+                _ => continue,
             }
         }
         bindings
@@ -113,23 +140,39 @@ impl KeyBindings {
         xdg_base.join("tuxedo").join("keybinds.toml")
     }
 
-    fn push_normal(&mut self, binding: Binding) {
+    /// Resolve a key pressed while the recurrence-builder overlay is open.
+    /// `None` means no custom binding matched and the caller should fall back
+    /// to the built-in motions.
+    pub fn resolve_recurrence(&self, key: KeyEvent) -> Option<RecAction> {
+        self.recurrence
+            .iter()
+            .find(|binding| binding.first.matches(key))
+            .map(|binding| binding.action)
+    }
+
+    fn push_normal(&mut self, binding: Binding<Action>) {
         self.normal.retain(|existing| {
             existing.first != binding.first || existing.second != binding.second
         });
         self.normal.push(binding);
     }
+
+    fn push_recurrence(&mut self, binding: Binding<RecAction>) {
+        self.recurrence
+            .retain(|existing| existing.first != binding.first);
+        self.recurrence.push(binding);
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Binding {
-    action: Action,
+struct Binding<A> {
+    action: A,
     first: KeyPress,
     second: Option<KeyPress>,
 }
 
-impl Binding {
-    fn parse(action: Action, text: &str) -> Option<Self> {
+impl<A> Binding<A> {
+    fn parse(action: A, text: &str) -> Option<Self> {
         let keys = parse_key_sequence(text)?;
         match keys.as_slice() {
             [first] => Some(Self {
@@ -453,5 +496,87 @@ mod tests {
     fn path_uses_tuxedo_keybinds_toml() {
         let path = KeyBindings::path_in(Path::new("/tmp/config"));
         assert!(path.ends_with("tuxedo/keybinds.toml"));
+    }
+
+    #[test]
+    fn parses_recurrence_table() {
+        let bindings = KeyBindings::parse(
+            r#"
+            [recurrence]
+            focus_next = ["Tab", "Ctrl-n"]
+            value_next = "L"
+            cancel = "q"
+            "#,
+        );
+        assert_eq!(
+            bindings.resolve_recurrence(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE)),
+            Some(RecAction::FocusNext)
+        );
+        assert_eq!(
+            bindings.resolve_recurrence(ctrl('n')),
+            Some(RecAction::FocusNext)
+        );
+        assert_eq!(
+            bindings.resolve_recurrence(key('L')),
+            Some(RecAction::ValueNext)
+        );
+        assert_eq!(
+            bindings.resolve_recurrence(key('q')),
+            Some(RecAction::Cancel)
+        );
+        // Unbound keys fall through so the caller can apply the built-ins.
+        assert_eq!(bindings.resolve_recurrence(key('z')), None);
+    }
+
+    #[test]
+    fn recurrence_ignores_chords_and_unknown_actions() {
+        let bindings = KeyBindings::parse(
+            r#"
+            [recurrence]
+            accept = "gg"
+            not_an_action = "z"
+            "#,
+        );
+        // A chord has no leader state to arm inside the overlay, so it is
+        // dropped rather than bound to a key that could never fire.
+        assert_eq!(bindings.resolve_recurrence(key('g')), None);
+        assert_eq!(bindings.resolve_recurrence(key('z')), None);
+    }
+
+    #[test]
+    fn recurrence_and_normal_namespaces_are_independent() {
+        let bindings = KeyBindings::parse(
+            r#"
+            [normal]
+            quit = "x"
+
+            [recurrence]
+            cancel = "x"
+            "#,
+        );
+        let mut chord = Chord::default();
+        assert_eq!(
+            bindings.resolve_normal(key('x'), &mut chord),
+            Some(ResolvedKey::Action(Action::Quit))
+        );
+        assert_eq!(
+            bindings.resolve_recurrence(key('x')),
+            Some(RecAction::Cancel)
+        );
+    }
+
+    #[test]
+    fn later_recurrence_binding_replaces_earlier_one() {
+        let bindings = KeyBindings::parse(
+            r#"
+            [recurrence]
+            value_next = "n"
+            focus_next = "n"
+            "#,
+        );
+        assert_eq!(
+            bindings.resolve_recurrence(key('n')),
+            Some(RecAction::FocusNext)
+        );
     }
 }

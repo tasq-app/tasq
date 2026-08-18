@@ -20,6 +20,8 @@ pub enum Action {
     Delete,
     Reschedule,
     CyclePriority,
+    MoveTaskDown,
+    MoveTaskUp,
     BeginSearch,
     OpenHelp,
     OpenSettings,
@@ -79,6 +81,8 @@ impl Action {
             "delete" => Some(Self::Delete),
             "reschedule" => Some(Self::Reschedule),
             "cycle_priority" => Some(Self::CyclePriority),
+            "move_task_down" => Some(Self::MoveTaskDown),
+            "move_task_up" => Some(Self::MoveTaskUp),
             "begin_search" | "search" => Some(Self::BeginSearch),
             "open_help" | "help" => Some(Self::OpenHelp),
             "open_settings" | "settings" => Some(Self::OpenSettings),
@@ -117,9 +121,73 @@ impl Action {
     }
 }
 
+/// Motions inside the `↻ REPEAT` recurrence-builder overlay. Separate from
+/// [`Action`] because the overlay owns the keyboard while it is open, so its
+/// keys occupy their own namespace and can safely reuse letters (`h`, `l`)
+/// that mean something else in normal mode. Bound under `[recurrence]` in
+/// `keybinds.toml`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecAction {
+    /// Move focus to the next field (interval → unit → mode, wrapping).
+    FocusNext,
+    /// Move focus to the previous field.
+    FocusPrev,
+    /// Increment the focused field: bump the interval, or cycle the unit /
+    /// mode forward.
+    ValueNext,
+    /// Decrement the focused field.
+    ValuePrev,
+    /// Write the `rec:` token and close.
+    Accept,
+    /// Close without writing.
+    Cancel,
+}
+
+impl RecAction {
+    /// Map a `keybinds.toml` key name to an action. Aliases mirror the
+    /// vocabulary used by `[normal]`: both a descriptive name and a shorter
+    /// one where an obvious short form exists.
+    pub fn from_keybind_name(name: &str) -> Option<Self> {
+        match name.trim().to_ascii_lowercase().as_str() {
+            "focus_next" | "next_field" => Some(Self::FocusNext),
+            "focus_prev" | "prev_field" => Some(Self::FocusPrev),
+            "value_next" | "increase" => Some(Self::ValueNext),
+            "value_prev" | "decrease" => Some(Self::ValuePrev),
+            "accept" | "save" => Some(Self::Accept),
+            "cancel" => Some(Self::Cancel),
+            _ => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rec_actions_are_rebindable() {
+        assert_eq!(
+            RecAction::from_keybind_name("focus_next"),
+            Some(RecAction::FocusNext)
+        );
+        assert_eq!(
+            RecAction::from_keybind_name("next_field"),
+            Some(RecAction::FocusNext)
+        );
+        assert_eq!(
+            RecAction::from_keybind_name("increase"),
+            Some(RecAction::ValueNext)
+        );
+        assert_eq!(
+            RecAction::from_keybind_name("decrease"),
+            Some(RecAction::ValuePrev)
+        );
+        assert_eq!(
+            RecAction::from_keybind_name("cancel"),
+            Some(RecAction::Cancel)
+        );
+        assert_eq!(RecAction::from_keybind_name("nope"), None);
+    }
 
     #[test]
     fn reschedule_is_rebindable() {
@@ -155,6 +223,18 @@ mod tests {
         assert_eq!(
             Action::from_keybind_name("create_note"),
             Some(Action::CreateOrOpenNote)
+        );
+    }
+
+    #[test]
+    fn task_movement_is_rebindable() {
+        assert_eq!(
+            Action::from_keybind_name("move_task_down"),
+            Some(Action::MoveTaskDown)
+        );
+        assert_eq!(
+            Action::from_keybind_name("move_task_up"),
+            Some(Action::MoveTaskUp)
         );
     }
 }
