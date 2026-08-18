@@ -876,7 +876,9 @@ fn render_recurrence_builder(frame: &mut Frame, dlg: Rect, screen: Rect, app: &A
         return;
     };
     let popup_w: u16 = 60;
-    let popup_h: u16 = 9;
+    // 8 content lines + 2 border rows. Was 9, which clipped the footer hint
+    // off the bottom so the key legend never actually rendered.
+    let popup_h: u16 = 10;
     let area = anchor_below_dialog(dlg, screen, popup_w, popup_h);
     frame.render_widget(Clear, area);
     let block = Block::default()
@@ -1039,15 +1041,15 @@ fn rec_footer<'a>(theme: &Theme) -> Line<'a> {
     Line::from(vec![
         Span::raw("  "),
         Span::styled(
-            "hjkl",
+            "jk",
             Style::default().fg(theme.dim).add_modifier(Modifier::BOLD),
         ),
-        Span::styled(" move · ", Style::default().fg(theme.dim)),
+        Span::styled(" field · ", Style::default().fg(theme.dim)),
         Span::styled(
-            "+/-",
+            "hl/+-",
             Style::default().fg(theme.dim).add_modifier(Modifier::BOLD),
         ),
-        Span::styled(" adjust · ", Style::default().fg(theme.dim)),
+        Span::styled(" change · ", Style::default().fg(theme.dim)),
         Span::styled(
             "Enter",
             Style::default().fg(theme.dim).add_modifier(Modifier::BOLD),
