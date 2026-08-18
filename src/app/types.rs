@@ -27,12 +27,14 @@ pub enum Mode {
     Visual,
     Help,
     Settings,
-    PromptProject,    // text input → add project on current task
-    PromptContext,    // text input → add/remove context on current task
-    PickProject,      // j/k cycles through projects to filter by
-    PickContext,      // j/k cycles through contexts to filter by
-    PickSavedFilter,  // j/k cycles through saved searches to apply
-    PromptSaveFilter, // text input → name the current search and save it
+    PromptProject,       // text input → add project on current task
+    PromptContext,       // text input → add/remove context on current task
+    PromptRenameProject, // text input → rename all project occurrences on current project in project list
+    PromptRenameContext, // text input → rename all context occurrences on current context in context list
+    PickProject,         // j/k cycles through projects to filter by
+    PickContext,         // j/k cycles through contexts to filter by
+    PickSavedFilter,     // j/k cycles through saved searches to apply
+    PromptSaveFilter,    // text input → name the current search and save it
     CommandPalette,
     /// QR + URL overlay for the in-TUI capture server. Any key
     /// dismisses; press `s` again to re-open without rebinding (the

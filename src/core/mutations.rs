@@ -3,6 +3,7 @@ use super::outcome::{
     AddOutcome, BulkCompleteOutcome, BulkDeleteOutcome, CompleteOutcome, DeleteOutcome,
     EditOutcome, MoveOutcome, PriorityOutcome, Reconcile, StoreError, TagOutcome,
 };
+use crate::core::outcome::RenameOutcome;
 use crate::recurrence::{self, RecSpec};
 use crate::todo::{self, TagError};
 
@@ -321,6 +322,78 @@ impl Store {
             Ok(false) => TagOutcome::Unchanged,
             Err(TagError::Invalid) => TagOutcome::InvalidName,
             Err(TagError::Parse(e)) => TagOutcome::Error(StoreError::Parse(e)),
+        }
+    }
+
+    pub fn rename_project(&mut self, name: &str, new_name: &str) -> RenameOutcome {
+        match self.reconcile() {
+            Reconcile::Unchanged => {}
+            other => return RenameOutcome::Aborted(other),
+        }
+        if !todo::is_valid_tag_name(new_name) {
+            return RenameOutcome::InvalidName;
+        }
+
+        let to_rename: Vec<usize> = self
+            .tasks
+            .iter()
+            .enumerate()
+            .filter(|(_, t)| t.projects.iter().any(|p| p == name))
+            .map(|(i, _)| i)
+            .collect();
+        if to_rename.is_empty() {
+            return RenameOutcome::NothingToRename;
+        }
+        self.push_history();
+
+        let mut renamed = 0;
+        for abs in to_rename {
+            match self.tasks[abs].rename_project(name, new_name) {
+                Ok(true) => renamed += 1,
+                Ok(false) => {}
+                Err(e) => return RenameOutcome::Error(StoreError::Tag(e)),
+            }
+        }
+
+        match self.persist() {
+            Ok(()) => RenameOutcome::Done { renamed },
+            Err(e) => RenameOutcome::Error(e),
+        }
+    }
+
+    pub fn rename_context(&mut self, name: &str, new_name: &str) -> RenameOutcome {
+        match self.reconcile() {
+            Reconcile::Unchanged => {}
+            other => return RenameOutcome::Aborted(other),
+        }
+        if !todo::is_valid_tag_name(new_name) {
+            return RenameOutcome::InvalidName;
+        }
+
+        let to_rename: Vec<usize> = self
+            .tasks
+            .iter()
+            .enumerate()
+            .filter(|(_, t)| t.contexts.iter().any(|c| c == name))
+            .map(|(i, _)| i)
+            .collect();
+        if to_rename.is_empty() {
+            return RenameOutcome::NothingToRename;
+        }
+        self.push_history();
+
+        let mut renamed = 0;
+        for abs in to_rename {
+            match self.tasks[abs].rename_context(name, new_name) {
+                Ok(true) => renamed += 1,
+                Ok(false) => {}
+                Err(e) => return RenameOutcome::Error(StoreError::Tag(e)),
+            }
+        }
+
+        match self.persist() {
+            Ok(()) => RenameOutcome::Done { renamed },
+            Err(e) => RenameOutcome::Error(e),
         }
     }
 
