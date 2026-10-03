@@ -9,6 +9,7 @@ a local database that stays yours — with todo.txt in and out whenever you
 want it. See [`DESIGN.md`](DESIGN.md) for where it's going.
 
 ```sh
+brew trust tasq-app/tap        # once: Homebrew asks before loading a third-party tap
 brew install tasq-app/tap/tasq
 ```
 
@@ -146,6 +147,7 @@ goes in verbatim, lists and all.
 ### Install
 
 ```sh
+brew trust tasq-app/tap        # once: Homebrew asks before loading a third-party tap
 brew install tasq-app/tap/tasq
 ```
 
@@ -273,9 +275,14 @@ tasq is in early alpha: expect rough edges, and keep your todo.txt around
 ### Homebrew (macOS, Linux)
 
 ```sh
+brew trust tasq-app/tap          # once
 brew install tasq-app/tap/tasq
 brew upgrade tasq                # later, for new versions
 ```
+
+Homebrew only loads formulae from its own taps until you trust a third-party
+one, so the first `brew install` stops with *Refusing to load formula … from
+untrusted tap* until you run `brew trust tasq-app/tap`.
 
 ### Prebuilt binaries
 
