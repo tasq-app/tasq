@@ -103,11 +103,22 @@ pub type Rejection = (FieldKind, String);
 /// which count as detected fields too), reports the byte span of every
 /// recognised phrase, and leaves `rejected` phrases as plain words.
 pub fn detect(text: &str, today: NaiveDate, rejected: &[Rejection]) -> Detection {
+    detect_in(text, today, rejected, &[])
+}
+
+/// [`detect`], also resolving "in exams" against the existing `spaces`
+/// (full paths like `Uni/Exams`, most used first).
+pub fn detect_in(
+    text: &str,
+    today: NaiveDate,
+    rejected: &[Rejection],
+    spaces: &[String],
+) -> Detection {
     let mut blocked = vec![false; text.len()];
     // A rejected phrase can, once blocked, let a shorter phrase inside it be
     // detected instead; a few rounds settle that.
     for _ in 0..4 {
-        let detection = detect_once(text, today, &blocked);
+        let detection = detect_once(text, today, &blocked, spaces);
         let mut changed = false;
         for span in &detection.spans {
             let phrase = text[span.start..span.end].to_lowercase();
@@ -125,10 +136,10 @@ pub fn detect(text: &str, today: NaiveDate, rejected: &[Rejection]) -> Detection
             return detection;
         }
     }
-    detect_once(text, today, &blocked)
+    detect_once(text, today, &blocked, spaces)
 }
 
-fn detect_once(text: &str, today: NaiveDate, blocked: &[bool]) -> Detection {
+fn detect_once(text: &str, today: NaiveDate, blocked: &[bool], spaces: &[String]) -> Detection {
     let mut scratch = Scratch::new(text);
     scratch.blocked = blocked.to_vec();
     let mut parsed = ParsedNl::default();
@@ -136,6 +147,7 @@ fn detect_once(text: &str, today: NaiveDate, blocked: &[bool]) -> Detection {
     pass_leading_priority(&mut scratch, &mut parsed);
     pass_canonical(&mut scratch, &mut parsed);
     pass_sigiled(&mut scratch, &mut parsed);
+    pass_space(&mut scratch, &mut parsed, spaces);
     pass_time(&mut scratch, &mut parsed);
     pass_reminder(&mut scratch, &mut parsed);
     pass_duration(&mut scratch, &mut parsed);
@@ -742,6 +754,59 @@ fn pass_sigiled(scratch: &mut Scratch, p: &mut ParsedNl) {
             scratch.mark(s, e);
         }
     }
+}
+
+/// "in exams", "into labs": the task goes in that space. The word is
+/// matched against the last part of each existing space (`Uni/Exams` →
+/// `exams`), ignoring case and accents, whole or as a prefix of 3+
+/// letters; `spaces` comes most used first, so that one wins a tie. Only
+/// existing spaces count, so "in the morning" stays text; a `+space`
+/// typed explicitly takes precedence.
+fn pass_space(scratch: &mut Scratch, p: &mut ParsedNl, spaces: &[String]) {
+    scratch.kind = Some(FieldKind::Project);
+    if spaces.is_empty() || !p.projects.is_empty() {
+        return;
+    }
+    let words = scratch.word_cache.clone();
+    for i in 0..words.len().saturating_sub(1) {
+        let (w, next) = (words[i], words[i + 1]);
+        if !scratch.is_live(w.0, w.1) || !scratch.is_live(next.0, next.1) {
+            continue;
+        }
+        if !matches!(scratch.word_lc(w), "in" | "into") {
+            continue;
+        }
+        let typed = fold(scratch.word_lc(next));
+        if typed.chars().count() < 3 {
+            continue;
+        }
+        let leaf = |s: &String| fold(&crate::core::spaces::leaf(s).to_lowercase());
+        let found = spaces
+            .iter()
+            .find(|s| leaf(s) == typed)
+            .or_else(|| spaces.iter().find(|s| leaf(s).starts_with(&typed)));
+        if let Some(space) = found {
+            scratch.mark(w.0, next.1);
+            p.projects.push(space.clone());
+            return;
+        }
+    }
+}
+
+/// Lower-case letters without their accents, for matching names.
+fn fold(s: &str) -> String {
+    s.chars()
+        .map(|c| match c {
+            'á' | 'à' | 'ä' | 'â' | 'ã' | 'å' => 'a',
+            'é' | 'è' | 'ë' | 'ê' => 'e',
+            'í' | 'ì' | 'ï' | 'î' => 'i',
+            'ó' | 'ò' | 'ö' | 'ô' | 'õ' => 'o',
+            'ú' | 'ù' | 'ü' | 'û' => 'u',
+            'ñ' => 'n',
+            'ç' => 'c',
+            c => c,
+        })
+        .collect()
 }
 
 fn push_unique(out: &mut Vec<String>, name: &str) {
@@ -1859,6 +1924,49 @@ mod tests {
         assert_eq!(p.duration, Some(90));
         assert_eq!(p.reminders, vec![15, 1440]);
         assert_eq!(p.body, "gym");
+    }
+
+    #[test]
+    fn in_a_space_resolves_against_existing_spaces() {
+        let today = d("2026-10-03");
+        let spaces: Vec<String> = ["Uni", "Uni/Exámenes", "Uni/Labs", "Personal/Moving"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let space = |text: &str| detect_in(text, today, &[], &spaces).parsed;
+        // Exact, accent- and case-insensitive, or a prefix.
+        for text in [
+            "study topic 3 in examenes",
+            "study topic 3 in Exámenes",
+            "study topic 3 in exam",
+        ] {
+            let p = space(text);
+            assert_eq!(p.projects, ["Uni/Exámenes"], "{text}");
+            assert_eq!(p.body, "study topic 3", "{text}");
+        }
+        assert_eq!(space("pay tuition in uni").projects, ["Uni"]);
+        assert_eq!(
+            space("pack boxes into moving").projects,
+            ["Personal/Moving"]
+        );
+        // Not a space: stays text.
+        let p = space("call in the morning");
+        assert!(p.projects.is_empty());
+        assert_eq!(p.body, "call in the morning");
+        assert!(space("meet in 3 days").projects.is_empty());
+        // An explicit +space wins; without spaces nothing is resolved.
+        assert_eq!(space("study +Uni/Labs in exams").projects, ["Uni/Labs"]);
+        assert!(
+            detect("study in exams", today, &[])
+                .parsed
+                .projects
+                .is_empty()
+        );
+        // Saved as a nested +project.
+        assert_eq!(
+            format_as_todo_txt(&space("study tomorrow in exam")),
+            "study +Uni/Exámenes plan:2026-10-04"
+        );
     }
 
     #[test]
