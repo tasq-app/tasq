@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.0-alpha.2](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.1...v0.1.0-alpha.2) (2026-10-03)
+
+
+### Features
+
+* **capture:** "in exams" puts the task in that space ([#12](https://github.com/tasq-app/tasq/issues/12)) ([5655f85](https://github.com/tasq-app/tasq/commit/5655f85649b75fe0f597e326b103675bc0a89c3f))
+* **spaces:** nested spaces with +Parent/Child ([#10](https://github.com/tasq-app/tasq/issues/10)) ([2bc7df9](https://github.com/tasq-app/tasq/commit/2bc7df99e59d8dae0249e1c941a2304c790e7c1b))
+* **views:** Today, Upcoming and All ([#11](https://github.com/tasq-app/tasq/issues/11)) ([3d143c9](https://github.com/tasq-app/tasq/commit/3d143c911564b7435da209ac87ab3624d95b66c1))
+
 ## [0.1.0-alpha.1](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.0...v0.1.0-alpha.1) (2026-10-03)
 
 
