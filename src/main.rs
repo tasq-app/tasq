@@ -494,7 +494,40 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::Share => handle_share(app, key),
         Mode::Notes => handle_notes(app, key),
         Mode::Welcome => handle_welcome(app, key),
+        Mode::Normal if app.calendar.is_some() => handle_calendar(app, key, keybinds),
         Mode::Normal | Mode::Visual => handle_normal(app, key, keybinds),
+    }
+}
+
+/// Keys on the calendar screen. Anything it doesn't use falls through to
+/// the list's keys (the command menu, help, sidebars, `1`–`3`…).
+fn handle_calendar(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    use tasq::app::CalView;
+    let view = app.calendar.as_ref().map(|c| c.view);
+    let month = view == Some(CalView::Month);
+    match key.code {
+        KeyCode::Esc => app.close_calendar(),
+        KeyCode::Char('d') => app.open_cal(CalView::Day),
+        KeyCode::Char('w') => app.open_cal(CalView::Week),
+        KeyCode::Char('m') => app.open_cal(CalView::Month),
+        KeyCode::Char('v') => app.cal_toggle_style(),
+        KeyCode::Char('t') => app.cal_today(),
+        KeyCode::Char('h') | KeyCode::Left => app.cal_move(-1),
+        KeyCode::Char('l') | KeyCode::Right => app.cal_move(1),
+        KeyCode::Char('j') | KeyCode::Down if month => app.cal_move(7),
+        KeyCode::Char('k') | KeyCode::Up if month => app.cal_move(-7),
+        KeyCode::Char('j') | KeyCode::Down => app.cal_select(true),
+        KeyCode::Char('k') | KeyCode::Up => app.cal_select(false),
+        KeyCode::Char('<') | KeyCode::PageUp => app.cal_page(false),
+        KeyCode::Char('>') | KeyCode::PageDown => app.cal_page(true),
+        KeyCode::Enter | KeyCode::Char('e') => app.cal_edit(),
+        KeyCode::Char('x') => app.cal_complete(),
+        KeyCode::Char('n') => app.cal_new(),
+        KeyCode::Char('J') => app.cal_shift_time(30),
+        KeyCode::Char('K') => app.cal_shift_time(-30),
+        KeyCode::Char('H') => app.cal_shift_day(-1),
+        KeyCode::Char('L') => app.cal_shift_day(1),
+        _ => handle_normal(app, key, keybinds),
     }
 }
 
@@ -1666,6 +1699,9 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('1') => Action::ScopeToday,
         KeyCode::Char('2') => Action::ScopeUpcoming,
         KeyCode::Char('3') => Action::ScopeAll,
+        KeyCode::Char('4') => Action::CalendarDay,
+        KeyCode::Char('5') => Action::CalendarWeek,
+        KeyCode::Char('6') => Action::CalendarMonth,
         KeyCode::Char('e') => Action::BeginEdit,
         KeyCode::Char('i') => Action::BeginEditInsert,
         KeyCode::Char('o') => Action::OpenNotes,
@@ -1895,6 +1931,9 @@ fn apply_action(app: &mut App, action: Action) {
             }
         }
         Action::GoList => app.set_view(View::List),
+        Action::CalendarDay => app.open_cal(tasq::app::CalView::Day),
+        Action::CalendarWeek => app.open_cal(tasq::app::CalView::Week),
+        Action::CalendarMonth => app.open_cal(tasq::app::CalView::Month),
         Action::ScopeToday => app.set_scope(tasq::app::Scope::Today),
         Action::ScopeUpcoming => app.set_scope(tasq::app::Scope::Upcoming),
         Action::ScopeAll => app.set_scope(tasq::app::Scope::All),

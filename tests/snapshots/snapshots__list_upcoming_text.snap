@@ -6,24 +6,24 @@ expression: buffer_to_text(&buf)
    Today             1 1                                                                            
  ▸ Upcoming          6 2   (1)  TOMORROW  ──────────────────────── priority  (B)                    
    All              15 3    1 ▸ ⚑ Review pull requests for auth re created   2026-05-02             
-                           (1)  FRI 8 MAY  ─────────────────────── due       2026-05-07  tomorrow   
- SPACES                     2   ⚑ Call dentist to reschedule clean space     work                   
-   ● work            4     (4)  LATER  ─────────────────────────── tags      @laptop                
-   ● health          3      3     Migrate analytics to new pipelin                                  
-   ● finance         2      4     Pay rent  ◷ by fri 15 may   ↻ ev RAW                              
-   ● home            1      5   ⚑ Renew passport before summer tri                                  
-   ● learning        1      6   ⚑ Pay quarterly estimated taxes  ◷ (B) 2026-05-02 Review pull       
-   ● personal        1                                             requests for auth refactor +work 
-   ● travel          1                                             @laptop due:2026-05-07           
+   Day               1 4   (1)  FRI 8 MAY  ─────────────────────── due       2026-05-07  tomorrow   
+   Week              3 5    2   ⚑ Call dentist to reschedule clean space     work                   
+   Month             6 6   (4)  LATER  ─────────────────────────── tags      @laptop                
+                            3     Migrate analytics to new pipelin                                  
+ SPACES                     4     Pay rent  ◷ by fri 15 may   ↻ ev RAW                              
+   ● work            4      5   ⚑ Renew passport before summer tri                                  
+   ● health          3      6   ⚑ Pay quarterly estimated taxes  ◷ (B) 2026-05-02 Review pull       
+   ● finance         2                                             requests for auth refactor +work 
+   ● home            1                                             @laptop due:2026-05-07           
+   ● learning        1                                                                              
+   ● personal        1                                                                              
+   ● travel          1                                                                              
                                                                                                     
  TAGS                                                                                               
    @errands          4                                                                              
    @home             4                                                                              
    @laptop           4                                                                              
    @phone            3                                                                              
-                                                                                                    
-                                                                                                    
-                                                                                                    
                                                                                                     
                                                                                                     
                                                                                                     

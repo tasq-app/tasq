@@ -6,15 +6,15 @@ expression: buffer_to_text(&buf)
    Today             0 1                                                                            
    Upcoming          0 2                                           (no task)                        
  ▸ All               0 3                                                                            
+   Day               0 4                                                                            
+   Week              0 5                                                                            
+   Month             0 6                                                                            
                                                                                                     
- SPACES                                                                                             
-   tag with +space                                                                                  
-                                                                                                    
- TAGS                 ╭ tasq · welcome ──────────────────────────────────────╮                      
-   tag with @context  │                    ██          ██                    │                      
+ SPACES               ╭ tasq · welcome ──────────────────────────────────────╮                      
+   tag with +space    │                    ██          ██                    │                      
                       │                    ████  ██  ████                    │                      
-                      │                    ██████████████                    │                      
-                      │                    ████  ██  ████                    │                      
+ TAGS                 │                    ██████████████                    │                      
+   tag with @context  │                    ████  ██  ████                    │                      
                       │                    ██          ██                    │                      
                       │                                                      │                      
                       │  no todo.txt in this folder yet                      │                      

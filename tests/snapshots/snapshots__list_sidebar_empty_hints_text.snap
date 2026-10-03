@@ -6,15 +6,15 @@ expression: buffer_to_text(&buf)
    Today             0 1                                                                            
    Upcoming          0 2   (1)  PRIORITY A  ────────────────────── priority  (A)                    
  ▸ All               3 3    1 ▸ ⚑ Buy milk                         created   —                      
-                           (1)  PRIORITY B  ────────────────────── space                            
- SPACES                     2   ⚑ Call mom                         tags                             
-   tag with +space         (1)  NO PRIORITY  ─────────────────────                                  
+   Day               0 4   (1)  PRIORITY B  ────────────────────── space                            
+   Week              0 5    2   ⚑ Call mom                         tags                             
+   Month             0 6   (1)  NO PRIORITY  ─────────────────────                                  
                             3     Write up notes                   RAW                              
+ SPACES                                                                                             
+   tag with +space                                                 (A) Buy milk                     
+                                                                                                    
  TAGS                                                                                               
-   tag with @context                                               (A) Buy milk                     
-                                                                                                    
-                                                                                                    
-                                                                                                    
+   tag with @context                                                                                
                                                                                                     
                                                                                                     
                                                                                                     

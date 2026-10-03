@@ -13,6 +13,7 @@ mod external;
 mod history;
 mod mutations;
 
+pub mod calendar;
 pub mod filter;
 pub mod outcome;
 pub mod spaces;

@@ -285,7 +285,7 @@ fn is_chip_token(token: &str) -> bool {
 
 /// Mix `color` into `bg` at `amount` (0–1), for a chip's tinted ground.
 /// `None` when either isn't an RGB colour (a terminal-palette theme).
-fn tint(color: Color, bg: Color, amount: f32) -> Option<Color> {
+pub(crate) fn tint(color: Color, bg: Color, amount: f32) -> Option<Color> {
     match (color, bg) {
         (Color::Rgb(r, g, b), Color::Rgb(br, bgc, bb)) => {
             let mix = |c: u8, base: u8| {

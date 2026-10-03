@@ -47,7 +47,37 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                     )
             })
             .count();
-        let active = in_list && app.prefs.scope == scope;
+        let active = in_list && app.calendar.is_none() && app.prefs.scope == scope;
+        let mut row = filter_row(theme, "", label, count, active, theme.fg);
+        row.spans.push(Span::styled(
+            format!(" {key}"),
+            Style::default().fg(theme.dim),
+        ));
+        lines.push(row);
+    }
+    // The calendar views, with what each holds around today.
+    let today_d = app.today_naive();
+    let week_from = crate::app::week_start(today_d);
+    let (month_from, month_to) = crate::app::month_bounds(today_d);
+    for (view, label, key, from, to) in [
+        (crate::app::CalView::Day, "Day", "4", today_d, today_d),
+        (
+            crate::app::CalView::Week,
+            "Week",
+            "5",
+            week_from,
+            week_from + chrono::Days::new(6),
+        ),
+        (
+            crate::app::CalView::Month,
+            "Month",
+            "6",
+            month_from,
+            month_to,
+        ),
+    ] {
+        let count = app.cal_occurrences(from, to).len();
+        let active = app.calendar.as_ref().is_some_and(|c| c.view == view);
         let mut row = filter_row(theme, "", label, count, active, theme.fg);
         row.spans.push(Span::styled(
             format!(" {key}"),

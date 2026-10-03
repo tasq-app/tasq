@@ -6,6 +6,7 @@ use ratatui::widgets::{Block, Clear};
 use crate::app::{App, Mode, View};
 
 pub mod archive;
+pub mod calendar;
 pub mod command_palette;
 pub mod detail;
 pub mod dialog;
@@ -97,11 +98,19 @@ pub fn draw(frame: &mut Frame, app: &App) {
     if let Some(la) = left_area {
         filters::render(frame, la, app);
     }
-    match app.view() {
-        View::List => list::render(frame, center_area, app),
-        View::Archive => archive::render(frame, center_area, app),
+    // The calendar takes the centre and the detail column.
+    if app.calendar.is_some() {
+        let r = right_area.map_or(center_area, |ra| center_area.union(ra));
+        calendar::render(frame, r, app);
+    } else {
+        match app.view() {
+            View::List => list::render(frame, center_area, app),
+            View::Archive => archive::render(frame, center_area, app),
+        }
     }
-    if let Some(ra) = right_area {
+    if let Some(ra) = right_area
+        && app.calendar.is_none()
+    {
         if app.pinned_notes.is_empty() {
             detail::render(frame, ra, app);
         } else {

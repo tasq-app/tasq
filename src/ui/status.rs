@@ -49,6 +49,11 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     if matches!(app.view, View::Archive) {
         mode_label = "ARCHIVE".into();
     }
+    if app.mode == Mode::Normal
+        && let Some(cal) = &app.calendar
+    {
+        mode_label = cal.view.label().into();
+    }
     if let Some(f) = app.flash_active() {
         mode_label = format!("{mode_label} · {f}").into();
     }
@@ -68,6 +73,21 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         note_editor_hint(editor.mode(), tail).into()
     } else if app.pinned_focus {
         "z unfocus · Z close pinned".into()
+    } else if app.mode == Mode::Normal
+        && let Some(cal) = &app.calendar
+    {
+        match cal.view {
+            crate::app::CalView::Day => {
+                "↑↓ task · ←→ day · Enter edit · x done · n new · J/K move · Esc list"
+            }
+            crate::app::CalView::Week => {
+                "←→ day · ↑↓ task · < > week · v blocks/agenda · Enter edit · n new · Esc list"
+            }
+            crate::app::CalView::Month => {
+                "←→↑↓ day · < > month · v counts/titles · Enter day · n new · Esc list"
+            }
+        }
+        .into()
     } else {
         match app.mode {
             Mode::Insert => match app.draft.input_mode() {

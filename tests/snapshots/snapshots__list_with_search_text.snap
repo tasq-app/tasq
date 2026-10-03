@@ -6,24 +6,24 @@ expression: buffer_to_text(&buf)
    Today             1 1                                                                            
    Upcoming          6 2   (1)  PRIORITY A  ────────────────────── priority  (A)                    
  ▸ All              15 3    1 ▸ ⚑ Finish Q2 board deck  ◷ due toda created   2026-05-01             
-                           (2)  PRIORITY B  ────────────────────── due       2026-05-06  today      
- SPACES                     2   ⚑ Review pull requests for auth re space     work                   
-   ● work            4      3   ⚑ Draft hiring rubric for senior e tags      @laptop                
-   ● health          3     (1)  NO PRIORITY  ─────────────────────                                  
-   ● finance         2      4     Migrate analytics to new pipelin RAW                              
-   ● home            1                                                                              
-   ● learning        1                                             (A) 2026-05-01 Finish Q2 board   
-   ● personal        1                                             deck +work @laptop               
-   ● travel          1                                             due:2026-05-06                   
+   Day               1 4   (2)  PRIORITY B  ────────────────────── due       2026-05-06  today      
+   Week              3 5    2   ⚑ Review pull requests for auth re space     work                   
+   Month             6 6    3   ⚑ Draft hiring rubric for senior e tags      @laptop                
+                           (1)  NO PRIORITY  ─────────────────────                                  
+ SPACES                     4     Migrate analytics to new pipelin RAW                              
+   ● work            4                                                                              
+   ● health          3                                             (A) 2026-05-01 Finish Q2 board   
+   ● finance         2                                             deck +work @laptop               
+   ● home            1                                             due:2026-05-06                   
+   ● learning        1                                                                              
+   ● personal        1                                                                              
+   ● travel          1                                                                              
                                                                                                     
  TAGS                                                                                               
    @errands          4                                                                              
    @home             4                                                                              
    @laptop           4                                                                              
    @phone            3                                                                              
-                                                                                                    
-                                                                                                    
-                                                                                                    
                                                                                                     
                                                                                                     
                                                                                                     
