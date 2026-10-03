@@ -8,13 +8,13 @@ expression: buffer_to_text(&buf)
  ▸ All              15 3    1 ▸ (A) Finish Q2 board deck +work @la created   2026-05-01             
                             2   (A) Call dentist to reschedule cle due       2026-05-06  today      
  SPACES                    (3)  PRIORITY B  ────────────────────── space     work                   
-   work             ╭ tasq · command ──────────────────────────────────────────╮ptop                
-   health           │ > arch█  4 matches                                       │                    
-   finance          │──────────────────────────────────────────────────────────│                    
-   home             │ ▶ archive completed tasks                              A │                    
-   learning         │   toggle archive view                                  a │1 Finish Q2 board   
-   personal         │   fuzzy search                                         / │aptop               
-   travel           │   save search as filter                               fs │6                   
+   ● work           ╭ tasq · command ──────────────────────────────────────────╮ptop                
+   ● health         │ > arch█  4 matches                                       │                    
+   ● finance        │──────────────────────────────────────────────────────────│                    
+   ● home           │ ▶ archive completed tasks                              A │                    
+   ● learning       │   toggle archive view                                  a │1 Finish Q2 board   
+   ● personal       │   fuzzy search                                         / │aptop               
+   ● travel         │   save search as filter                               fs │6                   
                     │                                                          │                    
  TAGS               │                                                          │                    
    @errands         │                                                          │                    

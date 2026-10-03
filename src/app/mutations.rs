@@ -9,7 +9,7 @@ use crate::app::WeekStart;
 use crate::core::AddOutcome as CoreAdd;
 use crate::core::{
     ArchiveDeleteOutcome, ArchiveOutcome, CompleteOutcome, DeleteOutcome, DeleteSpaceOutcome,
-    EditOutcome, HideSpaceOutcome, MoveOutcome, PriorityOutcome, RenameOutcome, TagOutcome,
+    EditOutcome, MoveOutcome, PriorityOutcome, RenameOutcome, SpaceSettingOutcome, TagOutcome,
     UnarchiveOutcome, UndoOutcome,
 };
 use crate::nl;
@@ -304,7 +304,7 @@ impl App {
             .any(|s| s.path == path && s.hidden);
         let name = crate::core::spaces::display(&path);
         match self.store.set_space_hidden(&path, hide) {
-            HideSpaceOutcome::Done => {
+            SpaceSettingOutcome::Done => {
                 let above = crate::core::spaces::hidden_by(&path, self.store.known_spaces())
                     .filter(|h| *h != path)
                     .map(crate::core::spaces::display);
@@ -317,9 +317,41 @@ impl App {
                 }
                 self.recompute_visible();
             }
-            HideSpaceOutcome::NotKept => self.flash("hiding a space needs the database"),
-            HideSpaceOutcome::Aborted(r) => self.handle_reconcile_abort(r),
-            HideSpaceOutcome::Error(e) => self.flash(format!("hide failed: {e}")),
+            SpaceSettingOutcome::NotKept => self.flash("hiding a space needs the database"),
+            SpaceSettingOutcome::Aborted(r) => self.handle_reconcile_abort(r),
+            SpaceSettingOutcome::Error(e) => self.flash(format!("hide failed: {e}")),
+        }
+    }
+
+    /// Give the space the picker is on the next colour of the palette
+    /// (`reset`: back to the automatic one).
+    pub fn cycle_current_space_color(&mut self, reset: bool) {
+        use crate::core::spaces::{PALETTE_SLOTS, SpaceColor};
+        let Some(path) = self.filter.project.clone() else {
+            return;
+        };
+        let next = if reset {
+            None
+        } else {
+            Some(match self.store.space_color(&path) {
+                SpaceColor::Slot(n) => SpaceColor::Slot((n + 1) % PALETTE_SLOTS),
+                SpaceColor::Rgb(..) => SpaceColor::Slot(0),
+            })
+        };
+        let name = crate::core::spaces::display(&path);
+        match self.store.set_space_color(&path, next) {
+            SpaceSettingOutcome::Done => match next {
+                Some(SpaceColor::Slot(n)) => {
+                    self.flash(format!(
+                        "{name}: colour {}/{PALETTE_SLOTS} · C automatic",
+                        n + 1
+                    ));
+                }
+                _ => self.flash(format!("{name}: automatic colour")),
+            },
+            SpaceSettingOutcome::NotKept => self.flash("space colours need the database"),
+            SpaceSettingOutcome::Aborted(r) => self.handle_reconcile_abort(r),
+            SpaceSettingOutcome::Error(e) => self.flash(format!("colour failed: {e}")),
         }
     }
 

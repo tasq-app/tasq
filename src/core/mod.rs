@@ -24,8 +24,8 @@ pub use archive::Archive;
 pub use history::History;
 pub use outcome::{
     AddOutcome, ArchiveDeleteOutcome, ArchiveOutcome, BulkCompleteOutcome, BulkDeleteOutcome,
-    CompleteOutcome, DeleteOutcome, DeleteSpaceOutcome, DrainReport, EditOutcome, HideSpaceOutcome,
-    MoveOutcome, PriorityOutcome, Reconcile, RenameOutcome, StoreError, TagOutcome,
+    CompleteOutcome, DeleteOutcome, DeleteSpaceOutcome, DrainReport, EditOutcome, MoveOutcome,
+    PriorityOutcome, Reconcile, RenameOutcome, SpaceSettingOutcome, StoreError, TagOutcome,
     UnarchiveOutcome, UndoOutcome,
 };
 

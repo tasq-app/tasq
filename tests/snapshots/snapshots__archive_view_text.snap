@@ -8,13 +8,13 @@ expression: buffer_to_text(&buf)
    All              15 3                                                                            
                                                                                                     
  SPACES                                                                                             
-   work              4                                                                              
-   health            3                                                                              
-   finance           2                                                                              
-   home              1                                                                              
-   learning          1                                                                              
-   personal          1                                                                              
-   travel            1                                                                              
+   ● work            4                                                                              
+   ● health          3                                                                              
+   ● finance         2                                                                              
+   ● home            1                                                                              
+   ● learning        1                                                                              
+   ● personal        1                                                                              
+   ● travel          1                                                                              
                                                                                                     
  TAGS                                                                                               
    @errands          4                                                                              

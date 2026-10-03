@@ -1460,6 +1460,8 @@ fn handle_pick(app: &mut App, key: KeyEvent) {
         },
         KeyCode::Char('d') if app.mode == Mode::PickProject => app.delete_current_space(),
         KeyCode::Char('h') if app.mode == Mode::PickProject => app.toggle_current_space_hidden(),
+        KeyCode::Char('c') if app.mode == Mode::PickProject => app.cycle_current_space_color(false),
+        KeyCode::Char('C') if app.mode == Mode::PickProject => app.cycle_current_space_color(true),
         KeyCode::Enter => app.pick_accept(),
         KeyCode::Esc => app.pick_cancel(),
         _ => {}

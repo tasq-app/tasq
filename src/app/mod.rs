@@ -403,6 +403,11 @@ impl App {
         }
     }
 
+    /// The colour the space `path` is painted in.
+    pub fn space_color(&self, path: &str) -> ratatui::style::Color {
+        self.theme().space_color(self.store.space_color(path))
+    }
+
     pub fn theme(&self) -> &'static Theme {
         self.prefs.theme()
     }

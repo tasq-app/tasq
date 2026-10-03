@@ -8,13 +8,13 @@ expression: buffer_to_text(&buf)
  ▸ Al│    j / k  (↓ / ↑)    next / previous task      1 / 2 / 3         today / upcoming / all│     
      │    gg / G            first / last task         /                 fuzzy search          │     
  SPAC│    Ctrl-d / Ctrl-u   page down / up            fp / fc           filter space/tag      │     
-   wo│                                                ff / fs           saved filter pick/save│     
-   he│  EDITING                                       S                 cycle sort            │     
-   fi│    n / o             new task / open notes     v                 visual / multi-select │     
-   ho│    e / i             edit (normal / insert)    l                 list view             │     
-   le│    r                 reschedule task           a                 archive view          │rd   
-   pe│    x                 toggle complete           A                 archive completed     │     
-   tr│    dd                delete task               H                 show done in list     │     
+   ● │                                                ff / fs           saved filter pick/save│     
+   ● │  EDITING                                       S                 cycle sort            │     
+   ● │    n / o             new task / open notes     v                 visual / multi-select │     
+   ● │    e / i             edit (normal / insert)    l                 list view             │     
+   ● │    r                 reschedule task           a                 archive view          │rd   
+   ● │    x                 toggle complete           A                 archive completed     │     
+   ● │    dd                delete task               H                 show done in list     │     
      │    p / *             priority A→B→C / star     F                 show future in list   │     
  TAGS│    J / K             move task down / up       [ / ]             toggle filter / detail│     
    @e│    c                 add/remove context        T                 theme picker          │     

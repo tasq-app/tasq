@@ -3,7 +3,7 @@ use super::outcome::{
     AddOutcome, BulkCompleteOutcome, BulkDeleteOutcome, CompleteOutcome, DeleteOutcome,
     EditOutcome, MoveOutcome, PriorityOutcome, Reconcile, StoreError, TagOutcome,
 };
-use crate::core::outcome::{DeleteSpaceOutcome, HideSpaceOutcome, RenameOutcome};
+use crate::core::outcome::{DeleteSpaceOutcome, RenameOutcome, SpaceSettingOutcome};
 use crate::recurrence::{self, RecSpec};
 use crate::todo::{self, TagError};
 
@@ -403,19 +403,46 @@ impl Store {
     }
 
     /// Hide or show a space. Only a database keeps the setting.
-    pub fn set_space_hidden(&mut self, path: &str, hidden: bool) -> HideSpaceOutcome {
+    pub fn set_space_hidden(&mut self, path: &str, hidden: bool) -> SpaceSettingOutcome {
         match self.reconcile() {
             Reconcile::Unchanged => {}
-            other => return HideSpaceOutcome::Aborted(other),
+            other => return SpaceSettingOutcome::Aborted(other),
         }
         let Some(db) = self.db.as_mut() else {
-            return HideSpaceOutcome::NotKept;
+            return SpaceSettingOutcome::NotKept;
         };
         if let Err(e) = db.set_space_hidden(path, hidden) {
-            return HideSpaceOutcome::Error(StoreError::Write(e));
+            return SpaceSettingOutcome::Error(StoreError::Write(e));
         }
         self.refresh_spaces();
-        HideSpaceOutcome::Done
+        SpaceSettingOutcome::Done
+    }
+
+    /// Set a space's colour (`None`: back to the automatic one). Only a
+    /// database keeps the setting.
+    pub fn set_space_color(
+        &mut self,
+        path: &str,
+        color: Option<super::spaces::SpaceColor>,
+    ) -> SpaceSettingOutcome {
+        match self.reconcile() {
+            Reconcile::Unchanged => {}
+            other => return SpaceSettingOutcome::Aborted(other),
+        }
+        let Some(db) = self.db.as_mut() else {
+            return SpaceSettingOutcome::NotKept;
+        };
+        let value = color.map(super::spaces::SpaceColor::to_value);
+        if let Err(e) = db.set_space_color(path, value.as_deref()) {
+            return SpaceSettingOutcome::Error(StoreError::Write(e));
+        }
+        self.refresh_spaces();
+        SpaceSettingOutcome::Done
+    }
+
+    /// The colour a space is painted in (see [`super::spaces::color_of`]).
+    pub fn space_color(&self, path: &str) -> super::spaces::SpaceColor {
+        super::spaces::color_of(path, &self.spaces)
     }
 
     /// Forget a space the database keeps (and its sub-spaces). Only an

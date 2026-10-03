@@ -33,9 +33,41 @@ pub struct Theme {
     pub done: Color,
     pub selected: Color,
     pub matched: Color,
+    /// Colours spaces are painted in, in slot order. Empty means "derive
+    /// them from the theme's other colours" (see [`Theme::palette`]).
+    pub palette: &'static [Color],
 }
 
+pub use crate::core::spaces::PALETTE_SLOTS;
+
 impl Theme {
+    /// The colours spaces are painted in: the theme's own `palette`, or one
+    /// made of its accent colours (red is left out — it means overdue).
+    pub fn palette(&self) -> [Color; PALETTE_SLOTS] {
+        if !self.palette.is_empty() {
+            return std::array::from_fn(|i| self.palette[i % self.palette.len()]);
+        }
+        [
+            self.project,
+            self.context,
+            self.pri_c,
+            self.pri_b,
+            self.pri_other,
+            self.accent,
+            self.pri_d,
+            self.matched,
+        ]
+    }
+
+    /// The terminal colour of a space colour.
+    pub fn space_color(&self, c: crate::core::spaces::SpaceColor) -> Color {
+        use crate::core::spaces::SpaceColor;
+        match c {
+            SpaceColor::Slot(n) => self.palette()[n % PALETTE_SLOTS],
+            SpaceColor::Rgb(r, g, b) => Color::Rgb(r, g, b),
+        }
+    }
+
     pub fn priority_color(&self, p: char) -> Color {
         match p {
             'A' => self.pri_a,
@@ -78,6 +110,7 @@ pub const MUTED: Theme = Theme {
     done: rgb(0x5a, 0x62, 0x70),
     selected: rgb(0x2f, 0x39, 0x47),
     matched: rgb(0xd4, 0xb0, 0x6a),
+    palette: &[],
 };
 
 pub const DAWN: Theme = Theme {
@@ -107,6 +140,7 @@ pub const DAWN: Theme = Theme {
     done: rgb(0xa8, 0x9a, 0x82),
     selected: rgb(0xed, 0xe0, 0xc8),
     matched: rgb(0xa3, 0x72, 0x2a),
+    palette: &[],
 };
 
 pub const NORD: Theme = Theme {
@@ -136,6 +170,7 @@ pub const NORD: Theme = Theme {
     done: rgb(0x4c, 0x56, 0x6a),
     selected: rgb(0x43, 0x4c, 0x5e),
     matched: rgb(0xeb, 0xcb, 0x8b),
+    palette: &[],
 };
 
 pub const MATRIX: Theme = Theme {
@@ -165,6 +200,7 @@ pub const MATRIX: Theme = Theme {
     done: rgb(0x3f, 0x6a, 0x3f),
     selected: rgb(0x1f, 0x3a, 0x1f),
     matched: rgb(0xff, 0xd6, 0x6e),
+    palette: &[],
 };
 
 pub const TERMINAL: Theme = Theme {
@@ -194,6 +230,7 @@ pub const TERMINAL: Theme = Theme {
     done: Color::DarkGray,
     selected: Color::DarkGray,
     matched: Color::Yellow,
+    palette: &[],
 };
 
 pub const BUILT_IN: &[&Theme] = &[&MUTED, &DAWN, &NORD, &MATRIX, &TERMINAL];
@@ -306,6 +343,7 @@ fn parse_theme(s: &str) -> Result<Theme, String> {
     let mut name: Option<String> = None;
     let mut colors: std::collections::BTreeMap<&'static str, Color> =
         std::collections::BTreeMap::new();
+    let mut palette: Vec<Color> = Vec::new();
 
     for (lineno, raw) in s.lines().enumerate() {
         let line = raw.trim();
@@ -322,6 +360,15 @@ fn parse_theme(s: &str) -> Result<Theme, String> {
                 return Err(format!("line {}: empty name", lineno + 1));
             }
             name = Some(v.to_string());
+            continue;
+        }
+        if k == "palette" {
+            for part in v.split(',').map(str::trim).filter(|p| !p.is_empty()) {
+                let color = parse_color(part).ok_or_else(|| {
+                    format!("line {}: palette has invalid color '{part}'", lineno + 1)
+                })?;
+                palette.push(color);
+            }
             continue;
         }
         if let Some(field) = match_color_field(k) {
@@ -374,6 +421,7 @@ fn parse_theme(s: &str) -> Result<Theme, String> {
         done: get("done")?,
         selected: get("selected")?,
         matched: get("matched")?,
+        palette: Box::leak(palette.into_boxed_slice()),
     })
 }
 
