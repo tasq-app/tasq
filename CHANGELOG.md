@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.0-alpha.3](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.2...v0.1.0-alpha.3) (2026-10-03)
+
+
+### Features
+
+* **spaces:** hide a space ([#18](https://github.com/tasq-app/tasq/issues/18)) ([b89c5f1](https://github.com/tasq-app/tasq/commit/b89c5f1af4422b87c2190f3468dab4a7c5863d8a))
+* **spaces:** keep spaces in the database ([#17](https://github.com/tasq-app/tasq/issues/17)) ([5f70d1c](https://github.com/tasq-app/tasq/commit/5f70d1c49532267e798bc6dd57b0c6f84c847740))
+* **views:** dim the Later rows in Upcoming ([#16](https://github.com/tasq-app/tasq/issues/16)) ([c6549dd](https://github.com/tasq-app/tasq/commit/c6549dd74ae8b67366912f3800011db7c42062db))
+
 ## [0.1.0-alpha.2](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.1...v0.1.0-alpha.2) (2026-10-03)
 
 
