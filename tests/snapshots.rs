@@ -21,7 +21,7 @@ use ratatui::buffer::Buffer;
 use ratatui::style::{Color, Modifier};
 
 use tasq::app::{
-    App, BuilderField, CalendarState, CalendarTarget, Density, DraftOverlay, Mode,
+    App, BuilderField, CalView, CalendarState, CalendarTarget, Density, DraftOverlay, Mode,
     PriorityChooserState, RecurrenceBuilderState, Scope, SlashMenuState, View,
 };
 use tasq::config::Config;
@@ -258,6 +258,31 @@ fn list_upcoming() {
     // The coming week by day, then Later — dimmed apart from the cursor row.
     app.set_scope(Scope::Upcoming);
     snapshot_app("list_upcoming", &app);
+}
+
+#[test]
+fn calendar_day() {
+    // Time-blocked tasks on the fixture's today, and a pinned clock.
+    let body = format!(
+        "{}{}",
+        sample::TODO_RAW,
+        "(A) Trabajo TIS +Uni/TIS plan:2026-05-06 at:16:00 dur:2h\n\
+         Teoria AII +Uni/AII plan:2026-05-06 at:09:00 dur:2h\n\
+         Gym +personal plan:2026-05-06 rec:+1d at:07:00 dur:1h\n\
+         Fisio +personal plan:2026-05-06 at:11:30\n\
+         Plan the week plan:2026-05-06\n"
+    );
+    let mut app = App::new(
+        PathBuf::from(FIXTURE_PATH),
+        body,
+        "2026-05-06".to_string(),
+        Config::default(),
+    );
+    app.version_label = "tasq 0.0.0".to_string();
+    app.prefs.density = Density::Compact;
+    app.frozen_now = Some(12 * 60 + 40);
+    app.open_cal(CalView::Day);
+    snapshot_app("calendar_day", &app);
 }
 
 #[test]

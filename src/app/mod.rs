@@ -14,6 +14,7 @@ use crate::todo::Task;
 
 mod autocomplete;
 mod bulk;
+mod calendar;
 mod chord;
 mod draft;
 mod draft_overlay;
@@ -38,6 +39,7 @@ pub use crate::core::Archive;
 pub use crate::core::History;
 pub use crate::core::filter::{ListDueBucket, ordered_unique};
 pub use autocomplete::{ActiveToken, AutocompleteTarget, TokenKind, active_token};
+pub use calendar::{CalScreen, CalStyle, CalView, month_bounds, week_start};
 pub use chord::Chord;
 pub use draft::{DialogInputMode, DraftCursor, DraftState};
 pub use draft_overlay::{
@@ -152,6 +154,11 @@ pub struct App {
     /// `filter.search` so duplicate queries don't strand j/k. Only
     /// meaningful while `Mode::PickSavedFilter`; re-seeded on each open.
     saved_pick_idx: usize,
+    /// The calendar screen, while it is open (see [`CalScreen`]).
+    pub calendar: Option<CalScreen>,
+    /// The time the calendar treats as now, in minutes; `None` reads the
+    /// clock. Snapshot tests pin it (24*60 or more hides the now line).
+    pub frozen_now: Option<u32>,
     pub command_palette: CommandPaletteState,
     /// Vertical scroll offset (rows from the top of the line list) for each
     /// view, keyed by `View::idx()`. Updated at render time via `Cell` so the
@@ -275,6 +282,8 @@ impl App {
             saved_filters,
             saved_pick_restore: None,
             saved_pick_idx: 0,
+            calendar: None,
+            frozen_now: None,
             command_palette: CommandPaletteState::default(),
             view_scroll: [Cell::new(0), Cell::new(0)],
             share: None,
@@ -584,6 +593,7 @@ impl App {
     /// Show Today, Upcoming or All in the list (and remember it). Switches
     /// back to the list from the archive.
     pub fn set_scope(&mut self, scope: Scope) {
+        self.calendar = None;
         self.prefs.scope = scope;
         self.set_view(View::List);
         self.cursor = 0;

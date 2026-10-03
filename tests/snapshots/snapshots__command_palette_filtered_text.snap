@@ -6,24 +6,24 @@ expression: buffer_to_text(&buf)
    Today             1 1                                                                            
    Upcoming          6 2   (2)  PRIORITY A  ────────────────────── priority  (A)                    
  ▸ All              15 3    1 ▸ ⚑ Finish Q2 board deck  ◷ due toda created   2026-05-01             
-                            2   ⚑ Call dentist to reschedule clean due       2026-05-06  today      
- SPACES                    (3)  PRIORITY B  ────────────────────── space     work                   
-   ● work           ╭ tasq · command ──────────────────────────────────────────╮ptop                
-   ● health         │ > arch█  4 matches                                       │                    
-   ● finance        │──────────────────────────────────────────────────────────│                    
-   ● home           │ ▶ archive completed tasks                              A │                    
-   ● learning       │   toggle archive view                                  a │1 Finish Q2 board   
-   ● personal       │   fuzzy search                                         / │aptop               
-   ● travel         │   save search as filter                               fs │6                   
+   Day               1 4    2   ⚑ Call dentist to reschedule clean due       2026-05-06  today      
+   Week              3 5   (3)  PRIORITY B  ────────────────────── space     work                   
+   Month            ╭ tasq · command ──────────────────────────────────────────╮ptop                
+                    │ > arch█  4 matches                                       │                    
+ SPACES             │──────────────────────────────────────────────────────────│                    
+   ● work           │ ▶ archive completed tasks                              A │                    
+   ● health         │   toggle archive view                                  a │1 Finish Q2 board   
+   ● finance        │   fuzzy search                                         / │aptop               
+   ● home           │   save search as filter                               fs │6                   
+   ● learning       │                                                          │                    
+   ● personal       │                                                          │                    
+   ● travel         │                                                          │                    
                     │                                                          │                    
  TAGS               │                                                          │                    
    @errands         │                                                          │                    
    @home            │                                                          │                    
    @laptop          │                                                          │                    
    @phone           │                                                          │                    
-                    │                                                          │                    
-                    │                                                          │                    
-                    │                                                          │                    
                     │                                                          │                    
                     │                                                          │                    
                     │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    

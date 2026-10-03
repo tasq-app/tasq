@@ -6,24 +6,24 @@ expression: buffer_to_text(&buf)
    Today             1 1                                                                            
    Upcoming          6 2   (2)  PRIORITY A  ────────────────────── priority  (A)                    
  ▸ All              15 3    1 ▸ ⚑ Finish Q2 board deck  ◷ due toda created   2026-05-01             
-                            2   ⚑ Call dentist to reschedule clean due       2026-05-06  today      
- SPACES                    (3)  PRIORITY B  ────────────────────── space     work                   
-   ● work            4      3   ⚑ Review pull requests for auth re tags      @laptop                
-   ● health          3      4   ⚑ Renew passport before summer tri                                  
-   ● finance         2      5   ⚑ Draft hiring rubric for senior e RAW                              
-   ● home            1     (2)  PRIORITY C  ──────────────────────                                  
-   ● learning        1      6   ⚑ Pay quarterly estimated taxes  ◷ (A) 2026-05-01 Finish Q2 board   
-   ● personal        1      7   ⚑ Order new running shoes  ● healt deck +work @laptop               
-   ● trave╭──────────────────────────────────────────────────────────────────────────────╮          
-          │                                                                              │          
- TAGS     │  > Pay rent  +home   @bank  ▦ plan:2026-06-01 ↻ rec:+1m ◐ t:-3d▏       ↑     │          
-   @errand│                                                                              │          
-   @home  │    ▦ mon 1 jun     ↻ every month     + home     @ bank     ◐ -3d             │          
-   @laptop│                                                                              │          
-   @phone ╰──────────────────────────────────────────────────────────────────────────────╯          
-                           14     Plan Saturday hike with K.  ● pe                                  
-                           15     Replace bathroom faucet washer                                    
-                                                                                                    
+   Day               1 4    2   ⚑ Call dentist to reschedule clean due       2026-05-06  today      
+   Week              3 5   (3)  PRIORITY B  ────────────────────── space     work                   
+   Month             6 6    3   ⚑ Review pull requests for auth re tags      @laptop                
+                            4   ⚑ Renew passport before summer tri                                  
+ SPACES                     5   ⚑ Draft hiring rubric for senior e RAW                              
+   ● work            4     (2)  PRIORITY C  ──────────────────────                                  
+   ● health          3      6   ⚑ Pay quarterly estimated taxes  ◷ (A) 2026-05-01 Finish Q2 board   
+   ● finance         2      7   ⚑ Order new running shoes  ● healt deck +work @laptop               
+   ● home ╭──────────────────────────────────────────────────────────────────────────────╮          
+   ● learn│                                                                              │          
+   ● perso│  > Pay rent  +home   @bank  ▦ plan:2026-06-01 ↻ rec:+1m ◐ t:-3d▏       ↑     │          
+   ● trave│                                                                              │          
+          │    ▦ mon 1 jun     ↻ every month     + home     @ bank     ◐ -3d             │          
+ TAGS     │                                                                              │          
+   @errand╰──────────────────────────────────────────────────────────────────────────────╯          
+   @home             4     14     Plan Saturday hike with K.  ● pe                                  
+   @laptop           4     15     Replace bathroom faucet washer                                    
+   @phone            3                                                                              
                                                                                                     
                                                                                                     
                                                                                                     

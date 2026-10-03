@@ -582,6 +582,7 @@ The modal keys below apply in Normal mode:
 | --- | --- |
 | `/` | search (a `due:` term filters by date range; see [todo.txt format](#todotxt-format)) |
 | `1` / `2` / `3` | Today / Upcoming / All |
+| `4` / `5` / `6` | Calendar: day / week / month (see [Calendar](#calendar)) |
 | `fp` | filter by space, sub-spaces included (`j` / `k` cycles, `c` / `C` next colour / automatic colour, `h` hides / shows it, `r` renames, `d` deletes an empty one, `Esc` clears) |
 | `fc` | filter by tag (`j` / `k` cycles, `Esc` clears) |
 | `ff` | pick a saved search (`j` / `k` cycles, `Enter` keeps, `Esc` reverts) |
@@ -602,6 +603,17 @@ plan or a missed deadline never drops out of sight; *Upcoming* lists every
 other task with a date, by day for the coming week and then *Later*
 (dimmed); *All*
 lists everything. The choice is remembered (`view = …` in the config).
+
+<a id="calendar"></a>**Calendar.** `4` opens the day as time blocks: each task with a time
+(`at:`) is a block as long as its duration (`dur:`, 30 min without one),
+tinted in its space's colour; tasks with a date but no time sit in the
+*all day* band on top, a red line marks now, and a side panel shows the
+selected task and the free gaps of the day. Future repeats show too, with
+a dashed edge and ↻. The tabs on top switch views (`d` / `w` / `m`); in
+the day view `←` / `→` change day, `↑` / `↓` select, `Enter` edits, `x`
+completes, `n` adds a task on that day, `J` / `K` move the selected block
+half an hour later / earlier and `H` / `L` a day back / forward, `t` goes
+to today and `Esc` back to the list.
 
 **Spaces.** A task's `+project` is its space, and `/` nests it:
 `+Uni/Exams`. Filtering by `Uni` shows Uni's and its sub-spaces' tasks; the

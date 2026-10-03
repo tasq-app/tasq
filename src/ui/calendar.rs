@@ -1,0 +1,658 @@
+//! The calendar screen: a bar of view tabs and the date, then the day,
+//! week or month view.
+//!
+//! Drawn cell by cell on the buffer: blocks are filled rectangles tinted in
+//! their space's colour, with a stronger edge on the left — dashed for a
+//! future repeat — the way the design mock-up draws them.
+
+use ratatui::Frame;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::style::{Color, Modifier, Style};
+
+use crate::app::{App, CalView};
+use crate::core::calendar::{self, Occurrence};
+use crate::theme::Theme;
+use crate::ui::task_row::{chip_date, tint};
+
+/// Width of the day view's side panel, when there's room for it.
+const SIDE_W: u16 = 32;
+/// Width of the hour labels.
+const GUTTER_W: u16 = 8;
+/// The hours always shown, widened to fit earlier or later blocks.
+const DAY_FROM: u32 = 7;
+const DAY_TO: u32 = 22;
+
+pub fn render(frame: &mut Frame, area: Rect, app: &App) {
+    let theme = app.theme();
+    let buf = frame.buffer_mut();
+    fill(buf, area, Style::default().bg(theme.bg));
+    let Some(cal) = &app.calendar else {
+        return;
+    };
+    if area.height < 4 || area.width < 30 {
+        return;
+    }
+    bar(buf, Rect { height: 1, ..area }, app, theme);
+    hline(
+        buf,
+        area.x,
+        area.y + 1,
+        area.width,
+        Style::default().fg(theme.border),
+    );
+    let body = Rect {
+        y: area.y + 2,
+        height: area.height - 2,
+        ..area
+    };
+    match cal.view {
+        CalView::Day => day(buf, body, app, theme),
+        CalView::Week | CalView::Month => {
+            let msg = "coming next: this view is on its way";
+            put(
+                buf,
+                body.x + 2,
+                body.y + 1,
+                msg,
+                body.width.saturating_sub(4),
+                Style::default().fg(theme.dim),
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Drawing helpers
+// ---------------------------------------------------------------------------
+
+fn fill(buf: &mut Buffer, r: Rect, style: Style) {
+    let r = r.intersection(buf.area);
+    for y in r.top()..r.bottom() {
+        for x in r.left()..r.right() {
+            if let Some(c) = buf.cell_mut((x, y)) {
+                c.set_symbol(" ");
+                c.set_style(style);
+            }
+        }
+    }
+}
+
+fn hline(buf: &mut Buffer, x: u16, y: u16, w: u16, style: Style) {
+    for i in 0..w {
+        if let Some(c) = buf.cell_mut((x + i, y)) {
+            c.set_symbol("─");
+            c.set_style(style);
+        }
+    }
+}
+
+/// Write `s` at `(x, y)`, at most `max` columns; returns the columns used.
+fn put(buf: &mut Buffer, x: u16, y: u16, s: &str, max: u16, style: Style) -> u16 {
+    if max == 0 || !buf.area.contains((x, y).into()) {
+        return 0;
+    }
+    let (end, _) = buf.set_stringn(x, y, s, usize::from(max), style);
+    end.saturating_sub(x)
+}
+
+/// `s` cut to `w` columns with an ellipsis when it doesn't fit.
+fn fit(s: &str, w: usize) -> String {
+    if s.chars().count() <= w {
+        return s.to_string();
+    }
+    if w == 0 {
+        return String::new();
+    }
+    let mut out: String = s.chars().take(w - 1).collect();
+    out.push('…');
+    out
+}
+
+fn hhmm(m: u32) -> String {
+    format!("{:02}:{:02}", m / 60, m % 60)
+}
+
+fn minutes_label(m: u32) -> String {
+    match (m / 60, m % 60) {
+        (0, m) => format!("{m}m"),
+        (h, 0) => format!("{h}h"),
+        (h, m) => format!("{h}h {m}m"),
+    }
+}
+
+/// The colour a task is painted in: its space's, else the accent.
+fn task_color(app: &App, abs: usize) -> Color {
+    app.tasks()
+        .get(abs)
+        .and_then(|t| t.projects.first())
+        .map_or(app.theme().accent, |p| app.space_color(p))
+}
+
+/// The task's title: its words without tags, keys or priority.
+fn title(app: &App, abs: usize) -> String {
+    let Some(t) = app.tasks().get(abs) else {
+        return String::new();
+    };
+    crate::todo::body_after_priority(&t.clean_raw)
+        .split_whitespace()
+        .filter(|w| {
+            let tag = w.starts_with('+') || w.starts_with('@') || crate::todo::is_star_token(w);
+            let key = w.split_once(':').is_some_and(|(k, v)| {
+                !k.is_empty() && !v.is_empty() && k.chars().all(|c| c.is_ascii_lowercase())
+            });
+            !tag && !key
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+// ---------------------------------------------------------------------------
+// The bar: view tabs, the date, a summary
+// ---------------------------------------------------------------------------
+
+fn bar(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
+    let Some(cal) = &app.calendar else {
+        return;
+    };
+    let mut x = r.x + 1;
+    for (view, key, name) in [
+        (CalView::Day, "d", "Day"),
+        (CalView::Week, "w", "Week"),
+        (CalView::Month, "m", "Month"),
+    ] {
+        let on = cal.view == view;
+        let (key_style, name_style) = if on {
+            let s = Style::default()
+                .bg(theme.mode_bg)
+                .fg(theme.mode_fg)
+                .add_modifier(Modifier::BOLD);
+            (s, s)
+        } else {
+            (
+                Style::default().fg(theme.dim),
+                Style::default().fg(theme.dim),
+            )
+        };
+        x += put(buf, x, r.y, &format!(" {key} "), 3, key_style);
+        x += put(buf, x, r.y, &format!("{name} "), 8, name_style);
+        x += 1;
+    }
+    x += 2;
+    let label = match cal.view {
+        CalView::Day => cal.date.format("%A %-d %B").to_string().to_lowercase(),
+        CalView::Week => {
+            let from = crate::app::week_start(cal.date);
+            let to = from + chrono::Days::new(6);
+            format!("{} – {}", from.format("%-d %b"), to.format("%-d %b %Y")).to_lowercase()
+        }
+        CalView::Month => cal.date.format("%B %Y").to_string().to_lowercase(),
+    };
+    x += put(buf, x, r.y, "‹ ", 2, Style::default().fg(theme.dim));
+    x += put(
+        buf,
+        x,
+        r.y,
+        &label,
+        r.right().saturating_sub(x),
+        Style::default().fg(theme.fg).add_modifier(Modifier::BOLD),
+    );
+    put(buf, x, r.y, " ›", 2, Style::default().fg(theme.dim));
+
+    // Summary on the right.
+    let summary = match cal.view {
+        CalView::Day => {
+            let items = app.cal_day_items();
+            let planned: u32 = items
+                .iter()
+                .filter(|o| o.start.is_some())
+                .map(|o| o.minutes)
+                .sum();
+            let n = items.len();
+            let tasks = if n == 1 { "task" } else { "tasks" };
+            if planned > 0 {
+                format!("{n} {tasks} · {} planned", minutes_label(planned))
+            } else {
+                format!("{n} {tasks}")
+            }
+        }
+        _ => String::new(),
+    };
+    let w = summary.chars().count() as u16;
+    if r.right() > x + w + 4 {
+        put(
+            buf,
+            r.right() - w - 1,
+            r.y,
+            &summary,
+            w,
+            Style::default().fg(theme.dim),
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Day: time blocks
+// ---------------------------------------------------------------------------
+
+fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
+    let Some(cal) = &app.calendar else {
+        return;
+    };
+    let items = app.cal_day_items();
+    let selected = items.get(cal.selected).cloned();
+    let side = r.width >= 90;
+    let grid_r = Rect {
+        width: if side { r.width - SIDE_W } else { r.width },
+        ..r
+    };
+    if side {
+        let sr = Rect {
+            x: r.right() - SIDE_W,
+            width: SIDE_W,
+            ..r
+        };
+        side_panel(buf, sr, app, theme, &items, selected.as_ref());
+    }
+
+    // All-day band: chips that wrap, then a dashed rule.
+    let all_day: Vec<(usize, &Occurrence)> = items
+        .iter()
+        .enumerate()
+        .filter(|(_, o)| o.start.is_none())
+        .collect();
+    let mut y = grid_r.y;
+    if !all_day.is_empty() {
+        put(
+            buf,
+            grid_r.x,
+            y,
+            &format!("{:>w$} ", "all day", w = usize::from(GUTTER_W) - 1),
+            GUTTER_W,
+            Style::default().fg(theme.dim),
+        );
+        let mut x = grid_r.x + GUTTER_W;
+        for (i, o) in all_day {
+            let (color, prefix) = if o.late {
+                (theme.overdue, "late · ")
+            } else if o.deadline {
+                (theme.overdue, "◷ ")
+            } else {
+                (task_color(app, o.abs), if o.projected { "↻ " } else { "" })
+            };
+            let text = format!(" {prefix}{} ", title(app, o.abs));
+            let w = (text.chars().count() as u16).min(grid_r.width.saturating_sub(GUTTER_W + 1));
+            if x + w > grid_r.right() && x > grid_r.x + GUTTER_W {
+                y += 1;
+                x = grid_r.x + GUTTER_W;
+            }
+            let sel = Some(i) == Some(cal.selected);
+            let amount = if sel { 0.42 } else { 0.22 };
+            let mut style = Style::default().fg(color);
+            if let Some(bg) = tint(color, theme.bg, amount) {
+                style = style.bg(bg);
+            }
+            if sel {
+                style = style.add_modifier(Modifier::BOLD);
+            }
+            if app.tasks().get(o.abs).is_some_and(|t| t.done) {
+                style = Style::default()
+                    .fg(theme.done)
+                    .add_modifier(Modifier::CROSSED_OUT);
+            }
+            put(buf, x, y, &fit(&text, usize::from(w)), w, style);
+            x += w + 1;
+        }
+        y += 1;
+        for x in grid_r.x..grid_r.right() {
+            if let Some(c) = buf.cell_mut((x, y)) {
+                c.set_symbol("┄");
+                c.set_style(Style::default().fg(theme.border));
+            }
+        }
+        y += 1;
+    }
+    let grid = Rect {
+        y,
+        height: grid_r.bottom().saturating_sub(y),
+        ..grid_r
+    };
+    if grid.height < 2 {
+        return;
+    }
+
+    // Hours to show, and how many rows an hour gets.
+    let timed: Vec<&Occurrence> = items.iter().filter(|o| o.start.is_some()).collect();
+    let first = timed
+        .iter()
+        .filter_map(|o| o.start)
+        .min()
+        .map_or(DAY_FROM, |s| (s / 60).min(DAY_FROM));
+    let now = (cal.date == app.today_naive())
+        .then(|| app.now_minutes())
+        .flatten();
+    // Through the last block, and through now on today.
+    let last = timed
+        .iter()
+        .filter_map(|o| o.end())
+        .chain(now.map(|n| n + 60))
+        .max()
+        .map_or(DAY_TO, |e| e.div_ceil(60).clamp(DAY_TO, 24));
+    let hours = last - first;
+    // Rows per hour: as many as fill the height (up to 4), never under one;
+    // with too little room, a window of hours around what matters.
+    let scale = (f64::from(grid.height) / f64::from(hours.max(1))).clamp(1.0, 4.0);
+    let visible_hours = ((f64::from(grid.height) / scale) as u32).max(1);
+    // Scroll so the selected block (else now, else the first block) shows.
+    let focus = selected
+        .as_ref()
+        .and_then(|o| o.start)
+        .or(now)
+        .or_else(|| timed.first().and_then(|o| o.start))
+        .unwrap_or(first * 60);
+    let top = if hours <= visible_hours {
+        first
+    } else {
+        (focus / 60)
+            .saturating_sub(visible_hours / 3)
+            .clamp(first, last - visible_hours)
+    };
+    let row_of =
+        |m: u32| -> i64 { ((f64::from(m) - f64::from(top * 60)) * scale / 60.0).floor() as i64 };
+
+    // Grid lines and hour labels.
+    let gx = grid.x + GUTTER_W;
+    let gw = grid.width.saturating_sub(GUTTER_W);
+    for h in top..last {
+        let row = row_of(h * 60);
+        if row < 0 || row >= i64::from(grid.height) {
+            continue;
+        }
+        let y = grid.y + row as u16;
+        put(
+            buf,
+            grid.x,
+            y,
+            &format!("{:>5}  ", hhmm(h * 60)),
+            GUTTER_W,
+            Style::default().fg(theme.dim),
+        );
+        for x in gx..gx + gw {
+            if let Some(c) = buf.cell_mut((x, y)) {
+                c.set_symbol("╌");
+                c.set_style(Style::default().fg(theme.border));
+            }
+        }
+    }
+
+    // Blocks, side by side where they overlap.
+    let lanes = calendar::lanes(&timed);
+    for (o, (lane, n)) in timed.iter().zip(lanes) {
+        let (Some(s), Some(e)) = (o.start, o.end()) else {
+            continue;
+        };
+        let r0 = row_of(s);
+        let r1 = row_of(e).max(r0 + 1);
+        let (r0, r1) = (r0.max(0), r1.min(i64::from(grid.height)));
+        if r0 >= r1 {
+            continue;
+        }
+        let lane_w = gw / n as u16;
+        let bx = gx + lane_w * lane as u16;
+        let bw = if lane + 1 == n {
+            gw - lane_w * lane as u16
+        } else {
+            lane_w.saturating_sub(1)
+        };
+        let block = Rect {
+            x: bx,
+            y: grid.y + r0 as u16,
+            width: bw,
+            height: (r1 - r0) as u16,
+        };
+        let sel = selected.as_ref().is_some_and(|x| x == *o);
+        draw_block(buf, block, app, theme, o, sel);
+    }
+
+    // Now: a red line across the free part of the grid.
+    if let Some(now) = now
+        && now >= top * 60
+    {
+        let row = row_of(now);
+        if row >= 0 && row < i64::from(grid.height) {
+            let y = grid.y + row as u16;
+            let red = Style::default()
+                .fg(theme.overdue)
+                .add_modifier(Modifier::BOLD);
+            put(
+                buf,
+                grid.x,
+                y,
+                &format!("{:>5} ●", hhmm(now)),
+                GUTTER_W,
+                red,
+            );
+            for x in gx..gx + gw {
+                if let Some(c) = buf.cell_mut((x, y))
+                    && matches!(c.symbol(), " " | "╌")
+                {
+                    c.set_symbol("─");
+                    c.set_style(red);
+                }
+            }
+        }
+    }
+}
+
+/// One time block: a tinted rectangle, a stronger left edge (dashed for a
+/// future repeat), the title, then its hours and space.
+fn draw_block(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme, o: &Occurrence, sel: bool) {
+    let done = app.tasks().get(o.abs).is_some_and(|t| t.done);
+    let color = if o.deadline {
+        theme.overdue
+    } else {
+        task_color(app, o.abs)
+    };
+    let amount = if sel { 0.40 } else { 0.20 };
+    let bg = if done {
+        theme.panel
+    } else {
+        tint(color, theme.bg, amount).unwrap_or(theme.panel)
+    };
+    fill(buf, r, Style::default().bg(bg));
+    let edge = if o.projected {
+        "┆"
+    } else if sel {
+        "┃"
+    } else {
+        "▎"
+    };
+    for y in r.top()..r.bottom() {
+        if let Some(c) = buf.cell_mut((r.x, y)) {
+            c.set_symbol(edge);
+            c.set_style(
+                Style::default()
+                    .fg(if done { theme.done } else { color })
+                    .bg(bg),
+            );
+        }
+    }
+    let w = r.width.saturating_sub(2);
+    let mut head = String::new();
+    if o.projected {
+        head.push_str("↻ ");
+    }
+    if let Some(p) = app.tasks().get(o.abs).and_then(|t| t.priority) {
+        head.push_str(&format!("({p}) "));
+    }
+    head.push_str(&title(app, o.abs));
+    let title_style = if done {
+        Style::default()
+            .fg(theme.done)
+            .bg(bg)
+            .add_modifier(Modifier::CROSSED_OUT)
+    } else {
+        Style::default()
+            .fg(theme.fg)
+            .bg(bg)
+            .add_modifier(Modifier::BOLD)
+    };
+    let (Some(s), Some(e)) = (o.start, o.end()) else {
+        return;
+    };
+    let hours = format!("{} – {}", hhmm(s), hhmm(e));
+    let space = app
+        .tasks()
+        .get(o.abs)
+        .and_then(|t| t.projects.first())
+        .map(|p| crate::core::spaces::display(p));
+    if r.height == 1 {
+        // One row: title and start time on the same line.
+        let line = format!(
+            "{} · {}",
+            fit(&head, usize::from(w).saturating_sub(8)),
+            hhmm(s)
+        );
+        put(buf, r.x + 2, r.y, &line, w, title_style);
+        return;
+    }
+    put(
+        buf,
+        r.x + 2,
+        r.y,
+        &fit(&head, usize::from(w)),
+        w,
+        title_style,
+    );
+    let mut detail = hours;
+    if let Some(sp) = space {
+        detail.push_str(" · ");
+        detail.push_str(&sp);
+    }
+    let detail_style = Style::default()
+        .fg(if done { theme.done } else { color })
+        .bg(bg);
+    put(
+        buf,
+        r.x + 2,
+        r.y + 1,
+        &fit(&detail, usize::from(w)),
+        w,
+        detail_style,
+    );
+}
+
+fn side_panel(
+    buf: &mut Buffer,
+    r: Rect,
+    app: &App,
+    theme: &Theme,
+    items: &[Occurrence],
+    selected: Option<&Occurrence>,
+) {
+    fill(buf, r, Style::default().bg(theme.panel));
+    for y in r.top()..r.bottom() {
+        if let Some(c) = buf.cell_mut((r.x, y)) {
+            c.set_symbol("│");
+            c.set_style(Style::default().fg(theme.border).bg(theme.panel));
+        }
+    }
+    let x = r.x + 2;
+    let w = r.width.saturating_sub(3);
+    let head = Style::default()
+        .fg(theme.dim)
+        .bg(theme.panel)
+        .add_modifier(Modifier::BOLD);
+    let key = Style::default().fg(theme.dim).bg(theme.panel);
+    let val = Style::default().fg(theme.fg).bg(theme.panel);
+    let mut y = r.y + 1;
+    let row = |buf: &mut Buffer, y: &mut u16, k: &str, v: &str, style: Style| {
+        if *y >= r.bottom() {
+            return;
+        }
+        put(buf, x, *y, &format!("{k:<9}"), 9, key);
+        put(
+            buf,
+            x + 9,
+            *y,
+            &fit(v, usize::from(w.saturating_sub(9))),
+            w.saturating_sub(9),
+            style,
+        );
+        *y += 1;
+    };
+
+    put(buf, x, y, "SELECTED", w, head);
+    y += 1;
+    match selected.and_then(|o| Some((o, app.tasks().get(o.abs)?))) {
+        Some((o, t)) => {
+            let today = app.today_naive().format("%Y-%m-%d").to_string();
+            row(
+                buf,
+                &mut y,
+                "task",
+                &title(app, o.abs),
+                val.add_modifier(Modifier::BOLD),
+            );
+            let mut when = chip_date(&o.date.format("%Y-%m-%d").to_string(), &today);
+            if let Some(s) = o.start {
+                when.push_str(&format!(" · {}", hhmm(s)));
+            }
+            row(buf, &mut y, "when", &when, val);
+            if o.start.is_some() {
+                row(buf, &mut y, "lasts", &minutes_label(o.minutes), val);
+            }
+            if let Some(p) = t.projects.first() {
+                let sp = crate::core::spaces::display(p);
+                row(buf, &mut y, "space", &sp, val.fg(app.space_color(p)));
+            }
+            if let Some(d) = t.due.as_deref() {
+                row(
+                    buf,
+                    &mut y,
+                    "deadline",
+                    &chip_date(d, &today),
+                    val.fg(theme.overdue),
+                );
+            }
+            if let Some(rec) = t.rec.as_deref() {
+                row(buf, &mut y, "repeat", &crate::app::describe_rec(rec), val);
+            }
+            if let Some(rem) = t.reminders.as_deref() {
+                row(
+                    buf,
+                    &mut y,
+                    "remind",
+                    &format!("{} before", rem.replace(',', ", ")),
+                    val,
+                );
+            }
+            if o.projected {
+                row(buf, &mut y, "", "a future repeat", key);
+            }
+        }
+        None => {
+            put(buf, x, y, "nothing on this day", w, key);
+            y += 1;
+        }
+    }
+
+    y += 1;
+    if y + 1 < r.bottom() {
+        put(buf, x, y, "FREE", w, head);
+        y += 1;
+        let refs: Vec<&Occurrence> = items.iter().collect();
+        let slots = calendar::free_slots(&refs, 8 * 60, 22 * 60, 30);
+        if slots.is_empty() {
+            put(buf, x, y, "no gaps between 08 and 22", w, key);
+        }
+        for (s, e) in slots {
+            if y >= r.bottom() {
+                break;
+            }
+            let text = format!("{} – {}  {}", hhmm(s), hhmm(e), minutes_label(e - s));
+            put(buf, x, y, &text, w, key);
+            y += 1;
+        }
+    }
+}

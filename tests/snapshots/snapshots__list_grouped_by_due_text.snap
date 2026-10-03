@@ -6,24 +6,24 @@ expression: buffer_to_text(&buf)
    Today             1 1                                                                            
    Upcoming          6 2   (1)  TODAY  ─────────────────────────── priority  (A)                    
  ▸ All              15 3    1 ▸ ⚑ Finish Q2 board deck  ◷ due toda created   2026-05-01             
-                           (2)  THIS WEEK  ─────────────────────── due       2026-05-06  today      
- SPACES                     2   ⚑ Review pull requests for auth re space     work                   
-   ● work            4      3   ⚑ Call dentist to reschedule clean tags      @laptop                
-   ● health          3     (2)  NEXT WEEK  ───────────────────────                                  
-   ● finance         2      4     Migrate analytics to new pipelin RAW                              
-   ● home            1      5     Pay rent  ◷ by fri 15 may   ↻ ev                                  
-   ● learning        1     (2)  LATER  ─────────────────────────── (A) 2026-05-01 Finish Q2 board   
-   ● personal        1      6   ⚑ Renew passport before summer tri deck +work @laptop               
-   ● travel          1      7   ⚑ Pay quarterly estimated taxes  ◷ due:2026-05-06                   
-                           (8)  NO DUE DATE  ─────────────────────                                  
- TAGS                       8   ⚑ Draft hiring rubric for senior e                                  
-   @errands          4      9   ⚑ Order new running shoes  ● healt                                  
-   @home             4     10     Pick up dry cleaning @errands                                     
-   @laptop           4     11     Schedule annual physical  ● heal                                  
-   @phone            3     12     Read "Designing Data-Intensive A                                  
-                           13     Send thank-you note to mentor @h                                  
-                           14     Plan Saturday hike with K.  ● pe                                  
-                           15     Replace bathroom faucet washer                                    
+   Day               1 4   (2)  THIS WEEK  ─────────────────────── due       2026-05-06  today      
+   Week              3 5    2   ⚑ Review pull requests for auth re space     work                   
+   Month             6 6    3   ⚑ Call dentist to reschedule clean tags      @laptop                
+                           (2)  NEXT WEEK  ───────────────────────                                  
+ SPACES                     4     Migrate analytics to new pipelin RAW                              
+   ● work            4      5     Pay rent  ◷ by fri 15 may   ↻ ev                                  
+   ● health          3     (2)  LATER  ─────────────────────────── (A) 2026-05-01 Finish Q2 board   
+   ● finance         2      6   ⚑ Renew passport before summer tri deck +work @laptop               
+   ● home            1      7   ⚑ Pay quarterly estimated taxes  ◷ due:2026-05-06                   
+   ● learning        1     (8)  NO DUE DATE  ─────────────────────                                  
+   ● personal        1      8   ⚑ Draft hiring rubric for senior e                                  
+   ● travel          1      9   ⚑ Order new running shoes  ● healt                                  
+                           10     Pick up dry cleaning @errands                                     
+ TAGS                      11     Schedule annual physical  ● heal                                  
+   @errands          4     12     Read "Designing Data-Intensive A                                  
+   @home             4     13     Send thank-you note to mentor @h                                  
+   @laptop           4     14     Plan Saturday hike with K.  ● pe                                  
+   @phone            3     15     Replace bathroom faucet washer                                    
                                                                                                     
                                                                                                     
                                                                                                     

@@ -219,6 +219,21 @@ pub const ENTRIES: &[PaletteEntry] = &[
         dispatch: PaletteDispatch::Global(Action::ScopeAll),
     },
     PaletteEntry {
+        label: "calendar: the day in time blocks",
+        keys: "4",
+        dispatch: PaletteDispatch::Global(Action::CalendarDay),
+    },
+    PaletteEntry {
+        label: "calendar: the week",
+        keys: "5",
+        dispatch: PaletteDispatch::Global(Action::CalendarWeek),
+    },
+    PaletteEntry {
+        label: "calendar: the month",
+        keys: "6",
+        dispatch: PaletteDispatch::Global(Action::CalendarMonth),
+    },
+    PaletteEntry {
         label: "list view",
         keys: "l",
         dispatch: PaletteDispatch::Global(Action::GoList),
@@ -732,6 +747,9 @@ mod tests {
             Action::ScopeToday,
             Action::ScopeUpcoming,
             Action::ScopeAll,
+            Action::CalendarDay,
+            Action::CalendarWeek,
+            Action::CalendarMonth,
             Action::ArchiveCompleted,
             Action::PickProject,
             Action::PickContext,

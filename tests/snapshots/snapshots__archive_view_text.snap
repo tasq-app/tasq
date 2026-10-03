@@ -6,6 +6,9 @@ expression: buffer_to_text(&buf)
    Today             1 1                                                                            
    Upcoming          6 2     no completed tasks yet                (no task)                        
    All              15 3                                                                            
+   Day               1 4                                                                            
+   Week              3 5                                                                            
+   Month             6 6                                                                            
                                                                                                     
  SPACES                                                                                             
    ● work            4                                                                              
@@ -21,9 +24,6 @@ expression: buffer_to_text(&buf)
    @home             4                                                                              
    @laptop           4                                                                              
    @phone            3                                                                              
-                                                                                                    
-                                                                                                    
-                                                                                                    
                                                                                                     
                                                                                                     
                                                                                                     
