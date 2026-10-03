@@ -2,16 +2,16 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- FILTERS                   ▶▮◀ /tmp/tasq-snapshot.txt  •  0 tasks  DETAIL                           
+ VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  0 tasks  DETAIL                           
+   Today             0 1                                                                            
+   Upcoming          0 2                                           (no task)                        
+ ▸ All               0 3                                                                            
                                                                                                     
- SPACES                                                            (no task)                        
+ SPACES                                                                                             
    tag with +space                                                                                  
                                                                                                     
- TAGS                                                                                               
-   tag with @context                                                                                
-                                                                                                    
-                      ╭ tasq · welcome ──────────────────────────────────────╮                      
-                      │                    ██          ██                    │                      
+ TAGS                 ╭ tasq · welcome ──────────────────────────────────────╮                      
+   tag with @context  │                    ██          ██                    │                      
                       │                    ████  ██  ████                    │                      
                       │                    ██████████████                    │                      
                       │                    ████  ██  ████                    │                      

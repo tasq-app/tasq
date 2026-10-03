@@ -13,6 +13,9 @@ pub enum GroupKey {
     /// `Some('A'..='Z')` for a graded priority, `None` for unprioritized.
     ListPriority(Option<char>),
     ListDue(ListDueBucket),
+    /// Upcoming view: a day of the coming week (`YYYY-MM-DD`), or `None`
+    /// for Later.
+    Day(Option<String>),
 }
 
 impl App {
@@ -45,7 +48,9 @@ impl App {
         let needle = (!self.filter.search.is_empty())
             .then(|| filter::resolve_needle(&self.filter.search, today));
 
+        let scope = self.prefs.scope;
         let mut idxs: Vec<usize> = (0..tasks.len())
+            .filter(|&i| filter::in_scope(&tasks[i], scope, today))
             .filter(|&i| {
                 filter::list_predicate(
                     &tasks[i],
@@ -57,6 +62,23 @@ impl App {
                 )
             })
             .collect();
+
+        // Upcoming reads as a calendar: by day, then as usual within it.
+        if scope == super::types::Scope::Upcoming {
+            filter::sort_by_prefs(&mut idxs, tasks, self.prefs.sort);
+            idxs.sort_by(|&a, &b| {
+                let key = |i: usize| tasks[i].date().unwrap_or("9999").to_string();
+                key(a).cmp(&key(b))
+            });
+            let groups: Vec<GroupKey> = idxs
+                .iter()
+                .map(|&i| GroupKey::Day(filter::upcoming_day(&tasks[i], today)))
+                .collect();
+            float_starred_within_groups(&mut idxs, &groups, tasks);
+            self.visible_groups = groups;
+            self.visible_cache = idxs;
+            return;
+        }
 
         filter::sort_by_prefs(&mut idxs, tasks, self.prefs.sort);
 

@@ -4,7 +4,7 @@ use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 
-use crate::app::{App, Filter, ordered_unique};
+use crate::app::{App, Filter, Scope, ordered_unique};
 use crate::core::filter;
 use crate::theme::Theme;
 
@@ -19,10 +19,41 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     lines.push(line_pad(
         theme,
         vec![Span::styled(
-            " FILTERS",
+            " VIEWS",
             Style::default().fg(theme.dim).add_modifier(Modifier::BOLD),
         )],
     ));
+    // Open tasks in each scope, before any space/tag/search filter.
+    let today = app.today();
+    let in_list = app.view == crate::app::View::List;
+    for (scope, label, key) in [
+        (Scope::Today, "Today", "1"),
+        (Scope::Upcoming, "Upcoming", "2"),
+        (Scope::All, "All", "3"),
+    ] {
+        let count = app
+            .tasks()
+            .iter()
+            .filter(|t| {
+                filter::in_scope(t, scope, today)
+                    && filter::list_predicate(
+                        t,
+                        false,
+                        app.prefs.show_future,
+                        today,
+                        &Filter::default(),
+                        None,
+                    )
+            })
+            .count();
+        let active = in_list && app.prefs.scope == scope;
+        let mut row = filter_row(theme, "", label, count, active, theme.fg);
+        row.spans.push(Span::styled(
+            format!(" {key}"),
+            Style::default().fg(theme.dim),
+        ));
+        lines.push(row);
+    }
     lines.push(line_pad(theme, vec![Span::raw(" ")]));
     lines.push(line_pad(
         theme,

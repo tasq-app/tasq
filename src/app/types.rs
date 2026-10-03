@@ -107,6 +107,48 @@ impl FromStr for Sort {
     }
 }
 
+/// Which tasks the list shows (DESIGN.md §2 "Visibility"). Dates never
+/// hide a task on their own; the scope decides.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Scope {
+    /// Overdue, planned for today or earlier, due today or earlier.
+    Today,
+    /// Everything with a date after today, grouped by day; further than a
+    /// week ahead under "Later".
+    Upcoming,
+    /// Every task.
+    #[default]
+    All,
+}
+
+impl Scope {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Scope::Today => "today",
+            Scope::Upcoming => "upcoming",
+            Scope::All => "all",
+        }
+    }
+}
+
+impl fmt::Display for Scope {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl FromStr for Scope {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "today" => Ok(Scope::Today),
+            "upcoming" => Ok(Scope::Upcoming),
+            "all" => Ok(Scope::All),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Density {
     Compact,

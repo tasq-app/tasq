@@ -2,30 +2,30 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- FILTERS                   ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
-     ╭ tasq · help · tasks notes (Tab) ───────────────────────────────────────────────────────╮     
- SPAC│  NAVIGATION                                  VIEW                                      │     
-   wo│    j / k  (↓ / ↑)    next / previous task      /                 fuzzy search          │     
-   he│    gg / G            first / last task         fp / fc           filter project/context│     
-   fi│    Ctrl-d / Ctrl-u   page down / up            ff / fs           saved filter pick/save│     
-   ho│                                                S                 cycle sort            │     
-   le│  EDITING                                       v                 visual / multi-select │     
-   pe│    n / o             new task / open notes     l                 list view             │     
-   tr│    e / i             edit (normal / insert)    a                 archive view          │     
-     │    r                 reschedule task           A                 archive completed     │rd   
- TAGS│    x                 toggle complete           H                 show done in list     │     
-   @e│    dd                delete task               F                 show future in list   │     
-   @h│    p / *             priority A→B→C / star     [ / ]             toggle filter / detail│     
-   @l│    J / K             move task down / up       T                 theme picker          │     
-   @p│    c                 add/remove context        D                 cycle density         │     
-     │    +                 add project               L                 toggle line numbers   │     
-     │    yy / yb           copy line / body                                                  │     
-     │    u                 undo                    SYSTEM                                    │     
-     │                                                : / Ctrl-P        command palette       │     
-     │  RECURRENCE (rec:)                             s                 share capture QR      │     
-     │    j / k / Tab       next / prev field         ? / ,             help / settings       │     
-     │    h / l / + / -     change value              q / Ctrl-c        quit                  │     
-     │    Enter / Esc       save / cancel                                                     │     
+ VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
+   To╭ tasq · help · tasks notes (Tab) ───────────────────────────────────────────────────────╮     
+   Up│  NAVIGATION                                  VIEW                                      │     
+ ▸ Al│    j / k  (↓ / ↑)    next / previous task      1 / 2 / 3         today / upcoming / all│     
+     │    gg / G            first / last task         /                 fuzzy search          │     
+ SPAC│    Ctrl-d / Ctrl-u   page down / up            fp / fc           filter space/tag      │     
+   wo│                                                ff / fs           saved filter pick/save│     
+   he│  EDITING                                       S                 cycle sort            │     
+   fi│    n / o             new task / open notes     v                 visual / multi-select │     
+   ho│    e / i             edit (normal / insert)    l                 list view             │     
+   le│    r                 reschedule task           a                 archive view          │rd   
+   pe│    x                 toggle complete           A                 archive completed     │     
+   tr│    dd                delete task               H                 show done in list     │     
+     │    p / *             priority A→B→C / star     F                 show future in list   │     
+ TAGS│    J / K             move task down / up       [ / ]             toggle filter / detail│     
+   @e│    c                 add/remove context        T                 theme picker          │     
+   @h│    +                 add project               D                 cycle density         │     
+   @l│    yy / yb           copy line / body          L                 toggle line numbers   │     
+   @p│    u                 undo                                                              │     
+     │                                              SYSTEM                                    │     
+     │  RECURRENCE (rec:)                             : / Ctrl-P        command palette       │     
+     │    j / k / Tab       next / prev field         s                 share capture QR      │     
+     │    h / l / + / -     change value              ? / ,             help / settings       │     
+     │    Enter / Esc       save / cancel             q / Ctrl-c        quit                  │     
      │────────────────────────────────────────────────────────────────────────────────────────│     
      │  FORMAT                                                                                │     
      │    (A)               priority A-Z              due:YYYY-MM-DD    due date (+1w = range)│     

@@ -2,25 +2,25 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- FILTERS                   ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
-                                                                                                    
- SPACES                    (2)  PRIORITY A  ────────────────────── priority  (A)                    
-   work              4      1 [x] ▸ (A) Finish Q2 board deck +work created   2026-05-01             
-   health            3      2 [x]   (A) Call dentist to reschedule due       2026-05-06  today      
-   finance           2     (3)  PRIORITY B  ────────────────────── space     work                   
-   home             ╭ tasq · command ──────────────────────────────────────────╮ptop                
-   learning         │ > █                                                      │                    
-   personal         │──────────────────────────────────────────────────────────│                    
-   travel           │ ▶ new task                                             n │                    
-                    │   edit current task (normal mode)                      e │1 Finish Q2 board   
- TAGS               │   edit current task (insert mode)                      i │aptop               
-   @errands         │   toggle complete                                      x │6                   
-   @home            │   delete task                                         dd │                    
-   @laptop          │   cycle priority                                       p │                    
-   @phone           │   star / unstar task (top of its priority)             * │                    
-                    │   move task down                                       J │                    
-                    │   move task up                                         K │                    
-                    │   add project to current task                          + │                    
+ VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
+   Today             1 1                                                                            
+   Upcoming          6 2   (2)  PRIORITY A  ────────────────────── priority  (A)                    
+ ▸ All              15 3    1 [x] ▸ (A) Finish Q2 board deck +work created   2026-05-01             
+                            2 [x]   (A) Call dentist to reschedule due       2026-05-06  today      
+ SPACES                    (3)  PRIORITY B  ────────────────────── space     work                   
+   work             ╭ tasq · command ──────────────────────────────────────────╮ptop                
+   health           │ > █                                                      │                    
+   finance          │──────────────────────────────────────────────────────────│                    
+   home             │ ▶ new task                                             n │                    
+   learning         │   edit current task (normal mode)                      e │1 Finish Q2 board   
+   personal         │   edit current task (insert mode)                      i │aptop               
+   travel           │   toggle complete                                      x │6                   
+                    │   delete task                                         dd │                    
+ TAGS               │   cycle priority                                       p │                    
+   @errands         │   star / unstar task (top of its priority)             * │                    
+   @home            │   move task down                                       J │                    
+   @laptop          │   move task up                                         K │                    
+   @phone           │   add project to current task                          + │                    
                     │   add or remove context on current task                c │                    
                     │   copy line to clipboard                              yy │                    
                     │   copy body to clipboard                              yb │                    

@@ -9,7 +9,7 @@ use std::cmp::Ordering;
 
 use chrono::{Datelike, Days, NaiveDate};
 
-use crate::app::{Filter, Sort, WeekStart};
+use crate::app::{Filter, Scope, Sort, WeekStart};
 use crate::due_filter;
 use crate::search::subseq_match_ci;
 use crate::threshold;
@@ -187,6 +187,29 @@ pub fn list_predicate(
         return false;
     }
     passes_user_filter(t, filter, needle)
+}
+
+/// Whether `t` belongs in the list's `scope` (see [`Scope`]): Today holds
+/// what's planned or due today or earlier — late and overdue tasks never
+/// drop out of sight; Upcoming every other task with a date.
+pub fn in_scope(t: &Task, scope: Scope, today: &str) -> bool {
+    let up_to_today = |d: Option<&str>| d.is_some_and(|d| d <= today);
+    let is_today = up_to_today(t.planned.as_deref()) || up_to_today(t.due.as_deref());
+    match scope {
+        Scope::All => true,
+        Scope::Today => is_today,
+        Scope::Upcoming => !is_today && t.date().is_some(),
+    }
+}
+
+/// The Upcoming view's group for a task: its day for the coming week,
+/// `None` (Later) beyond that.
+pub fn upcoming_day(t: &Task, today: &str) -> Option<String> {
+    let date = t.date()?;
+    let today = chrono::NaiveDate::parse_from_str(today, "%Y-%m-%d").ok()?;
+    let d = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()?;
+    let days = (d - today).num_days();
+    (1..=7).contains(&days).then(|| date.to_string())
 }
 
 /// True when the task carries a `t:` value that resolves to a date strictly
@@ -393,5 +416,43 @@ mod tests {
             .expect("unable to get the week cutoff date");
         assert_eq!(end_this_week, "2026-06-21");
         assert_eq!(end_next_week, "2026-06-28");
+    }
+
+    #[test]
+    fn today_and_upcoming_split_by_date() {
+        use crate::app::Scope;
+        let today = "2026-10-03";
+        let tasks = crate::todo::parse_file(
+            "late plan:2026-10-01\n\
+             overdue due:2026-09-30\n\
+             planned today plan:2026-10-03\n\
+             due today due:2026-10-03 plan:2026-10-08\n\
+             tomorrow plan:2026-10-04\n\
+             deadline next week due:2026-10-09\n\
+             far away plan:2026-12-01\n\
+             no date\n",
+        );
+        let pick = |scope| {
+            tasks
+                .iter()
+                .filter(|t| in_scope(t, scope, today))
+                .map(|t| crate::core::db::title_of(&t.raw))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            pick(Scope::Today),
+            ["late", "overdue", "planned today", "due today"]
+        );
+        assert_eq!(
+            pick(Scope::Upcoming),
+            ["tomorrow", "deadline next week", "far away"]
+        );
+        assert_eq!(pick(Scope::All).len(), 8);
+        // The coming week by day, then Later.
+        assert_eq!(
+            upcoming_day(&tasks[4], today).as_deref(),
+            Some("2026-10-04")
+        );
+        assert_eq!(upcoming_day(&tasks[6], today), None);
     }
 }
