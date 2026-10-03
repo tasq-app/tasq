@@ -3,13 +3,22 @@ use super::types::Mode;
 use crate::core::filter::unique_values;
 
 impl App {
+    /// Every space, parents included, in the sidebar's tree order: what
+    /// the space picker steps through.
+    fn space_paths(&self) -> Vec<String> {
+        crate::core::spaces::tree(self.store.tasks())
+            .into_iter()
+            .map(|r| r.path)
+            .collect()
+    }
+
     /// Enter project-picker mode. Seeds the filter from the cursor task's
     /// first project (falling back to the current filter, then alphabetical
     /// first). Inside the picker, j/k cycle through projects.
     pub fn enter_pick_project(&mut self) {
-        let all = unique_values(self.store.tasks(), |t| &t.projects);
+        let all = self.space_paths();
         if all.is_empty() {
-            self.flash("no projects");
+            self.flash("no spaces");
             return;
         }
         let seed = self
@@ -118,7 +127,7 @@ impl App {
     pub fn pick_step(&mut self, forward: bool) {
         match self.mode {
             Mode::PickProject => {
-                let all = unique_values(self.store.tasks(), |t| &t.projects);
+                let all = self.space_paths();
                 if all.is_empty() {
                     return;
                 }
@@ -157,10 +166,11 @@ impl App {
     }
 
     fn flash_pick_project(&mut self) {
-        let all = unique_values(self.store.tasks(), |t| &t.projects);
+        let all = self.space_paths();
         if let Some(cur) = self.filter.project.clone() {
             let pos = position_of(&all, &cur);
-            self.flash(format!("+{}  ({}/{})", cur, pos + 1, all.len()));
+            let name = crate::core::spaces::display(&cur);
+            self.flash(format!("{name}  ({}/{})", pos + 1, all.len()));
         }
     }
 

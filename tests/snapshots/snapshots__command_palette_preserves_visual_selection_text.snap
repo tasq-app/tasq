@@ -4,16 +4,16 @@ expression: buffer_to_text(&buf)
 ---
  FILTERS                   ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
                                                                                                     
- PROJECTS                  (2)  PRIORITY A  ────────────────────── priority  (A)                    
-   +work             4      1 [x] ▸ (A) Finish Q2 board deck +work created   2026-05-01             
-   +health           3      2 [x]   (A) Call dentist to reschedule due       2026-05-06  today      
-   +finance          2     (3)  PRIORITY B  ────────────────────── projects  +work                  
-   +home            ╭ tasq · command ──────────────────────────────────────────╮ptop                
-   +learning        │ > █                                                      │                    
-   +personal        │──────────────────────────────────────────────────────────│                    
-   +travel          │ ▶ new task                                             n │                    
+ SPACES                    (2)  PRIORITY A  ────────────────────── priority  (A)                    
+   work              4      1 [x] ▸ (A) Finish Q2 board deck +work created   2026-05-01             
+   health            3      2 [x]   (A) Call dentist to reschedule due       2026-05-06  today      
+   finance           2     (3)  PRIORITY B  ────────────────────── space     work                   
+   home             ╭ tasq · command ──────────────────────────────────────────╮ptop                
+   learning         │ > █                                                      │                    
+   personal         │──────────────────────────────────────────────────────────│                    
+   travel           │ ▶ new task                                             n │                    
                     │   edit current task (normal mode)                      e │1 Finish Q2 board   
- CONTEXTS           │   edit current task (insert mode)                      i │aptop               
+ TAGS               │   edit current task (insert mode)                      i │aptop               
    @errands         │   toggle complete                                      x │6                   
    @home            │   delete task                                         dd │                    
    @laptop          │   cycle priority                                       p │                    

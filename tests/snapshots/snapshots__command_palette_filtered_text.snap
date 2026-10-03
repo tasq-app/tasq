@@ -4,16 +4,16 @@ expression: buffer_to_text(&buf)
 ---
  FILTERS                   ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
                                                                                                     
- PROJECTS                  (2)  PRIORITY A  ────────────────────── priority  (A)                    
-   +work             4      1 ▸ (A) Finish Q2 board deck +work @la created   2026-05-01             
-   +health           3      2   (A) Call dentist to reschedule cle due       2026-05-06  today      
-   +finance          2     (3)  PRIORITY B  ────────────────────── projects  +work                  
-   +home            ╭ tasq · command ──────────────────────────────────────────╮ptop                
-   +learning        │ > arch█  4 matches                                       │                    
-   +personal        │──────────────────────────────────────────────────────────│                    
-   +travel          │ ▶ archive completed tasks                              A │                    
+ SPACES                    (2)  PRIORITY A  ────────────────────── priority  (A)                    
+   work              4      1 ▸ (A) Finish Q2 board deck +work @la created   2026-05-01             
+   health            3      2   (A) Call dentist to reschedule cle due       2026-05-06  today      
+   finance           2     (3)  PRIORITY B  ────────────────────── space     work                   
+   home             ╭ tasq · command ──────────────────────────────────────────╮ptop                
+   learning         │ > arch█  4 matches                                       │                    
+   personal         │──────────────────────────────────────────────────────────│                    
+   travel           │ ▶ archive completed tasks                              A │                    
                     │   toggle archive view                                  a │1 Finish Q2 board   
- CONTEXTS           │   fuzzy search                                         / │aptop               
+ TAGS               │   fuzzy search                                         / │aptop               
    @errands         │   save search as filter                               fs │6                   
    @home            │                                                          │                    
    @laptop          │                                                          │                    

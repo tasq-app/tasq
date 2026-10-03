@@ -123,8 +123,9 @@ pub fn resolve_needle(needle: &str, today: &str) -> ResolvedNeedle {
 /// resolved `due:` range, that's matched against `t.due` instead; see
 /// [`resolve_needle`].
 pub fn passes_user_filter(t: &Task, filter: &Filter, needle: Option<&ResolvedNeedle>) -> bool {
+    // A space shows its sub-spaces' tasks too.
     if let Some(p) = &filter.project
-        && !t.projects.iter().any(|x| x == p)
+        && !super::spaces::in_space(&t.projects, p)
     {
         return false;
     }
@@ -226,6 +227,16 @@ fn cmp_due(tasks: &[Task]) -> impl Fn(&usize, &usize) -> Ordering + '_ {
             .unwrap_or("z")
             .cmp(tasks[b].date().unwrap_or("z"))
     }
+}
+
+/// The space tree of `tasks` (see [`super::spaces::tree`]).
+pub fn spaces_tree(tasks: &[Task]) -> Vec<super::spaces::SpaceRow> {
+    super::spaces::tree(tasks)
+}
+
+/// The last part of a space path, as the sidebar shows it.
+pub fn space_leaf(path: &str) -> &str {
+    super::spaces::leaf(path)
 }
 
 /// Order projects/contexts the same way the filter sidebar does:

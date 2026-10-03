@@ -15,6 +15,7 @@ mod mutations;
 
 pub mod filter;
 pub mod outcome;
+pub mod spaces;
 
 #[cfg(test)]
 pub(crate) mod test_support;
