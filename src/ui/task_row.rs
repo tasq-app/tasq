@@ -5,7 +5,7 @@ use crate::search::subseq_match_ci;
 use crate::theme::Theme;
 use crate::todo::{Task, body_after_priority, is_star_token};
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy)]
 pub struct RowOpts<'a> {
     pub idx_label: usize,
     pub cursor: bool,
@@ -19,6 +19,25 @@ pub struct RowOpts<'a> {
     /// rendered body. Empty (the common case) means render everything,
     /// byte-for-byte as before.
     pub hidden_keys: &'a [String],
+    /// The colour a space (a `+project` path) is painted in.
+    pub space_color: &'a dyn Fn(&str) -> Color,
+}
+
+impl Default for RowOpts<'_> {
+    fn default() -> Self {
+        Self {
+            idx_label: 0,
+            cursor: false,
+            multi_mode: false,
+            multi_checked: false,
+            selected: false,
+            show_line_num: false,
+            match_term: None,
+            today: "",
+            hidden_keys: &[],
+            space_color: &|_| Color::Reset,
+        }
+    }
 }
 
 pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<'a> {
@@ -62,17 +81,15 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
     }
     spans.push(Span::styled(glyph, glyph_style));
 
-    if task.done {
-        spans.push(Span::styled("    ", Style::default().fg(theme.done)));
-    } else if let Some(p) = task.priority {
-        spans.push(Span::styled(
-            format!("({}) ", p),
+    // Priority as a flag in its colour (A red, B orange, C yellow…).
+    match task.priority {
+        Some(p) if !task.done => spans.push(Span::styled(
+            "⚑ ",
             Style::default()
                 .fg(theme.priority_color(p))
                 .add_modifier(Modifier::BOLD),
-        ));
-    } else {
-        spans.push(Span::raw("    "));
+        )),
+        _ => spans.push(Span::raw("  ")),
     }
     // The `star:1` tag itself is hidden from the body below; this glyph
     // stands in for it.
@@ -113,7 +130,9 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
         }
         let tok_end = rest.find(char::is_whitespace).unwrap_or(rest.len());
         let token = &rest[..tok_end];
-        if is_hidden_kv(token, opts.hidden_keys) || is_star_token(token) {
+        // Tags drawn as chips after the title, and the star (a glyph above),
+        // leave the title itself plain words.
+        if is_hidden_kv(token, opts.hidden_keys) || is_star_token(token) || is_chip_token(token) {
             // Drop the separator we just emitted for this token...
             if pushed_ws {
                 spans.pop();
@@ -143,6 +162,7 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
         emitted_body_token = true;
         rest = &rest[tok_end..];
     }
+    push_chips(&mut spans, task, opts, theme);
     let line_style = if opts.cursor {
         // handles the background highligh and serves as a fallback.
         Style::default().bg(theme.cursor).fg(theme.fg)
@@ -244,6 +264,147 @@ fn push_token_spans<'a>(
     }
     if cursor < token.len() {
         spans.push(Span::styled(&token[cursor..], base_style));
+    }
+}
+
+/// Tag keys shown as chips after the title instead of inside it.
+const CHIP_KEYS: &[&str] = &[
+    "due", "plan", "at", "dur", "remind", "rec", "until", "times", "t", "notes",
+];
+
+/// Whether `token` is drawn as a chip: a `+space`, an `@tag`, or one of
+/// [`CHIP_KEYS`] with a value.
+fn is_chip_token(token: &str) -> bool {
+    if (token.starts_with('+') || token.starts_with('@')) && token.len() > 1 {
+        return true;
+    }
+    token
+        .split_once(':')
+        .is_some_and(|(k, v)| !v.is_empty() && CHIP_KEYS.contains(&k))
+}
+
+/// Mix `color` into `bg` at `amount` (0–1), for a chip's tinted ground.
+/// `None` when either isn't an RGB colour (a terminal-palette theme).
+fn tint(color: Color, bg: Color, amount: f32) -> Option<Color> {
+    match (color, bg) {
+        (Color::Rgb(r, g, b), Color::Rgb(br, bgc, bb)) => {
+            let mix = |c: u8, base: u8| {
+                (f32::from(base) + (f32::from(c) - f32::from(base)) * amount).round() as u8
+            };
+            Some(Color::Rgb(mix(r, br), mix(g, bgc), mix(b, bb)))
+        }
+        _ => None,
+    }
+}
+
+/// One chip: ` text ` in `color` on a tint of it. A done task's chips are
+/// plain and dim.
+fn push_chip<'a>(spans: &mut Vec<Span<'a>>, text: String, color: Color, done: bool, theme: &Theme) {
+    spans.push(Span::raw(" "));
+    if done {
+        spans.push(Span::styled(text, Style::default().fg(theme.done)));
+        return;
+    }
+    let mut style = Style::default().fg(color);
+    if let Some(bg) = tint(color, theme.bg, 0.2) {
+        style = style.bg(bg);
+    }
+    spans.push(Span::styled(format!(" {text} "), style));
+}
+
+/// A date as a chip reads it: `today`, `tomorrow`, `yesterday`, else
+/// `fri 9 oct` (with the year when it isn't this one).
+pub(crate) fn chip_date(date: &str, today: &str) -> String {
+    use chrono::Datelike;
+    let parse = |s: &str| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok();
+    let (Some(d), Some(t)) = (parse(date), parse(today)) else {
+        return date.to_string();
+    };
+    match (d - t).num_days() {
+        0 => "today".into(),
+        1 => "tomorrow".into(),
+        -1 => "yesterday".into(),
+        _ if d.year() == t.year() => d.format("%a %-d %b").to_string().to_lowercase(),
+        _ => d.format("%-d %b %Y").to_string().to_lowercase(),
+    }
+}
+
+/// The chips after the title: when (date · time · duration), the
+/// deadline, the repeat, the space, the tags and a note marker.
+fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, theme: &Theme) {
+    let shown = |key: &str| !opts.hidden_keys.iter().any(|h| h.eq_ignore_ascii_case(key));
+    let done = task.done;
+    let time = shown("at")
+        .then(|| crate::todo::find_kv(&task.clean_raw, "at"))
+        .flatten();
+
+    // When: the planned day, else (with no deadline) just the time.
+    let mut when: Vec<String> = Vec::new();
+    if let Some(p) = task.planned.as_deref().filter(|_| shown("plan")) {
+        when.push(chip_date(p, opts.today));
+    }
+    if let Some(t) = time {
+        when.push(t);
+    }
+    if let Some(d) = task.duration.as_deref().filter(|_| shown("dur")) {
+        when.push(d.to_string());
+    }
+    if !when.is_empty() {
+        let color = match task.planned.as_deref() {
+            Some(p) if p <= opts.today => theme.today,
+            _ => theme.accent,
+        };
+        push_chip(spans, when.join(" · "), color, done, theme);
+    }
+    if let Some(d) = task.due.as_deref().filter(|_| shown("due")) {
+        let date = chip_date(d, opts.today);
+        let (text, color) = match due_status(d, opts.today) {
+            DueStatus::Overdue => (format!("◷ overdue · {date}"), theme.overdue),
+            DueStatus::Today => ("◷ due today".to_string(), theme.overdue),
+            DueStatus::Soon => (format!("◷ by {date}"), theme.due),
+            DueStatus::Later | DueStatus::None => (format!("◷ by {date}"), theme.dim),
+        };
+        push_chip(spans, text, color, done, theme);
+    }
+    if let Some(t) = task.threshold.as_deref().filter(|_| shown("t")) {
+        let from = crate::threshold::parse_threshold(t)
+            .and_then(|spec| {
+                crate::threshold::resolve(&spec, task.due.as_deref(), task.created_date.as_deref())
+            })
+            .map_or_else(
+                || t.to_string(),
+                |d| chip_date(&d.format("%Y-%m-%d").to_string(), opts.today),
+            );
+        push_chip(spans, format!("shows from {from}"), theme.dim, done, theme);
+    }
+    if let Some(r) = task.rec.as_deref().filter(|_| shown("rec")) {
+        let mut text = format!("↻ {}", crate::app::describe_rec(r));
+        if let Some(u) = task.until.as_deref() {
+            text.push_str(&format!(" until {}", chip_date(u, opts.today)));
+        }
+        if let Some(n) = task.times.as_deref() {
+            text.push_str(&format!(" · {n} left"));
+        }
+        push_chip(spans, text, theme.pri_other, done, theme);
+    }
+    for p in &task.projects {
+        let color = (opts.space_color)(p);
+        push_chip(
+            spans,
+            format!("● {}", crate::core::spaces::display(p)),
+            color,
+            done,
+            theme,
+        );
+    }
+    for c in &task.contexts {
+        spans.push(Span::styled(
+            format!(" @{c}"),
+            Style::default().fg(if done { theme.done } else { theme.context }),
+        ));
+    }
+    if crate::todo::find_kv(&task.clean_raw, "notes").is_some() && shown("notes") {
+        spans.push(Span::styled(" ≡", Style::default().fg(theme.dim)));
     }
 }
 
@@ -434,6 +595,7 @@ mod tests {
             match_term: Some("a"),
             today: "2026-05-06",
             hidden_keys: &[],
+            space_color: &|_| Color::Reset,
         };
         // Build must not panic; we don't assert on the rendered spans.
         let _ = build_line(&task, opts, &MUTED);
@@ -455,6 +617,7 @@ mod tests {
             match_term: Some("cade"),
             today: "2026-05-06",
             hidden_keys: &[],
+            space_color: &|_| Color::Reset,
         };
         let line = build_line(&task, opts, &MUTED);
         let highlight_bg = MUTED.matched;
@@ -483,6 +646,7 @@ mod tests {
             match_term: None,
             today: "2026-05-06",
             hidden_keys: hidden,
+            space_color: &|_| Color::Reset,
         };
         let line = build_line(&task, opts, &MUTED);
         line.spans
@@ -498,7 +662,8 @@ mod tests {
         let h = vec!["uid".to_string()];
         assert_eq!(
             body_text("Call dentist uid:abc-123 @phone +health", &h),
-            "Call dentist @phone +health",
+            // Spaces and tags come after the title, as chips.
+            "Call dentist  ● health  @phone",
         );
     }
 
@@ -530,7 +695,7 @@ mod tests {
     fn empty_hidden_list_renders_everything_unchanged() {
         assert_eq!(
             body_text("Call dentist uid:abc @phone +health", &[]),
-            "Call dentist uid:abc @phone +health",
+            "Call dentist uid:abc  ● health  @phone",
         );
     }
 
@@ -550,6 +715,7 @@ mod tests {
             match_term: None,
             today: "2026-05-06",
             hidden_keys: &[],
+            space_color: &|_| Color::Reset,
         };
         let line = build_line(&task, opts, &MUTED);
         let url_span = line
@@ -581,6 +747,7 @@ mod tests {
             match_term: None,
             today: "2026-05-06",
             hidden_keys: &[],
+            space_color: &|_| Color::Reset,
         };
         let line = build_line(&task, opts, &MUTED);
         let url_span = line
@@ -598,10 +765,31 @@ mod tests {
     #[test]
     fn non_listed_key_not_hidden() {
         let h = vec!["uid".to_string()];
-        // `due:` stays; only configured keys are dropped.
+        // The deadline stays (as a chip); only configured keys are dropped.
         assert_eq!(
             body_text("Pay rent due:2026-05-15 uid:x", &h),
-            "Pay rent due:2026-05-15",
+            "Pay rent  ◷ by fri 15 may ",
         );
+    }
+
+    #[test]
+    fn a_task_reads_as_its_title_and_chips() {
+        let raw = "(A) Trabajo TIS +Uni/Exams @laptop plan:2026-05-06 at:16:00 dur:2h due:2026-05-08 rec:+1w until:2026-06-30 star:1";
+        let task = parse_line(raw).unwrap();
+        let opts = RowOpts {
+            today: "2026-05-06",
+            ..RowOpts::default()
+        };
+        let text: String = build_line(&task, opts, &MUTED)
+            .spans
+            .iter()
+            .map(|s| s.content.as_ref())
+            .collect();
+        assert_eq!(
+            text.trim_end(),
+            "  ⚑ ★ Trabajo TIS  today · 16:00 · 2h   ◷ by fri 8 may   ↻ every week until tue 30 jun   ● Uni › Exams  @laptop"
+        );
+        assert_eq!(chip_date("2026-05-07", "2026-05-06"), "tomorrow");
+        assert_eq!(chip_date("2027-01-02", "2026-05-06"), "2 jan 2027");
     }
 }

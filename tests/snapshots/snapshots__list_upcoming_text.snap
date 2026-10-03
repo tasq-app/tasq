@@ -5,14 +5,14 @@ expression: buffer_to_text(&buf)
  VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  6 tasks  DETAIL                           
    Today             1 1                                                                            
  ▸ Upcoming          6 2   (1)  TOMORROW  ──────────────────────── priority  (B)                    
-   All              15 3    1 ▸ (B) Review pull requests for auth  created   2026-05-02             
+   All              15 3    1 ▸ ⚑ Review pull requests for auth re created   2026-05-02             
                            (1)  FRI 8 MAY  ─────────────────────── due       2026-05-07  tomorrow   
- SPACES                     2   (A) Call dentist to reschedule cle space     work                   
+ SPACES                     2   ⚑ Call dentist to reschedule clean space     work                   
    ● work            4     (4)  LATER  ─────────────────────────── tags      @laptop                
-   ● health          3      3       Migrate analytics to new pipel                                  
-   ● finance         2      4       Pay rent due:2026-05-15 rec:+1 RAW                              
-   ● home            1      5   (B) Renew passport before summer t                                  
-   ● learning        1      6   (C) Pay quarterly estimated taxes  (B) 2026-05-02 Review pull       
+   ● health          3      3     Migrate analytics to new pipelin                                  
+   ● finance         2      4     Pay rent  ◷ by fri 15 may   ↻ ev RAW                              
+   ● home            1      5   ⚑ Renew passport before summer tri                                  
+   ● learning        1      6   ⚑ Pay quarterly estimated taxes  ◷ (B) 2026-05-02 Review pull       
    ● personal        1                                             requests for auth refactor +work 
    ● travel          1                                             @laptop due:2026-05-07           
                                                                                                     

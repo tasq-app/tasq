@@ -5,12 +5,12 @@ expression: buffer_to_text(&buf)
  VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  4 tasks  DETAIL                           
    Today             1 1                                                                            
    Upcoming          6 2   (1)  PRIORITY A  ────────────────────── priority  (A)                    
- ▸ All              15 3    1 ▸ (A) Finish Q2 board deck +work @la created   2026-05-01             
+ ▸ All              15 3    1 ▸ ⚑ Finish Q2 board deck  ◷ due toda created   2026-05-01             
                            (2)  PRIORITY B  ────────────────────── due       2026-05-06  today      
- SPACES                     2   (B) Review pull requests for auth  space     work                   
- ▸ ● work            4      3   (B) Draft hiring rubric for senior tags      @laptop                
+ SPACES                     2   ⚑ Review pull requests for auth re space     work                   
+ ▸ ● work            4      3   ⚑ Draft hiring rubric for senior e tags      @laptop                
    ● health          3     (1)  NO PRIORITY  ─────────────────────                                  
-   ● finance         2      4       Migrate analytics to new pipel RAW                              
+   ● finance         2      4     Migrate analytics to new pipelin RAW                              
    ● home            1                                                                              
    ● learning        1                                             (A) 2026-05-01 Finish Q2 board   
    ● personal        1                                             deck +work @laptop               
