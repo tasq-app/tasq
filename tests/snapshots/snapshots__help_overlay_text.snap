@@ -33,4 +33,4 @@ expression: buffer_to_text(&buf)
      │    +project          project tag(s)            rec:+Nu           strict: anchor on due:│     
      ╰────────────────────────────────────────────────────────────────────────────────────────╯     
                                                                                                     
- HELP   Tab tasks ⇄ notes page · ? close help                 15 open · 2026-05-06 · tasq 2026.10.0
+ HELP   Tab tasks ⇄ notes page · ? close help                     15 open · 2026-05-06 · tasq 0.0.0

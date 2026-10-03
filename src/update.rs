@@ -118,7 +118,10 @@ const CACHE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
 /// (which is what burned us once during testing).
 const NEGATIVE_CACHE_TTL: Duration = Duration::from_secs(60 * 60);
 const CURL_TIMEOUT_SECS: u64 = 5;
-const RELEASE_URL: &str = "https://api.github.com/repos/tasq-app/tasq/releases/latest";
+/// The newest release, pre-releases included (`/releases/latest` skips
+/// them, and tasq ships alphas and betas). The first `tag_name` in the list
+/// is the newest.
+const RELEASE_URL: &str = "https://api.github.com/repos/tasq-app/tasq/releases?per_page=1";
 
 fn check_for_update() -> Option<String> {
     let cache_path = cache_path();
@@ -187,30 +190,62 @@ pub fn parse_tag_from_release_json(body: &str) -> Option<String> {
     Some(tag.to_string())
 }
 
-/// True when `latest` is a strictly newer version than `current`, comparing
-/// each dot-separated segment numerically. A leading `v` (e.g. `v2026.5.5`)
-/// is stripped on both sides. Non-numeric segments fall back to lexicographic
-/// comparison of that segment, so a future suffix like `2026.5.5-rc1` won't
-/// crash — it just compares the strings.
+/// True when `latest` is a strictly newer version than `current`, by
+/// semantic versioning: `x.y.z` compared numerically, then a pre-release
+/// (`-alpha.2`, `-beta.1`, `-rc.1`) sorts before its release, and
+/// pre-releases compare part by part (numbers numerically, words
+/// alphabetically: alpha < beta < rc). A leading `v` is ignored.
 pub fn is_newer(latest: &str, current: &str) -> bool {
-    let l = latest.trim_start_matches('v');
-    let c = current.trim_start_matches('v');
-    let mut li = l.split('.');
-    let mut ci = c.split('.');
-    loop {
-        match (li.next(), ci.next()) {
-            (None, None) => return false,
-            (Some(a), None) => return a.parse::<u64>().is_ok_and(|n| n > 0) || !a.is_empty(),
-            (None, Some(_)) => return false,
-            (Some(a), Some(b)) => match (a.parse::<u64>(), b.parse::<u64>()) {
-                (Ok(x), Ok(y)) if x != y => return x > y,
-                (Ok(_), Ok(_)) => continue,
-                _ => match a.cmp(b) {
-                    std::cmp::Ordering::Greater => return true,
-                    std::cmp::Ordering::Less => return false,
-                    std::cmp::Ordering::Equal => continue,
-                },
-            },
+    compare_versions(latest, current) == std::cmp::Ordering::Greater
+}
+
+fn compare_versions(a: &str, b: &str) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+    let split = |v: &str| -> (Vec<u64>, Option<String>) {
+        let v = v.trim().trim_start_matches('v');
+        let v = v.split('+').next().unwrap_or(v);
+        let (core, pre) = match v.split_once('-') {
+            Some((c, p)) => (c, Some(p.to_string())),
+            None => (v, None),
+        };
+        let nums = core.split('.').map(|n| n.parse().unwrap_or(0)).collect();
+        (nums, pre)
+    };
+    let (an, ap) = split(a);
+    let (bn, bp) = split(b);
+    for i in 0..an.len().max(bn.len()) {
+        let (x, y) = (
+            an.get(i).copied().unwrap_or(0),
+            bn.get(i).copied().unwrap_or(0),
+        );
+        if x != y {
+            return x.cmp(&y);
+        }
+    }
+    match (ap, bp) {
+        (None, None) => Ordering::Equal,
+        (None, Some(_)) => Ordering::Greater,
+        (Some(_), None) => Ordering::Less,
+        (Some(x), Some(y)) => {
+            let (mut xs, mut ys) = (x.split('.'), y.split('.'));
+            loop {
+                match (xs.next(), ys.next()) {
+                    (None, None) => return Ordering::Equal,
+                    (None, Some(_)) => return Ordering::Less,
+                    (Some(_), None) => return Ordering::Greater,
+                    (Some(p), Some(q)) => {
+                        let ord = match (p.parse::<u64>(), q.parse::<u64>()) {
+                            (Ok(m), Ok(n)) => m.cmp(&n),
+                            (Ok(_), Err(_)) => Ordering::Less,
+                            (Err(_), Ok(_)) => Ordering::Greater,
+                            (Err(_), Err(_)) => p.cmp(q),
+                        };
+                        if ord != Ordering::Equal {
+                            return ord;
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -335,34 +370,29 @@ mod tests {
     }
 
     #[test]
-    fn is_newer_handles_calver_segments() {
-        // Same version
-        assert!(!is_newer("2026.5.3", "2026.5.3"));
-        // Patch bump
-        assert!(is_newer("2026.5.4", "2026.5.3"));
-        assert!(!is_newer("2026.5.3", "2026.5.4"));
-        // Crucially: numeric (not lex) compare on patches >= 10
-        assert!(is_newer("2026.5.10", "2026.5.9"));
-        assert!(!is_newer("2026.5.9", "2026.5.10"));
-        // Month rollover
-        assert!(is_newer("2026.10.1", "2026.9.5"));
-        // Year rollover
-        assert!(is_newer("2027.1.1", "2026.12.31"));
+    fn is_newer_follows_semver() {
+        assert!(!is_newer("0.1.0", "0.1.0"));
+        assert!(is_newer("0.1.1", "0.1.0"));
+        assert!(is_newer("0.10.0", "0.9.3"), "numeric, not alphabetical");
+        assert!(is_newer("1.0.0", "0.99.99"));
+        assert!(!is_newer("0.1.0", "0.1.1"));
+    }
+
+    #[test]
+    fn pre_releases_sort_before_their_release() {
+        assert!(is_newer("0.1.0-alpha.2", "0.1.0-alpha.1"));
+        assert!(is_newer("0.1.0-alpha.10", "0.1.0-alpha.9"));
+        assert!(is_newer("0.1.0-beta.1", "0.1.0-alpha.7"));
+        assert!(is_newer("0.1.0-rc.1", "0.1.0-beta.3"));
+        assert!(is_newer("0.1.0", "0.1.0-rc.1"));
+        assert!(!is_newer("0.1.0-alpha.1", "0.1.0"));
+        assert!(is_newer("0.2.0-alpha.1", "0.1.0"));
     }
 
     #[test]
     fn is_newer_strips_v_prefix() {
-        assert!(is_newer("v2026.5.4", "2026.5.3"));
-        assert!(is_newer("2026.5.4", "v2026.5.3"));
-        assert!(!is_newer("v2026.5.3", "v2026.5.3"));
-    }
-
-    #[test]
-    fn is_newer_handles_segment_count_mismatch() {
-        // "2026.5" vs "2026.5.0" — equal in spirit, but with a non-zero suffix
-        // the longer one is newer.
-        assert!(is_newer("2026.5.1", "2026.5"));
-        assert!(!is_newer("2026.5", "2026.5.1"));
+        assert!(is_newer("v0.1.0-alpha.2", "0.1.0-alpha.1"));
+        assert!(!is_newer("v0.1.0", "0.1.0"));
     }
 
     #[test]
