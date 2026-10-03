@@ -5,8 +5,8 @@ expression: buffer_to_text(&buf)
  VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
    Today             1 1                                                                            
    Upcoming          6 2   (2)  PRIORITY A  ────────────────────── priority  (A)                    
- ▸ All              15 3    1 [x] ▸ (A) Finish Q2 board deck +work created   2026-05-01             
-                            2 [x]   (A) Call dentist to reschedule due       2026-05-06  today      
+ ▸ All              15 3    1 [x] ▸ ⚑ Finish Q2 board deck  ◷ due  created   2026-05-01             
+                            2 [x]   ⚑ Call dentist to reschedule c due       2026-05-06  today      
  SPACES                    (3)  PRIORITY B  ────────────────────── space     work                   
    ● work           ╭ tasq · command ──────────────────────────────────────────╮ptop                
    ● health         │ > █                                                      │                    

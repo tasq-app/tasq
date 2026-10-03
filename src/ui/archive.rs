@@ -9,6 +9,7 @@ use crate::ui::{header, keep_cursor_visible, task_row};
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let theme = app.theme();
+    let space_color = |p: &str| app.space_color(p);
     super::fill_bg(frame, area, Style::default().bg(theme.bg));
 
     let [header_area, _sp, body_area] = Layout::vertical([
@@ -98,6 +99,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             match_term: None,
             today: app.today(),
             hidden_keys: &app.prefs.hidden_keys,
+            space_color: &space_color,
         };
         if i == app.cursor {
             cursor_line = Some(lines.len());

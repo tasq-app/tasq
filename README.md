@@ -37,6 +37,11 @@ local database, notes, live natural-language capture and more, listed below.
   planned or due today, and anything late), **Upcoming** (`2`, the next
   days, then later) and **All** (`3`). Hide a space to keep it out of the
   views.
+- **Readable rows**: a task shows its title, then chips: when (`today ·
+  16:00 · 2h`), the deadline (`◷ by fri 9 oct`, red when due or late), the
+  repeat (`↻ every mon, wed, fri`), its space in the space's colour and its
+  tags. Priority is a flag in its colour (⚑), a starred task a ★. The
+  todo.txt line itself stays in the detail pane.
 - **Planned dates and deadlines**: "on friday" is when you'll do it
   (`plan:`), "by friday" when it's due (`due:`); plus a time (`at 6pm`),
   a duration (`for 1h`) and reminders (`remind me 15 min before`), each

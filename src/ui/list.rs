@@ -62,6 +62,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         .as_ref()
         .and_then(|n| (!n.text.is_empty()).then_some(n.text.as_str()));
 
+    let space_color = |p: &str| app.space_color(p);
     let visible = app.visible_indices();
     let groups = app.visible_groups();
     let mut lines: Vec<Line> = Vec::new();
@@ -101,6 +102,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                 match_term,
                 today: app.today(),
                 hidden_keys: &app.prefs.hidden_keys,
+                space_color: &space_color,
             };
             if i == app.cursor {
                 cursor_line = Some(lines.len());

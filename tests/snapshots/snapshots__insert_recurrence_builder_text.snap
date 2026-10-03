@@ -5,15 +5,15 @@ expression: buffer_to_text(&buf)
  VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
    Today             1 1                                                                            
    Upcoming          6 2   (2)  PRIORITY A  ────────────────────── priority  (A)                    
- ▸ All              15 3    1 ▸ (A) Finish Q2 board deck +work @la created   2026-05-01             
-                            2   (A) Call dentist to reschedule cle due       2026-05-06  today      
+ ▸ All              15 3    1 ▸ ⚑ Finish Q2 board deck  ◷ due toda created   2026-05-01             
+                            2   ⚑ Call dentist to reschedule clean due       2026-05-06  today      
  SPACES                    (3)  PRIORITY B  ────────────────────── space     work                   
-   ● work            4      3   (B) Review pull requests for auth  tags      @laptop                
-   ● health          3      4   (B) Renew passport before summer t                                  
-   ● finance         2      5   (B) Draft hiring rubric for senior RAW                              
+   ● work            4      3   ⚑ Review pull requests for auth re tags      @laptop                
+   ● health          3      4   ⚑ Renew passport before summer tri                                  
+   ● finance         2      5   ⚑ Draft hiring rubric for senior e RAW                              
    ● home            1     (2)  PRIORITY C  ──────────────────────                                  
-   ● learning        1      6   (C) Pay quarterly estimated taxes  (A) 2026-05-01 Finish Q2 board   
-   ● personal        1      7   (C) Order new running shoes +healt deck +work @laptop               
+   ● learning        1      6   ⚑ Pay quarterly estimated taxes  ◷ (A) 2026-05-01 Finish Q2 board   
+   ● personal        1      7   ⚑ Order new running shoes  ● healt deck +work @laptop               
    ● trave╭──────────────────────────────────────────────────────────────────────────────╮          
           │                                                                              │          
  TAGS     │  > Water the plants  +home ▏                                           ↑     │          
