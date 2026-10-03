@@ -223,6 +223,29 @@ Short common words ("a", "el", "en") only count inside a pattern, never alone.
   a fallback — your own font stays.
 - An MCP server so AI assistants can read and add tasks, read-only by default.
 
+### Everything visible, nothing to memorise
+
+The interface inherited from tuxedo works only if you already know its
+shortcuts: the sidebar opens with `[`, filtering by space is `f` then `p`,
+views are `1` / `2` / `3`. Nothing on screen suggests any of them, so they
+feel like easter eggs. The redesign is built on the opposite rule: **every
+action can be found by looking at the screen**. In practice:
+
+- **Shown by default.** The sidebar (views and spaces) is open from the
+  start. Hiding it is a choice you make, not where you begin.
+- **Panels with focus.** Tab moves between sidebar, list and detail; arrows
+  move inside the focused panel. Filtering by a space means selecting it and
+  pressing Enter; there is no separate picker mode.
+- **Context hints.** The bottom line lists only what applies to what's
+  selected: on a space, `Enter open · h hide · r rename`; on a task, its
+  actions.
+- **One command menu.** Type what you want ("hide", "space", "week") and the
+  action appears, with its shortcut beside it. This is how you learn the
+  shortcuts.
+- **Shortcuts are an extra.** Single keys stay for speed, but no feature
+  depends on knowing them.
+- **Mouse.** Clicking a view, a space or a task works too.
+
 ## 7. Releases
 
 Each release is usable on its own and worth a short video.
