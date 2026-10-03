@@ -33,8 +33,7 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
       tag_name: ${{ steps.rp.outputs.tag_name }}
@@ -42,6 +41,10 @@ jobs:
       - id: rp
         uses: googleapis/release-please-action@v4
         with:
+          # A token of the maintainer's, not GITHUB_TOKEN: the repository
+          # doesn't let Actions open pull requests, and a release PR opened
+          # with GITHUB_TOKEN wouldn't run CI either.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 

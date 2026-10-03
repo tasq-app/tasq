@@ -51,6 +51,11 @@ Releasing is automatic, driven by
    Linux and Windows, attaches them, and updates the Homebrew formula in
    [tasq-app/homebrew-tap](https://github.com/tasq-app/homebrew-tap).
 
+release-please acts with the `RELEASE_PLEASE_TOKEN` organization secret (a
+fine-grained token with *Contents*, *Pull requests* and *Workflows* write
+access to this repository); the Homebrew step with `HOMEBREW_TAP_TOKEN`
+(*Contents* write on the tap).
+
 Users then get it with `brew upgrade tasq` (or `brew install
 tasq-app/tap/tasq`).
 
