@@ -311,6 +311,27 @@ fn calendar_week() {
 }
 
 #[test]
+fn calendar_month() {
+    let body = format!(
+        "{}{}",
+        sample::TODO_RAW,
+        "Gym +personal plan:2026-05-04 rec:+1w:mon,wed,fri at:07:00 dur:1h\n"
+    );
+    let mut app = App::new(
+        PathBuf::from(FIXTURE_PATH),
+        body,
+        "2026-05-06".to_string(),
+        Config::default(),
+    );
+    app.version_label = "tasq 0.0.0".to_string();
+    app.prefs.density = Density::Compact;
+    app.frozen_now = Some(24 * 60);
+    app.prefs.layout.right = false;
+    app.open_cal(CalView::Month);
+    snapshot_app("calendar_month", &app);
+}
+
+#[test]
 fn list_grouped_by_due() {
     let mut app = make_app();
     // Default sort is Priority (groups by priority bucket); cycle once to

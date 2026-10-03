@@ -258,8 +258,17 @@ impl App {
         Some(occ)
     }
 
-    /// Enter: edit the selected task (a repeat edits the whole series).
+    /// Enter: edit the selected task (a repeat edits the whole series); in
+    /// the month, open the selected day.
     pub fn cal_edit(&mut self) {
+        if self
+            .calendar
+            .as_ref()
+            .is_some_and(|c| c.view == CalView::Month)
+        {
+            self.open_cal(CalView::Day);
+            return;
+        }
         let Some(occ) = self.cal_selected() else {
             return;
         };
@@ -392,6 +401,20 @@ mod tests {
             app.calendar.as_ref().unwrap().date.to_string(),
             "2026-05-06"
         );
+    }
+
+    #[test]
+    fn enter_on_a_month_day_opens_that_day() {
+        let mut app = build_app("a plan:2026-05-20\n");
+        app.open_cal(CalView::Month);
+        app.cal_move(14);
+        app.cal_edit();
+        let c = app.calendar.as_ref().unwrap();
+        assert_eq!(
+            (c.view, c.date.to_string()),
+            (CalView::Day, "2026-05-20".into())
+        );
+        assert_eq!(app.cal_selected().unwrap().abs, 0);
     }
 
     #[test]

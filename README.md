@@ -620,6 +620,12 @@ an all-day row on top. `←` / `→` move the selected day, `<` / `>` the
 week, and `v` switches to an agenda (each day a heading with its tasks
 below), which is also what narrow terminals get.
 
+`6` shows the month: each day with how many tasks it holds and a dot per
+task in its colour (red for deadlines), and the selected day's tasks
+below the grid. `←` / `→` move a day, `↑` / `↓` a week, `<` / `>` the
+month, `Enter` opens the day, and `v` switches to the titles of each
+day's tasks inside the cells.
+
 **Spaces.** A task's `+project` is its space, and `/` nests it:
 `+Uni/Exams`. Filtering by `Uni` shows Uni's and its sub-spaces' tasks; the
 sidebar draws the tree with counts that include sub-spaces. In the add

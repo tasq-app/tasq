@@ -10,6 +10,8 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 
+use chrono::Datelike;
+
 use crate::app::{App, CalView};
 use crate::core::calendar::{self, Occurrence};
 use crate::theme::Theme;
@@ -57,17 +59,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                 week_agenda(buf, body, app, theme);
             }
         }
-        CalView::Month => {
-            let msg = "coming next: this view is on its way";
-            put(
-                buf,
-                body.x + 2,
-                body.y + 1,
-                msg,
-                body.width.saturating_sub(4),
-                Style::default().fg(theme.dim),
-            );
-        }
+        CalView::Month => month(buf, body, app, theme),
     }
 }
 
@@ -241,7 +233,11 @@ fn bar(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
                 format!("{n} {tasks}")
             }
         }
-        CalView::Month => String::new(),
+        CalView::Month => {
+            let (from, to) = crate::app::month_bounds(cal.date);
+            let n = app.cal_occurrences(from, to).len();
+            format!("{n} {}", if n == 1 { "task" } else { "tasks" })
+        }
     };
     let w = summary.chars().count() as u16;
     if r.right() > x + w + 4 {
@@ -1167,6 +1163,217 @@ fn agenda(
                     );
                 }
             }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Month
+// ---------------------------------------------------------------------------
+
+fn month(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
+    let Some(cal) = &app.calendar else {
+        return;
+    };
+    let today = app.today_naive();
+    let (first, last) = crate::app::month_bounds(cal.date);
+    let grid_from = crate::app::week_start(first);
+    let weeks = ((last - grid_from).num_days() / 7 + 1) as u16;
+    let grid_to = grid_from + chrono::Days::new(u64::from(weeks) * 7 - 1);
+    let occs = app.cal_occurrences(grid_from, grid_to);
+    let titles = cal.month_style == crate::app::CalStyle::List;
+
+    // Room: the grid, and in the counts look the selected day below it.
+    let panel_h = if titles {
+        0
+    } else {
+        (r.height / 3).clamp(4, 9)
+    };
+    let grid_h = r.height.saturating_sub(panel_h + 1);
+    let cell_h = (grid_h.saturating_sub(1) / weeks).max(2);
+    let cell_w = r.width / 7;
+    let col_x = |i: u16| r.x + cell_w * i;
+    let col_w = |i: u16| if i == 6 { r.width - cell_w * 6 } else { cell_w };
+
+    // Weekday heads.
+    for (i, name) in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+        .iter()
+        .enumerate()
+    {
+        let i = i as u16;
+        let text = format!("{name:^w$}", w = usize::from(col_w(i)));
+        put(
+            buf,
+            col_x(i),
+            r.y,
+            &text,
+            col_w(i),
+            Style::default().fg(theme.dim),
+        );
+    }
+    let rule = Style::default().fg(theme.border);
+    hline(buf, r.x, r.y + 1, r.width, rule);
+
+    for week in 0..weeks {
+        let y0 = r.y + 2 + week * cell_h;
+        for i in 0..7u16 {
+            let d = grid_from + chrono::Days::new(u64::from(week * 7 + i));
+            let cell = Rect {
+                x: col_x(i),
+                y: y0,
+                width: col_w(i),
+                height: cell_h - 1,
+            };
+            if cell.bottom() > r.bottom() {
+                continue;
+            }
+            let in_month = d.month() == first.month();
+            let sel = d == cal.date;
+            if sel && let Some(bg) = tint(theme.accent, theme.bg, 0.10) {
+                fill(buf, cell, Style::default().bg(bg));
+            }
+            let bg = |s: Style| {
+                if sel {
+                    s.bg(tint(theme.accent, theme.bg, 0.10).unwrap_or(theme.bg))
+                } else {
+                    s
+                }
+            };
+            // Day number.
+            let num = format!("{:>2}", d.day());
+            let num_style = if d == today {
+                Style::default()
+                    .bg(theme.mode_bg)
+                    .fg(theme.mode_fg)
+                    .add_modifier(Modifier::BOLD)
+            } else if !in_month {
+                bg(Style::default().fg(theme.border))
+            } else if sel {
+                bg(Style::default()
+                    .fg(theme.accent)
+                    .add_modifier(Modifier::BOLD))
+            } else {
+                bg(Style::default().fg(theme.fg))
+            };
+            put(buf, cell.x + 1, cell.y, &format!(" {num} "), 4, num_style);
+            if sel {
+                put(
+                    buf,
+                    cell.right().saturating_sub(2),
+                    cell.y,
+                    "◆",
+                    1,
+                    bg(Style::default().fg(theme.accent)),
+                );
+            }
+
+            let day: Vec<&Occurrence> = occs.iter().filter(|o| o.date == d).collect();
+            if day.is_empty() {
+                continue;
+            }
+            if titles {
+                let w = cell.width.saturating_sub(2);
+                let rows = cell.height.saturating_sub(1);
+                for (k, o) in day.iter().enumerate() {
+                    let k = k as u16;
+                    if k >= rows {
+                        break;
+                    }
+                    if k + 1 == rows && day.len() > rows as usize {
+                        let more = format!("+{} more", day.len() - k as usize);
+                        put(
+                            buf,
+                            cell.x + 1,
+                            cell.y + 1 + k,
+                            &more,
+                            w,
+                            bg(Style::default().fg(theme.dim)),
+                        );
+                        break;
+                    }
+                    let color = occ_color(app, theme, o);
+                    let mut style = Style::default().fg(color);
+                    if let Some(t) = tint(color, theme.bg, 0.22) {
+                        style = style.bg(t);
+                    }
+                    let mark = if o.deadline {
+                        "◷ "
+                    } else if o.projected {
+                        "↻ "
+                    } else {
+                        ""
+                    };
+                    let text = fit(&format!("{mark}{}", title(app, o.abs)), usize::from(w));
+                    put(
+                        buf,
+                        cell.x + 1,
+                        cell.y + 1 + k,
+                        &format!("{text:<width$}", width = usize::from(w)),
+                        w,
+                        style,
+                    );
+                }
+            } else if cell.height >= 2 {
+                // How many, then a dot per task in its colour.
+                let n = format!("{} ", day.len());
+                let mut x = cell.x + 2;
+                x += put(buf, x, cell.y + 1, &n, 4, bg(Style::default().fg(theme.fg)));
+                let room = cell.right().saturating_sub(x + 1);
+                for o in day.iter().take(usize::from(room)) {
+                    put(
+                        buf,
+                        x,
+                        cell.y + 1,
+                        "●",
+                        1,
+                        bg(Style::default().fg(occ_color(app, theme, o))),
+                    );
+                    x += 1;
+                }
+            }
+        }
+        // Rules under each week and between the days.
+        let ry = y0 + cell_h - 1;
+        if ry < r.bottom() {
+            hline(buf, r.x, ry, r.width, rule);
+        }
+    }
+
+    // Rules between the days.
+    let grid_bottom = (r.y + 2 + weeks * cell_h).min(r.bottom());
+    for i in 1..7u16 {
+        for y in r.y + 2..grid_bottom {
+            if let Some(c) = buf.cell_mut((col_x(i), y)) {
+                let joint = c.symbol() == "─";
+                c.set_symbol(if joint { "┼" } else { "│" });
+                c.set_style(rule);
+            }
+        }
+    }
+
+    // The selected day, below the grid.
+    if panel_h > 0 {
+        let py = r.y + 2 + weeks * cell_h;
+        if py + 2 < r.bottom() {
+            let pr = Rect {
+                x: r.x,
+                y: py,
+                width: r.width,
+                height: r.bottom() - py,
+            };
+            let items = app.cal_day_items();
+            let selected = app.cal_selected();
+            agenda(
+                buf,
+                pr,
+                app,
+                theme,
+                &[cal.date],
+                &items,
+                selected.as_ref(),
+                cal.date,
+                today,
+            );
         }
     }
 }
