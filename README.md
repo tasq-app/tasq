@@ -265,6 +265,7 @@ another theme is skipped with a warning at startup.
 | `done` | completed tasks |
 | `selected` | selected-row background (visual mode) and the active filter |
 | `matched` | search-match highlight |
+| `palette` | optional: up to 8 comma-separated colours spaces are painted in (default: made from the colours above) |
 
 </details>
 
@@ -576,7 +577,7 @@ The modal keys below apply in Normal mode:
 | --- | --- |
 | `/` | search (a `due:` term filters by date range; see [todo.txt format](#todotxt-format)) |
 | `1` / `2` / `3` | Today / Upcoming / All |
-| `fp` | filter by space, sub-spaces included (`j` / `k` cycles, `h` hides / shows it, `r` renames, `d` deletes an empty one, `Esc` clears) |
+| `fp` | filter by space, sub-spaces included (`j` / `k` cycles, `c` / `C` next colour / automatic colour, `h` hides / shows it, `r` renames, `d` deletes an empty one, `Esc` clears) |
 | `fc` | filter by tag (`j` / `k` cycles, `Esc` clears) |
 | `ff` | pick a saved search (`j` / `k` cycles, `Enter` keeps, `Esc` reverts) |
 | `fs` | save the active `/`-search as a named filter |
@@ -608,6 +609,9 @@ last task is done or deleted stays in the sidebar (with a count of 0) until
 you delete it from the space picker (`fp`, then `d`). Renaming a space
 (`fp`, then `r`) takes its sub-spaces along: `Uni` → `School` moves
 `Uni/Exams` to `School/Exams`.
+Each space has a colour from the theme's palette, picked from its name
+until you choose one (`fp`, pick it, `c` for the next colour, `C` back to
+automatic). A sub-space without a colour of its own takes its parent's.
 To keep a part of your life out of Today, Upcoming and All, hide its space
 (`fp`, pick it, `h`). Its sub-spaces go with it, and a single sub-space can
 be hidden on its own. A hidden space stays dimmed in the sidebar, and opening

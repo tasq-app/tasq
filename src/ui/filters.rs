@@ -73,9 +73,13 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         for row in &spaces {
             let active = app.filter.project.as_deref() == Some(row.path.as_str());
             let indent = "  ".repeat(row.depth);
-            let label = format!("{indent}{}", filter::space_leaf(&row.path));
+            let label = format!("{indent}● {}", filter::space_leaf(&row.path));
             // A hidden space (or one inside it) stays listed, dimmed.
-            let color = if row.hidden { theme.dim } else { theme.project };
+            let color = if row.hidden {
+                theme.dim
+            } else {
+                app.space_color(&row.path)
+            };
             lines.push(filter_row(theme, "", &label, row.count, active, color));
         }
     }

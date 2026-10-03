@@ -8,13 +8,13 @@ expression: buffer_to_text(&buf)
  ▸ All              15 3    1 ▸ (A) Finish Q2 board deck +work @la created   2026-05-01             
                             2   (A) Call dentist to reschedule cle due       2026-05-06  today      
  SPACES                    (3)  PRIORITY B  ────────────────────── space     work                   
-   work              4      3   (B) Review pull requests for auth  tags      @laptop                
-   health            3      4   (B) Renew passport before summer t                                  
-   finance           2      5   (B) Draft hiring rubric for senior RAW                              
-   home              1     (2)  PRIORITY C  ──────────────────────                                  
-   learning          1      6   (C) Pay quarterly estimated taxes  (A) 2026-05-01 Finish Q2 board   
-   personal          1      7   (C) Order new running shoes +healt deck +work @laptop               
-   travel ╭──────────────────────────────────────────────────────────────────────────────╮          
+   ● work            4      3   (B) Review pull requests for auth  tags      @laptop                
+   ● health          3      4   (B) Renew passport before summer t                                  
+   ● finance         2      5   (B) Draft hiring rubric for senior RAW                              
+   ● home            1     (2)  PRIORITY C  ──────────────────────                                  
+   ● learning        1      6   (C) Pay quarterly estimated taxes  (A) 2026-05-01 Finish Q2 board   
+   ● personal        1      7   (C) Order new running shoes +healt deck +work @laptop               
+   ● trave╭──────────────────────────────────────────────────────────────────────────────╮          
           │                                                                              │          
  TAGS     │  > Pay rent  +home   @bank  ▦ plan:2026-06-01 ↻ rec:+1m ◐ t:-3d▏       ↑     │          
    @errand│                                                                              │          

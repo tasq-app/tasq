@@ -8,13 +8,13 @@ expression: buffer_to_text(&buf)
  ▸ All              15 3    1 ▸ (A) Finish Q2 board deck +work @la created   2026-05-01             
                             2   (A) Call dentist to reschedule cle due       2026-05-06  today      
  SPACES                    (3)  PRIORITY B  ────────────────────── space     work                   
-   work             ╭ tasq · command ──────────────────────────────────────────╮ptop                
-   health           │ > █                                                      │                    
-   finance          │──────────────────────────────────────────────────────────│                    
-   home             │ ▶ new task                                             n │                    
-   learning         │   edit current task (normal mode)                      e │1 Finish Q2 board   
-   personal         │   edit current task (insert mode)                      i │aptop               
-   travel           │   toggle complete                                      x │6                   
+   ● work           ╭ tasq · command ──────────────────────────────────────────╮ptop                
+   ● health         │ > █                                                      │                    
+   ● finance        │──────────────────────────────────────────────────────────│                    
+   ● home           │ ▶ new task                                             n │                    
+   ● learning       │   edit current task (normal mode)                      e │1 Finish Q2 board   
+   ● personal       │   edit current task (insert mode)                      i │aptop               
+   ● travel         │   toggle complete                                      x │6                   
                     │   delete task                                         dd │                    
  TAGS               │   cycle priority                                       p │                    
    @errands         │   star / unstar task (top of its priority)             * │                    

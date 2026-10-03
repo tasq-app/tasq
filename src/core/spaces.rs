@@ -43,6 +43,68 @@ pub struct Space {
     /// Full path, e.g. `Uni/Exams`.
     pub path: String,
     pub hidden: bool,
+    /// The colour picked for it (see [`SpaceColor::parse`]); `None` uses
+    /// the parent's, or one chosen from its name.
+    pub color: Option<String>,
+}
+
+/// Number of colours in a theme's palette (see `Theme::palette`).
+pub const PALETTE_SLOTS: usize = 8;
+
+/// A space's colour, independent of the theme: one of the theme's palette
+/// slots, or an exact RGB the user wrote.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpaceColor {
+    Slot(usize),
+    Rgb(u8, u8, u8),
+}
+
+impl SpaceColor {
+    /// `"3"` → palette slot 3; `"#8aadf4"` → that colour.
+    pub fn parse(v: &str) -> Option<Self> {
+        if let Some(hex) = v.strip_prefix('#') {
+            if hex.len() != 6 || !hex.chars().all(|c| c.is_ascii_hexdigit()) {
+                return None;
+            }
+            let byte = |i: usize| u8::from_str_radix(&hex[i..i + 2], 16).ok();
+            return Some(Self::Rgb(byte(0)?, byte(2)?, byte(4)?));
+        }
+        v.parse::<usize>()
+            .ok()
+            .filter(|n| *n < PALETTE_SLOTS)
+            .map(Self::Slot)
+    }
+
+    /// How it's stored.
+    pub fn to_value(self) -> String {
+        match self {
+            Self::Slot(n) => n.to_string(),
+            Self::Rgb(r, g, b) => format!("#{r:02x}{g:02x}{b:02x}"),
+        }
+    }
+}
+
+/// The colour a space is painted in: its own, else the nearest space above
+/// it that has one, else a palette slot picked from its path — so every
+/// sub-space gets its own colour until you choose otherwise.
+pub fn color_of(path: &str, known: &[Space]) -> SpaceColor {
+    known
+        .iter()
+        .filter(|s| is_within(path, &s.path))
+        .filter_map(|s| Some((s.path.len(), SpaceColor::parse(s.color.as_deref()?)?)))
+        .max_by_key(|(len, _)| *len)
+        .map(|(_, c)| c)
+        .unwrap_or_else(|| SpaceColor::Slot(auto_slot(path)))
+}
+
+/// A palette slot from the path's letters (FNV-1a), stable across runs.
+fn auto_slot(path: &str) -> usize {
+    let mut h: u32 = 0x811c_9dc5;
+    for b in path.bytes() {
+        h ^= u32::from(b);
+        h = h.wrapping_mul(0x0100_0193);
+    }
+    h as usize % PALETTE_SLOTS
 }
 
 /// A path and every space above it: `Uni/Exams` → `Uni`, `Uni/Exams`.
@@ -207,6 +269,7 @@ mod tests {
         let known = [Space {
             path: "Personal/Moving".to_string(),
             hidden: false,
+            color: None,
         }];
         let rows: Vec<(String, usize)> = tree(&tasks, &known)
             .into_iter()
@@ -240,10 +303,12 @@ mod tests {
             Space {
                 path: "Uni".to_string(),
                 hidden: true,
+                color: None,
             },
             Space {
                 path: "Personal/Moving".to_string(),
                 hidden: true,
+                color: None,
             },
         ];
         let exams = vec!["Uni/Exams".to_string()];
@@ -270,5 +335,33 @@ mod tests {
                 ("Uni/Exams".to_string(), true),
             ]
         );
+    }
+
+    #[test]
+    fn colours_come_from_the_space_then_above_then_the_name() {
+        let known = [
+            Space {
+                path: "Uni".to_string(),
+                hidden: false,
+                color: Some("2".to_string()),
+            },
+            Space {
+                path: "Uni/Labs".to_string(),
+                hidden: false,
+                color: Some("#8aadf4".to_string()),
+            },
+        ];
+        assert_eq!(color_of("Uni", &known), SpaceColor::Slot(2));
+        assert_eq!(color_of("Uni/Exams", &known), SpaceColor::Slot(2));
+        assert_eq!(
+            color_of("Uni/Labs", &known),
+            SpaceColor::Rgb(0x8a, 0xad, 0xf4)
+        );
+        // Without a choice, a stable slot from the name.
+        assert_eq!(color_of("Personal", &known), color_of("Personal", &[]));
+        assert!(matches!(color_of("Personal", &[]), SpaceColor::Slot(n) if n < PALETTE_SLOTS));
+        assert_eq!(SpaceColor::parse("8"), None);
+        assert_eq!(SpaceColor::parse("#12345"), None);
+        assert_eq!(SpaceColor::Rgb(1, 2, 255).to_value(), "#0102ff");
     }
 }

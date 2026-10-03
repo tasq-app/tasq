@@ -159,7 +159,8 @@ pub enum DeleteSpaceOutcome {
 }
 
 #[derive(Debug)]
-pub enum HideSpaceOutcome {
+/// Hiding a space or setting its colour.
+pub enum SpaceSettingOutcome {
     Done,
     /// A todo.txt store keeps no spaces of its own.
     NotKept,

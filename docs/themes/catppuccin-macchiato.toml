@@ -35,3 +35,7 @@ matched = #eed49f
 due = #eed49f
 overdue = #ed8796
 today = #ed8796
+
+# Colours spaces are painted in: blue, mauve, green, peach, yellow, teal,
+# pink, lavender.
+palette = #8aadf4, #c6a0f6, #a6da95, #f5a97f, #eed49f, #8bd5ca, #f5bde6, #b7bdf8

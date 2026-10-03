@@ -21,7 +21,7 @@ use super::spaces::{self, Space};
 use crate::todo::{self, Task};
 
 /// The schema version this build reads and writes.
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 4;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS meta (
@@ -277,13 +277,14 @@ impl Db {
     pub fn load_spaces(&self) -> std::io::Result<Vec<Space>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT path, hidden FROM spaces ORDER BY path")
+            .prepare("SELECT path, hidden, color FROM spaces ORDER BY path")
             .map_err(io_err)?;
         let rows = stmt
             .query_map([], |r| {
                 Ok(Space {
                     path: r.get(0)?,
                     hidden: r.get::<_, i64>(1)? != 0,
+                    color: r.get(2)?,
                 })
             })
             .map_err(io_err)?;
@@ -304,6 +305,20 @@ impl Db {
         Ok(())
     }
 
+    /// Set the colour of the space `path` (see `SpaceColor`), or go back
+    /// to the automatic one with `None`.
+    pub fn set_space_color(&mut self, path: &str, color: Option<&str>) -> std::io::Result<()> {
+        add_spaces(&self.conn, &[path.to_string()], &now_rfc3339()).map_err(io_err)?;
+        self.conn
+            .execute(
+                "UPDATE spaces SET color = ?2 WHERE path = ?1",
+                params![path, color],
+            )
+            .map_err(io_err)?;
+        self.data_version = self.read_data_version().map_err(io_err)?;
+        Ok(())
+    }
+
     /// Forget the space `path` and its sub-spaces.
     pub fn delete_space(&mut self, path: &str) -> std::io::Result<()> {
         self.conn
@@ -318,26 +333,28 @@ impl Db {
     /// merged into.
     pub fn rename_space(&mut self, from: &str, to: &str) -> std::io::Result<()> {
         let tx = self.conn.transaction().map_err(io_err)?;
-        let rows: Vec<(String, i64, String)> = {
+        type Row = (String, i64, String, Option<String>);
+        let rows: Vec<Row> = {
             let mut stmt = tx
                 .prepare(&format!(
-                    "SELECT path, hidden, created_at FROM spaces WHERE {WITHIN}"
+                    "SELECT path, hidden, created_at, color FROM spaces WHERE {WITHIN}"
                 ))
                 .map_err(io_err)?;
-            stmt.query_map([from], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+            stmt.query_map([from], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
                 .map_err(io_err)?
                 .collect::<Result<_, _>>()
                 .map_err(io_err)?
         };
         tx.execute(&format!("DELETE FROM spaces WHERE {WITHIN}"), [from])
             .map_err(io_err)?;
-        for (path, hidden, created_at) in rows {
+        for (path, hidden, created_at, color) in rows {
             let Some(new_path) = spaces::renamed(&path, from, to) else {
                 continue;
             };
             tx.execute(
-                "INSERT OR IGNORE INTO spaces (path, hidden, created_at) VALUES (?1, ?2, ?3)",
-                params![new_path, hidden, created_at],
+                "INSERT OR IGNORE INTO spaces (path, hidden, created_at, color)
+                 VALUES (?1, ?2, ?3, ?4)",
+                params![new_path, hidden, created_at, color],
             )
             .map_err(io_err)?;
         }
@@ -412,6 +429,10 @@ fn migrate(conn: &Connection, from: i64) -> rusqlite::Result<()> {
                 .flat_map(|t| t.projects)
                 .collect();
             add_spaces(conn, &paths, &now_rfc3339())?;
+        }
+        if from < 4 {
+            // A colour per space (a palette slot or `#rrggbb`).
+            conn.execute_batch("ALTER TABLE spaces ADD COLUMN color TEXT;")?;
         }
         conn.execute(
             "INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', ?1)",
@@ -727,7 +748,7 @@ mod tests {
                 Some("2026-10-05".into()),
                 Some(60),
                 Some("15,1440".into()),
-                "3".into()
+                "4".into()
             )
         );
         let paths: Vec<String> = db
@@ -923,5 +944,28 @@ mod tests {
             crate::core::RenameOutcome::Done { renamed: 0 }
         ));
         assert_eq!(paths(&s), ["Uni"]);
+    }
+
+    #[test]
+    fn a_space_keeps_its_colour_and_its_sub_spaces_inherit_it() {
+        use crate::core::spaces::SpaceColor;
+        let mut s = Store::in_memory_db("2026-10-03");
+        s.add_finalized("study +Uni/Exams");
+        s.set_space_color("Uni", Some(SpaceColor::Slot(5)));
+        assert_eq!(s.space_color("Uni"), SpaceColor::Slot(5));
+        assert_eq!(s.space_color("Uni/Exams"), SpaceColor::Slot(5));
+        s.set_space_color("Uni/Exams", Some(SpaceColor::Rgb(1, 2, 3)));
+        assert_eq!(s.space_color("Uni/Exams"), SpaceColor::Rgb(1, 2, 3));
+        // Renaming keeps the choice; resetting goes back to automatic.
+        s.rename_project("Uni", "School");
+        assert_eq!(s.space_color("School"), SpaceColor::Slot(5));
+        s.set_space_color("School", None);
+        assert_ne!(
+            s.known_spaces()
+                .iter()
+                .find(|k| k.path == "School")
+                .and_then(|k| k.color.clone()),
+            Some("5".to_string())
+        );
     }
 }
