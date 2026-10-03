@@ -1659,6 +1659,9 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('r') => Action::Reschedule,
         KeyCode::Char('a') => Action::ToggleArchiveView,
         KeyCode::Char('l') => Action::GoList,
+        KeyCode::Char('1') => Action::ScopeToday,
+        KeyCode::Char('2') => Action::ScopeUpcoming,
+        KeyCode::Char('3') => Action::ScopeAll,
         KeyCode::Char('e') => Action::BeginEdit,
         KeyCode::Char('i') => Action::BeginEditInsert,
         KeyCode::Char('o') => Action::OpenNotes,
@@ -1888,6 +1891,9 @@ fn apply_action(app: &mut App, action: Action) {
             }
         }
         Action::GoList => app.set_view(View::List),
+        Action::ScopeToday => app.set_scope(tasq::app::Scope::Today),
+        Action::ScopeUpcoming => app.set_scope(tasq::app::Scope::Upcoming),
+        Action::ScopeAll => app.set_scope(tasq::app::Scope::All),
         Action::ToggleArchiveView => {
             let next = if app.view() == View::Archive {
                 View::List

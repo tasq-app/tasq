@@ -23,7 +23,11 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let filter_label = header::filter_label(&app.filter);
     // The database needs no path in the header; a todo.txt shows which file.
     let title = if app.store.is_db() {
-        "all tasks".to_string()
+        match app.prefs.scope {
+            crate::app::Scope::Today => "today".to_string(),
+            crate::app::Scope::Upcoming => "upcoming".to_string(),
+            crate::app::Scope::All => "all tasks".to_string(),
+        }
     } else {
         display_path(&app.file_path)
     };
@@ -82,7 +86,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                 if !lines.is_empty() {
                     push_blanks(&mut lines, blank);
                 }
-                lines.push(group_header(theme, gk, counts.lookup(gk)));
+                lines.push(group_header(theme, gk, counts.lookup(gk), app.today()));
                 last_group = Some(gk);
             }
 
@@ -163,14 +167,17 @@ fn group_count_key(gk: &GroupKey) -> String {
         GroupKey::ListPriority(Some(c)) => format!("p:{c}"),
         GroupKey::ListPriority(None) => "p:_".to_string(),
         GroupKey::ListDue(b) => format!("d:{}", b.label()),
+        GroupKey::Day(d) => format!("day:{}", d.as_deref().unwrap_or("later")),
         // Not produced for List view; encode defensively.
         GroupKey::ArchiveDate(d) => format!("a:{d}"),
         GroupKey::None => String::new(),
     }
 }
 
-fn group_header<'a>(theme: &Theme, gk: &GroupKey, count: usize) -> Line<'a> {
+fn group_header<'a>(theme: &Theme, gk: &GroupKey, count: usize, today: &str) -> Line<'a> {
     let (label, color) = match gk {
+        GroupKey::Day(Some(d)) => (day_label(d, today), theme.accent),
+        GroupKey::Day(None) => ("LATER".to_string(), theme.dim),
         GroupKey::ListPriority(Some(c)) => (format!("PRIORITY {c}"), theme.priority_color(*c)),
         GroupKey::ListPriority(None) => ("NO PRIORITY".to_string(), theme.dim),
         GroupKey::ListDue(b) => (b.label().to_string(), due_bucket_color(theme, *b)),
@@ -196,6 +203,16 @@ fn group_header<'a>(theme: &Theme, gk: &GroupKey, count: usize) -> Line<'a> {
             Style::default().fg(theme.border),
         ),
     ])
+}
+
+/// An Upcoming day header: `TOMORROW`, else `FRI 9 OCT`.
+fn day_label(date: &str, today: &str) -> String {
+    let parse = |s: &str| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok();
+    match (parse(date), parse(today)) {
+        (Some(d), Some(t)) if (d - t).num_days() == 1 => "TOMORROW".to_string(),
+        (Some(d), _) => d.format("%a %-d %b").to_string().to_uppercase(),
+        _ => date.to_string(),
+    }
 }
 
 fn due_bucket_color(theme: &Theme, b: ListDueBucket) -> Color {

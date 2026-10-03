@@ -13,13 +13,15 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::app::WeekStart;
-use crate::app::{Density, Sort};
+use crate::app::{Density, Scope, Sort};
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Config {
     pub theme: Option<String>,
     pub density: Option<Density>,
     pub sort: Option<Sort>,
+    /// The list's scope: `view = today | upcoming | all`.
+    pub view: Option<Scope>,
     pub show_left: Option<bool>,
     pub show_right: Option<bool>,
     pub show_line_num: Option<bool>,
@@ -152,6 +154,7 @@ fn parse(s: &str) -> Config {
             "theme" => c.theme = Some(v.to_string()),
             "density" => c.density = v.parse().ok(),
             "sort" => c.sort = v.parse().ok(),
+            "view" => c.view = v.parse().ok(),
             "show_left" => c.show_left = parse_bool(v),
             "show_right" => c.show_right = parse_bool(v),
             "show_line_num" => c.show_line_num = parse_bool(v),
@@ -209,6 +212,9 @@ fn serialize(c: &Config) -> String {
     }
     if let Some(v) = c.density {
         let _ = writeln!(out, "density = {v}");
+    }
+    if let Some(v) = c.view {
+        let _ = writeln!(out, "view = {v}");
     }
     if let Some(v) = c.sort {
         let _ = writeln!(out, "sort = {v}");
@@ -285,6 +291,7 @@ mod tests {
             theme: Some("Nord".into()),
             density: Some(Density::Cozy),
             sort: Some(Sort::Due),
+            view: Some(Scope::Upcoming),
             show_left: Some(false),
             show_right: Some(true),
             show_line_num: Some(false),
@@ -446,6 +453,7 @@ mod tests {
             theme: Some("Dawn".into()),
             density: Some(Density::Compact),
             sort: Some(Sort::File),
+            view: None,
             show_left: Some(false),
             show_right: Some(false),
             show_line_num: Some(true),

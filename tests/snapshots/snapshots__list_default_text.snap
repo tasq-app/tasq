@@ -2,25 +2,25 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- FILTERS                   ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
-                                                                                                    
- SPACES                    (2)  PRIORITY A  ────────────────────── priority  (A)                    
-   work              4      1 ▸ (A) Finish Q2 board deck +work @la created   2026-05-01             
-   health            3      2   (A) Call dentist to reschedule cle due       2026-05-06  today      
-   finance           2     (3)  PRIORITY B  ────────────────────── space     work                   
-   home              1      3   (B) Review pull requests for auth  tags      @laptop                
-   learning          1      4   (B) Renew passport before summer t                                  
-   personal          1      5   (B) Draft hiring rubric for senior RAW                              
-   travel            1     (2)  PRIORITY C  ──────────────────────                                  
-                            6   (C) Pay quarterly estimated taxes  (A) 2026-05-01 Finish Q2 board   
- TAGS                       7   (C) Order new running shoes +healt deck +work @laptop               
-   @errands          4     (8)  NO PRIORITY  ───────────────────── due:2026-05-06                   
-   @home             4      8       Migrate analytics to new pipel                                  
-   @laptop           4      9       Pay rent due:2026-05-15 rec:+1                                  
-   @phone            3     10       Pick up dry cleaning @errands                                   
-                           11       Schedule annual physical @phon                                  
-                           12       Read "Designing Data-Intensive                                  
-                           13       Send thank-you note to mentor                                   
+ VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
+   Today             1 1                                                                            
+   Upcoming          6 2   (2)  PRIORITY A  ────────────────────── priority  (A)                    
+ ▸ All              15 3    1 ▸ (A) Finish Q2 board deck +work @la created   2026-05-01             
+                            2   (A) Call dentist to reschedule cle due       2026-05-06  today      
+ SPACES                    (3)  PRIORITY B  ────────────────────── space     work                   
+   work              4      3   (B) Review pull requests for auth  tags      @laptop                
+   health            3      4   (B) Renew passport before summer t                                  
+   finance           2      5   (B) Draft hiring rubric for senior RAW                              
+   home              1     (2)  PRIORITY C  ──────────────────────                                  
+   learning          1      6   (C) Pay quarterly estimated taxes  (A) 2026-05-01 Finish Q2 board   
+   personal          1      7   (C) Order new running shoes +healt deck +work @laptop               
+   travel            1     (8)  NO PRIORITY  ───────────────────── due:2026-05-06                   
+                            8       Migrate analytics to new pipel                                  
+ TAGS                       9       Pay rent due:2026-05-15 rec:+1                                  
+   @errands          4     10       Pick up dry cleaning @errands                                   
+   @home             4     11       Schedule annual physical @phon                                  
+   @laptop           4     12       Read "Designing Data-Intensive                                  
+   @phone            3     13       Send thank-you note to mentor                                   
                            14       Plan Saturday hike with K. @ph                                  
                            15       Replace bathroom faucet washer                                  
                                                                                                     

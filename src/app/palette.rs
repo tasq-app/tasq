@@ -204,6 +204,21 @@ pub const ENTRIES: &[PaletteEntry] = &[
         dispatch: PaletteDispatch::Global(Action::ToggleSelected),
     },
     PaletteEntry {
+        label: "today: planned or due today, and late",
+        keys: "1",
+        dispatch: PaletteDispatch::Global(Action::ScopeToday),
+    },
+    PaletteEntry {
+        label: "upcoming: the next days, then later",
+        keys: "2",
+        dispatch: PaletteDispatch::Global(Action::ScopeUpcoming),
+    },
+    PaletteEntry {
+        label: "all tasks",
+        keys: "3",
+        dispatch: PaletteDispatch::Global(Action::ScopeAll),
+    },
+    PaletteEntry {
         label: "list view",
         keys: "l",
         dispatch: PaletteDispatch::Global(Action::GoList),
@@ -714,6 +729,9 @@ mod tests {
             Action::ToggleSelected,
             Action::GoList,
             Action::ToggleArchiveView,
+            Action::ScopeToday,
+            Action::ScopeUpcoming,
+            Action::ScopeAll,
             Action::ArchiveCompleted,
             Action::PickProject,
             Action::PickContext,

@@ -2,16 +2,16 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- FILTERS                   ▶▮◀ /tmp/tasq-snapshot.txt  •  3 tasks  DETAIL                           
-                                                                                                    
- SPACES                    (1)  PRIORITY A  ────────────────────── priority  (A)                    
-   tag with +space          1 ▸ (A) Buy milk                       created   —                      
+ VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  3 tasks  DETAIL                           
+   Today             0 1                                                                            
+   Upcoming          0 2   (1)  PRIORITY A  ────────────────────── priority  (A)                    
+ ▸ All               3 3    1 ▸ (A) Buy milk                       created   —                      
                            (1)  PRIORITY B  ────────────────────── space                            
- TAGS                       2   (B) Call mom                       tags                             
-   tag with @context       (1)  NO PRIORITY  ─────────────────────                                  
+ SPACES                     2   (B) Call mom                       tags                             
+   tag with +space         (1)  NO PRIORITY  ─────────────────────                                  
                             3       Write up notes                 RAW                              
-                                                                                                    
-                                                                   (A) Buy milk                     
+ TAGS                                                                                               
+   tag with @context                                               (A) Buy milk                     
                                                                                                     
                                                                                                     
                                                                                                     

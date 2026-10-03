@@ -52,8 +52,9 @@ const RECURRENCE: Section = (
 const VIEW: Section = (
     "VIEW",
     &[
+        ("1 / 2 / 3", "today / upcoming / all"),
         ("/", "fuzzy search"),
-        ("fp / fc", "filter project/context"),
+        ("fp / fc", "filter space/tag"),
         ("ff / fs", "saved filter pick/save"),
         ("S", "cycle sort"),
         ("v", "visual / multi-select"),

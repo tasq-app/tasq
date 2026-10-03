@@ -57,7 +57,7 @@ pub use prefs::{Layout, Prefs};
 pub use selection::Selection;
 pub use types::{
     AUTOCOMPLETE_CAP, AddOutcome, Density, FLASH_TTL, Filter, LEADER_WINDOW, Mode, SavedFilter,
-    Sort, UNDO_LIMIT, View,
+    Scope, Sort, UNDO_LIMIT, View,
 };
 pub use visibility::GroupKey;
 
@@ -576,6 +576,16 @@ impl App {
     /// Switch top-level view. Recomputes the cache so the next frame reflects
     /// the change, snapshots the outgoing view's cursor, and restores the
     /// incoming view's saved cursor (clamped to the new visible length).
+    /// Show Today, Upcoming or All in the list (and remember it). Switches
+    /// back to the list from the archive.
+    pub fn set_scope(&mut self, scope: Scope) {
+        self.prefs.scope = scope;
+        self.set_view(View::List);
+        self.cursor = 0;
+        self.recompute_visible();
+        self.save_prefs();
+    }
+
     pub fn set_view(&mut self, view: View) {
         if self.view == view {
             return;
