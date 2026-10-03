@@ -34,6 +34,10 @@ pub struct ParsedNl {
     /// Reminders, in minutes before its time: "remind me 15 min before".
     pub reminders: Vec<u32>,
     pub rec: Option<String>,
+    /// When a repeat ends: "until dec 20" (`until:`).
+    pub until: Option<NaiveDate>,
+    /// How many times it repeats: "10 times" (`times:`).
+    pub times: Option<u32>,
     pub threshold: Option<String>,
     pub projects: Vec<String>,
     pub contexts: Vec<String>,
@@ -153,6 +157,7 @@ fn detect_once(text: &str, today: NaiveDate, blocked: &[bool], spaces: &[String]
     pass_duration(&mut scratch, &mut parsed);
     pass_threshold(&mut scratch, &mut parsed);
     let weekday_hint = pass_recurrence(&mut scratch, &mut parsed);
+    pass_repeat_end(&mut scratch, &mut parsed, today);
     pass_date(&mut scratch, &mut parsed, today, weekday_hint);
     pass_project_context(&mut scratch, &mut parsed);
     pass_priority(&mut scratch, &mut parsed);
@@ -214,6 +219,7 @@ pub fn try_parse(text: &str, today: NaiveDate) -> Option<ParsedNl> {
     pass_duration(&mut scratch, &mut parsed);
     pass_threshold(&mut scratch, &mut parsed);
     let weekday_hint = pass_recurrence(&mut scratch, &mut parsed);
+    pass_repeat_end(&mut scratch, &mut parsed, today);
     pass_date(&mut scratch, &mut parsed, today, weekday_hint);
     pass_project_context(&mut scratch, &mut parsed);
     pass_priority(&mut scratch, &mut parsed);
@@ -270,6 +276,13 @@ pub fn format_as_todo_txt(p: &ParsedNl) -> String {
     if let Some(r) = &p.rec {
         out.push_str(" rec:");
         out.push_str(r);
+    }
+    if let Some(d) = p.until {
+        out.push_str(" until:");
+        out.push_str(&d.format("%Y-%m-%d").to_string());
+    }
+    if let Some(n) = p.times {
+        out.push_str(&format!(" times:{n}"));
     }
     if let Some(t) = &p.threshold {
         out.push_str(" t:");
@@ -611,6 +624,20 @@ fn pass_canonical(scratch: &mut Scratch, p: &mut ParsedNl) {
                 p.rec = Some(value.to_string());
                 FieldKind::Repeat
             }
+            "until" => match NaiveDate::parse_from_str(value, "%Y-%m-%d") {
+                Ok(d) => {
+                    p.until = Some(d);
+                    FieldKind::Repeat
+                }
+                Err(_) => continue,
+            },
+            "times" => match value.parse::<u32>() {
+                Ok(n) if n > 0 => {
+                    p.times = Some(n);
+                    FieldKind::Repeat
+                }
+                _ => continue,
+            },
             "at" => match parse_clock(value) {
                 Some(t) => {
                     p.time = Some(t);
@@ -1089,6 +1116,45 @@ fn pass_recurrence(scratch: &mut Scratch, p: &mut ParsedNl) -> Option<Weekday> {
         return wh;
     }
     None
+}
+
+/// How a repeat ends, once one was found: "until dec 20" / "till friday"
+/// (a date), or "10 times" / "for 3 times" (a count). Part of the Repeat
+/// chip; on its own, without a repeat, neither means anything.
+fn pass_repeat_end(scratch: &mut Scratch, p: &mut ParsedNl, today: NaiveDate) {
+    if p.rec.is_none() {
+        return;
+    }
+    scratch.kind = Some(FieldKind::Repeat);
+    let words = scratch.word_cache.clone();
+    for i in 0..words.len() {
+        if !scratch.is_live(words[i].0, words[i].1) {
+            continue;
+        }
+        let w = scratch.word_lc(words[i]);
+        if p.until.is_none()
+            && matches!(w, "until" | "till")
+            && i + 1 < words.len()
+            && let Some((date, count)) = match_date_at(scratch, &words, i + 1, today)
+        {
+            scratch.mark(words[i].0, words[i + count].1);
+            p.until = Some(date);
+            continue;
+        }
+        if p.times.is_some() {
+            continue;
+        }
+        let start = if w == "for" { i + 1 } else { i };
+        if start + 1 < words.len()
+            && scratch.is_live(words[start].0, words[start + 1].1)
+            && let Some(n) = parse_number(scratch.word_lc(words[start]))
+            && n > 0
+            && scratch.word_lc(words[start + 1]) == "times"
+        {
+            scratch.mark(words[i].0, words[start + 1].1);
+            p.times = Some(n);
+        }
+    }
 }
 
 /// Parse `every <...>` starting at index `i`. Returns `(rec_value, word_count, weekday_hint)`
@@ -1924,6 +1990,21 @@ mod tests {
         assert_eq!(p.duration, Some(90));
         assert_eq!(p.reminders, vec![15, 1440]);
         assert_eq!(p.body, "gym");
+    }
+
+    #[test]
+    fn a_repeat_ends_on_a_date_or_a_count_only_after_a_repeat() {
+        let today = d("2026-10-03");
+        let p = try_parse("gym every week until 2026-12-20", today).unwrap();
+        assert_eq!(p.until, Some(d("2026-12-20")));
+        assert_eq!(p.body, "gym");
+        let p = try_parse("pills daily 3 times", today).unwrap();
+        assert_eq!((p.times, p.body.as_str()), (Some(3), "pills"));
+        // Without a repeat, neither phrase means anything.
+        let p = try_parse("wait until friday", today).unwrap();
+        assert_eq!(p.until, None);
+        assert_eq!(p.planned, Some(d("2026-10-09")));
+        assert_eq!(try_parse("read it 3 times", today), None);
     }
 
     #[test]

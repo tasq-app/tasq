@@ -50,6 +50,11 @@ pub enum CompleteOutcome {
     Completed {
         abs: usize,
     },
+    /// Completed the last occurrence of a repeating task: its `until:` or
+    /// `times:` has run out, so nothing follows.
+    CompletedLast {
+        abs: usize,
+    },
     /// Completed a recurring task; the successor was inserted at `next`.
     CompletedSpawned {
         abs: usize,

@@ -58,6 +58,9 @@ pub struct Picked {
     pub reminders: Option<Vec<u32>>,
     pub threshold: Option<String>,
     pub rec: Option<String>,
+    /// The repeat's end travels with it.
+    pub until: Option<NaiveDate>,
+    pub times: Option<u32>,
     pub time: Option<(u32, u32)>,
     pub priority: Option<char>,
 }
@@ -84,7 +87,11 @@ impl Picked {
             FieldKind::Duration => self.duration = None,
             FieldKind::Reminder => self.reminders = None,
             FieldKind::ShowFrom => self.threshold = None,
-            FieldKind::Repeat => self.rec = None,
+            FieldKind::Repeat => {
+                self.rec = None;
+                self.until = None;
+                self.times = None;
+            }
             FieldKind::Time => self.time = None,
             FieldKind::Priority => self.priority = None,
             FieldKind::Project | FieldKind::Context => {}
@@ -101,7 +108,11 @@ impl Picked {
                 self.reminders = (!p.reminders.is_empty()).then(|| p.reminders.clone());
             }
             FieldKind::ShowFrom => self.threshold = p.threshold.clone(),
-            FieldKind::Repeat => self.rec = p.rec.clone(),
+            FieldKind::Repeat => {
+                self.rec = p.rec.clone();
+                self.until = p.until;
+                self.times = p.times;
+            }
             FieldKind::Time => self.time = p.time,
             FieldKind::Priority => self.priority = p.priority,
             FieldKind::Project | FieldKind::Context => {}
@@ -156,6 +167,8 @@ impl App {
         }
         if picked.rec.is_some() {
             p.rec = picked.rec.clone();
+            p.until = picked.until.or(p.until);
+            p.times = picked.times.or(p.times);
         }
         if picked.time.is_some() {
             p.time = picked.time;
@@ -200,7 +213,16 @@ impl App {
                         format!("{} before", list.join(", "))
                     }),
                     FieldKind::Time => p.time.map(|(h, m)| format!("{h:02}:{m:02}")),
-                    FieldKind::Repeat => p.rec.as_deref().map(describe_rec),
+                    FieldKind::Repeat => p.rec.as_deref().map(|r| {
+                        let mut s = describe_rec(r);
+                        if let Some(d) = p.until {
+                            s.push_str(&format!(" until {}", short_date(d)));
+                        }
+                        if let Some(n) = p.times {
+                            s.push_str(&format!(", {n} times"));
+                        }
+                        s
+                    }),
                     FieldKind::Project => (!p.projects.is_empty()).then(|| {
                         p.projects
                             .iter()
@@ -725,5 +747,30 @@ mod tests {
         assert_eq!(app.live_add(), AddOutcome::Saved);
         let raw = &app.tasks().last().expect("added").raw;
         assert!(raw.ends_with("study topic 3 +Uni/Exams"), "{raw}");
+    }
+
+    #[test]
+    fn a_repeat_can_end_on_a_date_or_after_some_times() {
+        let mut app = build_app("");
+        typed(&mut app, "gym every monday until dec 20");
+        assert_eq!(
+            chip(&app, FieldKind::Repeat).value.as_deref(),
+            Some("every week until sun 20 dec")
+        );
+        assert_eq!(app.live_add(), AddOutcome::Saved);
+        let raw = &app.tasks().last().expect("added").raw;
+        assert!(raw.contains("rec:+1w until:2026-12-20"), "{raw}");
+        assert!(raw.contains("gym"), "{raw}");
+
+        let mut app = build_app("");
+        typed(&mut app, "pills daily for 10 times");
+        assert_eq!(
+            chip(&app, FieldKind::Repeat).value.as_deref(),
+            Some("every day, 10 times")
+        );
+        assert_eq!(app.live_add(), AddOutcome::Saved);
+        let raw = &app.tasks().last().expect("added").raw;
+        assert!(raw.contains("rec:+1d times:10"), "{raw}");
+        assert!(!raw.contains(" for "), "{raw}");
     }
 }

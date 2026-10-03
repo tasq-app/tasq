@@ -62,6 +62,10 @@ pub struct Task {
     /// as the unparsed string so a malformed value round-trips intact through
     /// `serialize` — only the spawn-on-complete code path needs to parse it.
     pub rec: Option<String>,
+    /// Last day a repeating task may fall on (`until:`), e.g. `2026-12-20`.
+    pub until: Option<String>,
+    /// Occurrences left of a repeating task, this one included (`times:`).
+    pub times: Option<String>,
     /// Raw value of the `t:` (threshold) tag if present, e.g. `"2026-08-01"`
     /// or `"-3d"`. Stored unparsed for round-trip integrity; the visibility
     /// filter parses it on demand via `crate::threshold`.
@@ -76,6 +80,9 @@ pub struct Task {
 pub const PLAN_KEY: &str = "plan";
 pub const DURATION_KEY: &str = "dur";
 pub const REMIND_KEY: &str = "remind";
+/// Tag keys ending a repeat: on a date, or after a number of times.
+pub const UNTIL_KEY: &str = "until";
+pub const TIMES_KEY: &str = "times";
 
 impl Task {
     /// The date the task is shown on: when it's planned, else its deadline.
@@ -132,6 +139,8 @@ pub fn parse_line(raw: &str) -> Result<Task, ParseError> {
     let duration = find_kv(rest, DURATION_KEY);
     let reminders = find_kv(rest, REMIND_KEY);
     let rec = find_kv(rest, "rec");
+    let until = find_kv(rest, UNTIL_KEY);
+    let times = find_kv(rest, TIMES_KEY);
     let threshold = find_kv(rest, "t");
     let notes = find_quoted_kv(rest, "note");
     let starred = find_kv(rest, STAR_KEY).is_some_and(|v| v != "0");
@@ -152,6 +161,8 @@ pub fn parse_line(raw: &str) -> Result<Task, ParseError> {
         duration,
         reminders,
         rec,
+        until,
+        times,
         threshold,
         notes,
         starred,

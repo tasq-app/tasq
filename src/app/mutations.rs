@@ -32,6 +32,10 @@ impl App {
                 self.flash("completed");
                 self.after_mutation(abs);
             }
+            CompleteOutcome::CompletedLast { abs } => {
+                self.flash("completed · that was the last one");
+                self.after_mutation(abs);
+            }
             CompleteOutcome::CompletedSpawned { next, .. } => {
                 self.flash("completed +next");
                 self.after_mutation(next);

@@ -135,7 +135,7 @@ local database, notes, live natural-language capture and more, listed below.
 | | `Z` | Close the pinned note, from anywhere |
 | | `Tab` / `Shift+Tab` | Switch between pinned notes (when more than one is pinned) |
 | Task list | `*` | Star / unstar the task: top of its priority group |
-| Add dialog (`n`) | type naturally | `tomorrow`, `on friday` (planned), `by friday` (deadline), `at 6pm`, `for 1h`, `remind me 15 min before`, `every week`, `every fri, sat and sun`, `+project`, `@context`, `high priority` are detected live |
+| Add dialog (`n`) | type naturally | `tomorrow`, `on friday` (planned), `by friday` (deadline), `at 6pm`, `for 1h`, `remind me 15 min before`, `every week`, `every fri, sat and sun`, `until dec 20`, `10 times`, `+project`, `@context`, `high priority` are detected live |
 | | `Tab` / `Shift+Tab` | Walk the chips; on a chip `x` rejects it, `Enter` opens its picker, `Esc` returns to the text |
 | | `Ctrl+Z` | Undo the newest detection (its words become plain text); on an empty dialog, undo the task just added |
 | | `Enter` | Add the task (converted to todo.txt) and stay open for the next one |
@@ -688,6 +688,11 @@ Standard [todo.txt](https://github.com/todotxt/todo.txt) lines:
   one week after I last did"). A weekly rule can name its weekdays:
   `rec:+1w:fri,sat,sun` moves to the next of those days (typed as "every
   friday, saturday and sunday"; `rec:+2w:mon,thu` every other week).
+- `until:YYYY-MM-DD` / `times:N` — when a repeat ends. With `until:`, no
+  copy is made once the next date would fall after it ("every week until
+  dec 20"). `times:` counts the occurrences left, this one included, and
+  goes down by one with each copy ("daily for 10 times"); completing the
+  last one says so.
 
 Completed tasks are prefixed with `x ` and a completion date:
 
@@ -722,6 +727,8 @@ todo.txt — review or tweak it, then Enter again to save.
 | `Daily standup high priority` | `(A) standup rec:+1d` |
 | `Gym every mon, wed and fri at 7am` | `Gym plan:2026-05-13 rec:+1w:mon,wed,fri at:07:00` |
 | `Swim every other monday, tuesday` | `Swim plan:2026-05-12 rec:+2w:mon,tue` |
+| `Physio every tuesday until june 30` | `Physio plan:2026-05-12 rec:+1w until:2026-06-30` |
+| `Antibiotics daily for 7 times` | `Antibiotics rec:+1d times:7` |
 | `Annual review due April 15 +work @office` | `Annual review +work @office due:2027-04-15` |
 
 Recognized vocabulary:
