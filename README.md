@@ -575,7 +575,7 @@ The modal keys below apply in Normal mode:
 | --- | --- |
 | `/` | search (a `due:` term filters by date range; see [todo.txt format](#todotxt-format)) |
 | `1` / `2` / `3` | Today / Upcoming / All |
-| `fp` | filter by space, sub-spaces included (`j` / `k` cycles, `Esc` clears) |
+| `fp` | filter by space, sub-spaces included (`j` / `k` cycles, `r` renames, `d` deletes an empty one, `Esc` clears) |
 | `fc` | filter by tag (`j` / `k` cycles, `Esc` clears) |
 | `ff` | pick a saved search (`j` / `k` cycles, `Enter` keeps, `Esc` reverts) |
 | `fs` | save the active `/`-search as a named filter |
@@ -601,6 +601,11 @@ sidebar draws the tree with counts that include sub-spaces. In the add
 dialog, "in exams" (or "into labs") puts the task in an existing space whose
 name — ignoring case and accents, whole or by its first letters — matches;
 the chip shows `Uni › Exams`.
+The database keeps each space once a task has used it, so a space whose
+last task is done or deleted stays in the sidebar (with a count of 0) until
+you delete it from the space picker (`fp`, then `d`). Renaming a space
+(`fp`, then `r`) takes its sub-spaces along: `Uni` → `School` moves
+`Uni/Exams` to `School/Exams`.
 
 While a space or `@tag` filter is active, `n` seeds the add prompt
 with the matching tags so a task added under a filter stays in view —

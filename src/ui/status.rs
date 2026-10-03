@@ -87,7 +87,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             Mode::Settings => "Esc back",
             Mode::PromptProject => "type +project name · Enter save · Esc cancel",
             Mode::PromptContext => "type @context name · Enter toggle · Esc cancel",
-            Mode::PickProject => "j/k or ↑↓ cycle projects · r rename · Enter keep · Esc clear",
+            Mode::PickProject => "j/k or ↑↓ cycle spaces · r rename · d delete if empty · Enter keep · Esc clear",
             Mode::PickContext => "j/k or ↑↓ cycle contexts · r rename · Enter keep · Esc clear",
             Mode::PickSavedFilter => "j/k or ↑↓ cycle filters · Enter keep · Esc revert",
             Mode::PromptSaveFilter => "type a filter name · Enter save · Esc cancel",

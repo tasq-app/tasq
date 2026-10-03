@@ -252,11 +252,6 @@ fn cmp_due(tasks: &[Task]) -> impl Fn(&usize, &usize) -> Ordering + '_ {
     }
 }
 
-/// The space tree of `tasks` (see [`super::spaces::tree`]).
-pub fn spaces_tree(tasks: &[Task]) -> Vec<super::spaces::SpaceRow> {
-    super::spaces::tree(tasks)
-}
-
 /// The last part of a space path, as the sidebar shows it.
 pub fn space_leaf(path: &str) -> &str {
     super::spaces::leaf(path)

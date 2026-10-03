@@ -3,7 +3,7 @@ use super::outcome::{
     AddOutcome, BulkCompleteOutcome, BulkDeleteOutcome, CompleteOutcome, DeleteOutcome,
     EditOutcome, MoveOutcome, PriorityOutcome, Reconcile, StoreError, TagOutcome,
 };
-use crate::core::outcome::RenameOutcome;
+use crate::core::outcome::{DeleteSpaceOutcome, RenameOutcome};
 use crate::recurrence::{self, RecSpec};
 use crate::todo::{self, TagError};
 
@@ -351,31 +351,77 @@ impl Store {
             return RenameOutcome::InvalidName;
         }
 
+        // A space takes its sub-spaces along: Uni → School moves
+        // Uni/Exams to School/Exams.
         let to_rename: Vec<usize> = self
             .tasks
             .iter()
             .enumerate()
-            .filter(|(_, t)| t.projects.iter().any(|p| p == name))
+            .filter(|(_, t)| super::spaces::in_space(&t.projects, name))
             .map(|(i, _)| i)
             .collect();
-        if to_rename.is_empty() {
+        let kept = self
+            .spaces
+            .iter()
+            .any(|s| super::spaces::is_within(&s.path, name));
+        if to_rename.is_empty() && !kept {
             return RenameOutcome::NothingToRename;
         }
-        self.push_history();
+        if !to_rename.is_empty() {
+            self.push_history();
+        }
 
         let mut renamed = 0;
         for abs in to_rename {
-            match self.tasks[abs].rename_project(name, new_name) {
-                Ok(true) => renamed += 1,
-                Ok(false) => {}
-                Err(e) => return RenameOutcome::Error(StoreError::Tag(e)),
+            let moves: Vec<(String, String)> = self.tasks[abs]
+                .projects
+                .iter()
+                .filter_map(|p| Some((p.clone(), super::spaces::renamed(p, name, new_name)?)))
+                .collect();
+            for (from, to) in moves {
+                if let Err(e) = self.tasks[abs].rename_project(&from, &to) {
+                    return RenameOutcome::Error(StoreError::Tag(e));
+                }
             }
+            renamed += 1;
         }
 
+        // The kept rows move first, so the save below finds the new paths
+        // already there, settings and all.
+        if let Some(db) = self.db.as_mut()
+            && let Err(e) = db.rename_space(name, new_name)
+        {
+            return RenameOutcome::Error(StoreError::Write(e));
+        }
         match self.persist() {
             Ok(()) => RenameOutcome::Done { renamed },
             Err(e) => RenameOutcome::Error(e),
         }
+    }
+
+    /// Forget a space the database keeps (and its sub-spaces). Only an
+    /// empty one: while a live task uses it, it would come straight back.
+    pub fn delete_space(&mut self, path: &str) -> DeleteSpaceOutcome {
+        match self.reconcile() {
+            Reconcile::Unchanged => {}
+            other => return DeleteSpaceOutcome::Aborted(other),
+        }
+        let used = self
+            .tasks
+            .iter()
+            .filter(|t| super::spaces::in_space(&t.projects, path))
+            .count();
+        if used > 0 {
+            return DeleteSpaceOutcome::InUse(used);
+        }
+        let Some(db) = self.db.as_mut() else {
+            return DeleteSpaceOutcome::NotKept;
+        };
+        if let Err(e) = db.delete_space(path) {
+            return DeleteSpaceOutcome::Error(StoreError::Write(e));
+        }
+        self.refresh_spaces();
+        DeleteSpaceOutcome::Deleted
     }
 
     pub fn rename_context(&mut self, name: &str, new_name: &str) -> RenameOutcome {

@@ -338,6 +338,7 @@ impl Store {
         if let Some(db) = self.db.as_mut() {
             db.save(Some(&mut self.tasks), None)
                 .map_err(StoreError::Write)?;
+            self.refresh_spaces();
             // A task back in the live list (undo of an archive) has left the
             // archive in the database; mirror that.
             if !self.archive.tasks.is_empty() {

@@ -6,7 +6,8 @@ impl App {
     /// Every space, parents included, in the sidebar's tree order: what
     /// the space picker steps through.
     fn space_paths(&self) -> Vec<String> {
-        crate::core::spaces::tree(self.store.tasks())
+        self.store
+            .space_tree()
             .into_iter()
             .map(|r| r.path)
             .collect()

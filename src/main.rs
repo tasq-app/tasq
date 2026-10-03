@@ -1458,6 +1458,7 @@ fn handle_pick(app: &mut App, key: KeyEvent) {
             Mode::PickContext => app.begin_rename_context(),
             _ => {}
         },
+        KeyCode::Char('d') if app.mode == Mode::PickProject => app.delete_current_space(),
         KeyCode::Enter => app.pick_accept(),
         KeyCode::Esc => app.pick_cancel(),
         _ => {}

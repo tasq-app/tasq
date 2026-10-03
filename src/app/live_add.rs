@@ -130,7 +130,9 @@ impl App {
         let Some(today) = self.today_date() else {
             return Detection::default();
         };
-        let spaces: Vec<String> = crate::core::spaces::tree(self.store.tasks())
+        let spaces: Vec<String> = self
+            .store
+            .space_tree()
             .into_iter()
             .map(|r| r.path)
             .collect();

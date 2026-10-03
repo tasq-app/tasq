@@ -143,6 +143,17 @@ pub enum RenameOutcome {
 }
 
 #[derive(Debug)]
+pub enum DeleteSpaceOutcome {
+    Deleted,
+    /// Live tasks (open or done) still use it.
+    InUse(usize),
+    /// A todo.txt store keeps no spaces of its own.
+    NotKept,
+    Aborted(Reconcile),
+    Error(StoreError),
+}
+
+#[derive(Debug)]
 pub enum BulkCompleteOutcome {
     Done { completed: usize, spawned: usize },
     NothingToComplete,

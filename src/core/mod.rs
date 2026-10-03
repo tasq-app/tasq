@@ -24,8 +24,9 @@ pub use archive::Archive;
 pub use history::History;
 pub use outcome::{
     AddOutcome, ArchiveDeleteOutcome, ArchiveOutcome, BulkCompleteOutcome, BulkDeleteOutcome,
-    CompleteOutcome, DeleteOutcome, DrainReport, EditOutcome, MoveOutcome, PriorityOutcome,
-    Reconcile, RenameOutcome, StoreError, TagOutcome, UnarchiveOutcome, UndoOutcome,
+    CompleteOutcome, DeleteOutcome, DeleteSpaceOutcome, DrainReport, EditOutcome, MoveOutcome,
+    PriorityOutcome, Reconcile, RenameOutcome, StoreError, TagOutcome, UnarchiveOutcome,
+    UndoOutcome,
 };
 
 /// The durable task store. Owns the live task list, the sibling `done.txt`
@@ -43,6 +44,9 @@ pub struct Store {
     /// todo.txt file. With a database, `file_path` is the database's path
     /// and `last_disk` is unused.
     pub(crate) db: Option<db::Db>,
+    /// The spaces the database keeps (empty for a todo.txt file, whose
+    /// spaces are only the ones its tasks use).
+    pub(crate) spaces: Vec<spaces::Space>,
 }
 
 impl Store {
@@ -94,6 +98,7 @@ impl Store {
             last_disk: body,
             today,
             db: None,
+            spaces: Vec::new(),
         }
     }
 
@@ -107,6 +112,7 @@ impl Store {
     fn from_db(db: db::Db, path: PathBuf, today: String) -> std::io::Result<Self> {
         let tasks = db.load(db::List::Live)?;
         let archived = db.load(db::List::Archive)?;
+        let spaces = db.load_spaces()?;
         Ok(Self {
             tasks,
             history: History::default(),
@@ -115,6 +121,7 @@ impl Store {
             last_disk: String::new(),
             today,
             db: Some(db),
+            spaces,
         })
     }
 
@@ -159,7 +166,28 @@ impl Store {
         let Some(db) = self.db.as_mut() else {
             return Ok(());
         };
-        db.save(live, archive).map_err(StoreError::Write)
+        db.save(live, archive).map_err(StoreError::Write)?;
+        self.refresh_spaces();
+        Ok(())
+    }
+
+    /// Re-read the kept spaces after a write. A failed read keeps the old
+    /// list; the tasks themselves are already saved.
+    pub(crate) fn refresh_spaces(&mut self) {
+        if let Some(Ok(spaces)) = self.db.as_ref().map(db::Db::load_spaces) {
+            self.spaces = spaces;
+        }
+    }
+
+    /// The spaces the database keeps.
+    pub fn known_spaces(&self) -> &[spaces::Space] {
+        &self.spaces
+    }
+
+    /// The space tree for the sidebar and pickers: the spaces open tasks
+    /// use plus the ones the database keeps (see [`spaces::tree`]).
+    pub fn space_tree(&self) -> Vec<spaces::SpaceRow> {
+        spaces::tree(&self.tasks, &self.spaces)
     }
 
     pub fn tasks(&self) -> &[Task] {
