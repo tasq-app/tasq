@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.0-alpha.4](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.3...v0.1.0-alpha.4) (2026-10-03)
+
+
+### Features
+
+* **calendar:** the day in time blocks ([#24](https://github.com/tasq-app/tasq/issues/24)) ([bac4652](https://github.com/tasq-app/tasq/commit/bac4652de7373ee0e6b64b0854d08d867cc659fe))
+* **calendar:** the month, with counts or titles ([#26](https://github.com/tasq-app/tasq/issues/26)) ([48c9cca](https://github.com/tasq-app/tasq/commit/48c9cca6ccd1411769c19814ec1206b2c29c5aab))
+* **calendar:** the week, in blocks or as an agenda ([#25](https://github.com/tasq-app/tasq/issues/25)) ([0ec9c31](https://github.com/tasq-app/tasq/commit/0ec9c31bd8664d48d46f9c66e6a69a2e25a045a7))
+* **list:** show a task as its title and chips ([#23](https://github.com/tasq-app/tasq/issues/23)) ([399a426](https://github.com/tasq-app/tasq/commit/399a4261b57f3456ab5c61faf9c854f91b7f1760))
+* **repeat:** end a repeat on a date or after some times ([#21](https://github.com/tasq-app/tasq/issues/21)) ([a20d2c3](https://github.com/tasq-app/tasq/commit/a20d2c360c700bcd917d05b64fe46a9f525cc855))
+* **spaces:** a colour for every space ([#22](https://github.com/tasq-app/tasq/issues/22)) ([398cc2c](https://github.com/tasq-app/tasq/commit/398cc2cd8b91d2f0b8b2ad2c6ee711f799824317))
+
 ## [0.1.0-alpha.3](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.2...v0.1.0-alpha.3) (2026-10-03)
 
 
