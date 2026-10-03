@@ -105,7 +105,13 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             if i == app.cursor {
                 cursor_line = Some(lines.len());
             }
-            lines.push(task_row::build_line(task, opts, theme));
+            let mut line = task_row::build_line(task, opts, theme);
+            // Upcoming keeps far-off tasks in view under Later, but quiet:
+            // dimmed, except the row the cursor is on.
+            if matches!(gk, GroupKey::Day(None)) && i != app.cursor {
+                dim_line(&mut line, theme);
+            }
+            lines.push(line);
             if matches!(gk, GroupKey::None) && i != last {
                 for _ in 0..blank {
                     lines.push(Line::raw(""));
@@ -127,6 +133,13 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         .style(Style::default().bg(theme.bg).fg(theme.fg))
         .scroll((scroll, 0));
     frame.render_widget(para, body_area);
+}
+
+/// Paint every span of a row in the dim colour, keeping its background.
+fn dim_line(line: &mut Line, theme: &Theme) {
+    for span in &mut line.spans {
+        span.style = span.style.fg(theme.dim).remove_modifier(Modifier::BOLD);
+    }
 }
 
 fn display_path(p: &std::path::Path) -> String {
