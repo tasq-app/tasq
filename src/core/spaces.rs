@@ -75,6 +75,28 @@ pub struct SpaceRow {
     pub depth: usize,
     /// Tasks in it or any of its sub-spaces (each counted once).
     pub count: usize,
+    /// Hidden, itself or through a space above it.
+    pub hidden: bool,
+}
+
+/// The hidden space `path` is in — itself or the nearest one above it —
+/// if any.
+pub fn hidden_by<'a>(path: &str, known: &'a [Space]) -> Option<&'a str> {
+    known
+        .iter()
+        .filter(|s| s.hidden && is_within(path, &s.path))
+        .max_by_key(|s| s.path.len())
+        .map(|s| s.path.as_str())
+}
+
+/// Whether a task with these `+project`s is out of sight: it lives in a
+/// hidden space, and the space being looked at (`open`) isn't that space or
+/// one inside it. Opening a hidden space shows its tasks.
+pub fn hidden_from_view(projects: &[String], known: &[Space], open: Option<&str>) -> bool {
+    known
+        .iter()
+        .filter(|s| s.hidden)
+        .any(|h| in_space(projects, &h.path) && !open.is_some_and(|o| is_within(o, &h.path)))
 }
 
 /// Every space the open tasks use plus the `known` ones (kept in the
@@ -95,6 +117,9 @@ pub fn tree(tasks: &[Task], known: &[Space]) -> Vec<SpaceRow> {
     let count = |path: &str| open.iter().filter(|t| in_space(&t.projects, path)).count();
     let mut out = Vec::new();
     push_children(&paths, None, 0, &count, &mut out);
+    for row in &mut out {
+        row.hidden = hidden_by(&row.path, known).is_some();
+    }
     out
 }
 
@@ -122,6 +147,7 @@ fn push_children(
             path: path.clone(),
             depth,
             count: n,
+            hidden: false,
         });
         push_children(paths, Some(path), depth + 1, count, out);
     }
@@ -206,5 +232,43 @@ mod tests {
             Some("School/Exams")
         );
         assert_eq!(renamed("University", "Uni", "School"), None);
+    }
+
+    #[test]
+    fn hiding_a_space_hides_its_sub_spaces_unless_opened() {
+        let known = [
+            Space {
+                path: "Uni".to_string(),
+                hidden: true,
+            },
+            Space {
+                path: "Personal/Moving".to_string(),
+                hidden: true,
+            },
+        ];
+        let exams = vec!["Uni/Exams".to_string()];
+        assert!(hidden_from_view(&exams, &known, None));
+        assert!(hidden_from_view(&exams, &known, Some("Personal")));
+        assert!(!hidden_from_view(&exams, &known, Some("Uni")));
+        assert!(!hidden_from_view(&exams, &known, Some("Uni/Exams")));
+        assert!(!hidden_from_view(&["Personal".to_string()], &known, None));
+        assert_eq!(hidden_by("Uni/Exams", &known), Some("Uni"));
+        assert_eq!(hidden_by("Personal", &known), None);
+
+        let tasks =
+            crate::todo::parse_file("study +Uni/Exams\nboxes +Personal/Moving\nbills +Personal\n");
+        let rows: Vec<(String, bool)> = tree(&tasks, &known)
+            .into_iter()
+            .map(|r| (r.path, r.hidden))
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                ("Personal".to_string(), false),
+                ("Personal/Moving".to_string(), true),
+                ("Uni".to_string(), true),
+                ("Uni/Exams".to_string(), true),
+            ]
+        );
     }
 }

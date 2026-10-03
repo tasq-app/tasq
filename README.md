@@ -35,7 +35,8 @@ local database, notes, live natural-language capture and more, listed below.
   `+Uni/Exams` is Exams inside Uni, and typing "in exams" in the add dialog
   files the task there. The sidebar shows the tree, and **Today** (`1`,
   planned or due today, and anything late), **Upcoming** (`2`, the next
-  days, then later) and **All** (`3`).
+  days, then later) and **All** (`3`). Hide a space to keep it out of the
+  views.
 - **Planned dates and deadlines**: "on friday" is when you'll do it
   (`plan:`), "by friday" when it's due (`due:`); plus a time (`at 6pm`),
   a duration (`for 1h`) and reminders (`remind me 15 min before`), each
@@ -575,7 +576,7 @@ The modal keys below apply in Normal mode:
 | --- | --- |
 | `/` | search (a `due:` term filters by date range; see [todo.txt format](#todotxt-format)) |
 | `1` / `2` / `3` | Today / Upcoming / All |
-| `fp` | filter by space, sub-spaces included (`j` / `k` cycles, `r` renames, `d` deletes an empty one, `Esc` clears) |
+| `fp` | filter by space, sub-spaces included (`j` / `k` cycles, `h` hides / shows it, `r` renames, `d` deletes an empty one, `Esc` clears) |
 | `fc` | filter by tag (`j` / `k` cycles, `Esc` clears) |
 | `ff` | pick a saved search (`j` / `k` cycles, `Enter` keeps, `Esc` reverts) |
 | `fs` | save the active `/`-search as a named filter |
@@ -592,7 +593,8 @@ The modal keys below apply in Normal mode:
 
 **Views.** *Today* lists what's planned or due today or earlier, so a late
 plan or a missed deadline never drops out of sight; *Upcoming* lists every
-other task with a date, by day for the coming week and then *Later*; *All*
+other task with a date, by day for the coming week and then *Later*
+(dimmed); *All*
 lists everything. The choice is remembered (`view = …` in the config).
 
 **Spaces.** A task's `+project` is its space, and `/` nests it:
@@ -606,6 +608,10 @@ last task is done or deleted stays in the sidebar (with a count of 0) until
 you delete it from the space picker (`fp`, then `d`). Renaming a space
 (`fp`, then `r`) takes its sub-spaces along: `Uni` → `School` moves
 `Uni/Exams` to `School/Exams`.
+To keep a part of your life out of Today, Upcoming and All, hide its space
+(`fp`, pick it, `h`). Its sub-spaces go with it, and a single sub-space can
+be hidden on its own. A hidden space stays dimmed in the sidebar, and opening
+it (`fp`) still shows its tasks.
 
 While a space or `@tag` filter is active, `n` seeds the add prompt
 with the matching tags so a task added under a filter stays in view —

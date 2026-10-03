@@ -5,7 +5,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 
 use crate::app::{App, Filter, Scope, ordered_unique};
-use crate::core::filter;
+use crate::core::{filter, spaces};
 use crate::theme::Theme;
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
@@ -36,6 +36,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             .iter()
             .filter(|t| {
                 filter::in_scope(t, scope, today)
+                    && !spaces::hidden_from_view(&t.projects, app.store.known_spaces(), None)
                     && filter::list_predicate(
                         t,
                         false,
@@ -73,14 +74,9 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             let active = app.filter.project.as_deref() == Some(row.path.as_str());
             let indent = "  ".repeat(row.depth);
             let label = format!("{indent}{}", filter::space_leaf(&row.path));
-            lines.push(filter_row(
-                theme,
-                "",
-                &label,
-                row.count,
-                active,
-                theme.project,
-            ));
+            // A hidden space (or one inside it) stays listed, dimmed.
+            let color = if row.hidden { theme.dim } else { theme.project };
+            lines.push(filter_row(theme, "", &label, row.count, active, color));
         }
     }
     lines.push(line_pad(theme, vec![Span::raw(" ")]));

@@ -154,6 +154,15 @@ pub enum DeleteSpaceOutcome {
 }
 
 #[derive(Debug)]
+pub enum HideSpaceOutcome {
+    Done,
+    /// A todo.txt store keeps no spaces of its own.
+    NotKept,
+    Aborted(Reconcile),
+    Error(StoreError),
+}
+
+#[derive(Debug)]
 pub enum BulkCompleteOutcome {
     Done { completed: usize, spawned: usize },
     NothingToComplete,

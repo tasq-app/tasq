@@ -9,8 +9,8 @@ use crate::app::WeekStart;
 use crate::core::AddOutcome as CoreAdd;
 use crate::core::{
     ArchiveDeleteOutcome, ArchiveOutcome, CompleteOutcome, DeleteOutcome, DeleteSpaceOutcome,
-    EditOutcome, MoveOutcome, PriorityOutcome, RenameOutcome, TagOutcome, UnarchiveOutcome,
-    UndoOutcome,
+    EditOutcome, HideSpaceOutcome, MoveOutcome, PriorityOutcome, RenameOutcome, TagOutcome,
+    UnarchiveOutcome, UndoOutcome,
 };
 use crate::nl;
 use crate::todo::Task;
@@ -284,6 +284,38 @@ impl App {
             RenameOutcome::InvalidName => self.flash("invalid project name"),
             RenameOutcome::Aborted(r) => self.handle_reconcile_abort(r),
             RenameOutcome::Error(e) => self.flash(format!("rename failed: {e}")),
+        }
+    }
+
+    /// Hide the space the picker is on from the views, or show it again.
+    /// The picker stays open on it, so its tasks stay in sight.
+    pub fn toggle_current_space_hidden(&mut self) {
+        let Some(path) = self.filter.project.clone() else {
+            return;
+        };
+        let hide = !self
+            .store
+            .known_spaces()
+            .iter()
+            .any(|s| s.path == path && s.hidden);
+        let name = crate::core::spaces::display(&path);
+        match self.store.set_space_hidden(&path, hide) {
+            HideSpaceOutcome::Done => {
+                let above = crate::core::spaces::hidden_by(&path, self.store.known_spaces())
+                    .filter(|h| *h != path)
+                    .map(crate::core::spaces::display);
+                match (hide, above) {
+                    (true, _) => self.flash(format!("{name} hidden from the views")),
+                    (false, Some(above)) => {
+                        self.flash(format!("{name} shown, but {above} is still hidden"))
+                    }
+                    (false, None) => self.flash(format!("{name} shown")),
+                }
+                self.recompute_visible();
+            }
+            HideSpaceOutcome::NotKept => self.flash("hiding a space needs the database"),
+            HideSpaceOutcome::Aborted(r) => self.handle_reconcile_abort(r),
+            HideSpaceOutcome::Error(e) => self.flash(format!("hide failed: {e}")),
         }
     }
 
@@ -574,5 +606,36 @@ mod tests {
         assert_eq!(app.week_start, WeekStart::Monday);
         app.toggle_week_start_date();
         assert_eq!(app.week_start, WeekStart::Sunday);
+    }
+
+    #[test]
+    fn a_hidden_space_leaves_the_views_until_opened() {
+        let mut app = build_app("");
+        app.store = crate::core::Store::in_memory_db("2026-05-06");
+        app.store.add_finalized("study +Uni/Exams");
+        app.store.add_finalized("bills +Personal");
+        app.recompute_visible();
+        let titles = |app: &crate::app::App| -> Vec<String> {
+            app.visible_indices()
+                .iter()
+                .map(|&i| app.tasks()[i].raw.clone())
+                .collect()
+        };
+        assert_eq!(titles(&app).len(), 2);
+
+        app.enter_pick_project();
+        app.filter.project = Some("Uni".into());
+        app.toggle_current_space_hidden();
+        // Open in the picker, Uni's tasks stay in sight…
+        assert_eq!(titles(&app), ["2026-05-06 study +Uni/Exams"]);
+        // …and leave the views once it's closed.
+        app.pick_cancel();
+        assert_eq!(titles(&app), ["2026-05-06 bills +Personal"]);
+
+        app.enter_pick_project();
+        app.filter.project = Some("Uni".into());
+        app.toggle_current_space_hidden();
+        app.pick_cancel();
+        assert_eq!(titles(&app).len(), 2);
     }
 }

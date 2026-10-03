@@ -1,6 +1,7 @@
 use super::App;
 use super::types::{Sort, View};
 use crate::core::filter::{self, ListDueBucket};
+use crate::core::spaces;
 use crate::todo::Task;
 
 /// One entry per visible row, parallel to `visible_cache`. Renderers detect
@@ -49,8 +50,11 @@ impl App {
             .then(|| filter::resolve_needle(&self.filter.search, today));
 
         let scope = self.prefs.scope;
+        let known = self.store.known_spaces();
+        let open = self.filter.project.as_deref();
         let mut idxs: Vec<usize> = (0..tasks.len())
             .filter(|&i| filter::in_scope(&tasks[i], scope, today))
+            .filter(|&i| !spaces::hidden_from_view(&tasks[i].projects, known, open))
             .filter(|&i| {
                 filter::list_predicate(
                     &tasks[i],
