@@ -1,23 +1,57 @@
 name: Release
 
+# How releases happen (see CONTRIBUTING.md):
+#   1. Every push to main runs release-please, which keeps a "release PR"
+#      open with the next version (from the conventional commits since the
+#      last release) and its CHANGELOG entry.
+#   2. Merging that PR makes release-please tag the version and create the
+#      GitHub release; the jobs below then build the binaries, attach them
+#      and update the Homebrew formula.
+# `workflow_dispatch` with a tag rebuilds and re-attaches an existing
+# release's binaries (e.g. after a failed build).
+
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to release (e.g. v2026.5.1)"
+        description: "Existing release tag to rebuild (e.g. v0.1.0-alpha.1)"
         required: true
 
 # Default for every job: read-only. Jobs that need more raise it themselves.
 permissions:
   contents: read
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
+  release-please:
+    name: Release PR / tag
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
   build:
     name: Build ${{ matrix.target }}
+    needs: release-please
+    if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
     runs-on: ${{ matrix.os }}
+    env:
+      TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
     strategy:
       fail-fast: false
       matrix:
@@ -42,6 +76,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
 
       - name: Install mise
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
@@ -71,8 +107,7 @@ jobs:
         if: matrix.archive == 'tar.gz'
         shell: bash
         run: |
-          version="${{ inputs.tag || github.ref_name }}"
-          stage="tasq-${version}-${{ matrix.target }}"
+          stage="tasq-${TAG}-${{ matrix.target }}"
           mkdir -p "dist/${stage}"
           cp "target/${{ matrix.target }}/release/tasq" "dist/${stage}/"
           cp README.md "dist/${stage}/" 2>/dev/null || true
@@ -83,8 +118,7 @@ jobs:
         if: matrix.archive == 'zip'
         shell: pwsh
         run: |
-          $version = "${{ inputs.tag || github.ref_name }}"
-          $stage = "tasq-$version-${{ matrix.target }}"
+          $stage = "tasq-$env:TAG-${{ matrix.target }}"
           New-Item -ItemType Directory -Force -Path "dist/$stage" | Out-Null
           Copy-Item "target/${{ matrix.target }}/release/tasq.exe" "dist/$stage/"
           if (Test-Path README.md) { Copy-Item README.md "dist/$stage/" }
@@ -101,37 +135,32 @@ jobs:
             dist/*.sha256
           if-no-files-found: error
 
-  release:
-    name: Publish release
-    needs: build
+  publish:
+    name: Attach binaries
+    needs: [release-please, build]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
-    # The only job that writes to this repo: it creates the GitHub release.
+    # The only job that writes to this repo: it uploads the binaries to the
+    # release release-please created.
     permissions:
       contents: write
+    env:
+      TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
       - name: Download artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: dist
           merge-multiple: true
 
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
-        with:
-          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          name: ${{ github.event.inputs.tag || github.ref_name }}
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          files: |
-            dist/*.tar.gz
-            dist/*.zip
-            dist/*.sha256
+      - name: Upload to the release
+        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
 
   update-tap:
     name: Update Homebrew tap
-    needs: release
+    needs: [release-please, publish]
+    if: ${{ !cancelled() && needs.publish.result == 'success' }}
     runs-on: ubuntu-latest
     # Touches only tasq-app/homebrew-tap, authenticated with HOMEBREW_TAP_TOKEN.
     # GITHUB_TOKEN needs no scopes at all here.
@@ -146,7 +175,7 @@ jobs:
 
       - name: Render formula
         env:
-          TAG: ${{ inputs.tag || github.ref_name }}
+          TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
         run: |
           set -euo pipefail
           version="${TAG#v}"
@@ -162,7 +191,7 @@ jobs:
 
           cat > tap/Formula/tasq.rb <<EOF
           class Tasq < Formula
-            desc "Fast, keyboard-driven terminal UI for todo.txt"
+            desc "Capture your notes, plan your routines from the terminal"
             homepage "https://github.com/tasq-app/tasq"
             version "${version}"
             license "MIT"
@@ -201,7 +230,7 @@ jobs:
 
       - name: Commit and push
         env:
-          TAG: ${{ inputs.tag || github.ref_name }}
+          TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
         run: |
           set -euo pipefail
           cd tap
