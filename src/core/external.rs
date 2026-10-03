@@ -22,6 +22,7 @@ impl Store {
                             self.tasks = live;
                             self.archive.tasks = archived;
                             self.history.clear();
+                            self.refresh_spaces();
                             Reconcile::Reloaded
                         }
                         Err(_) => Reconcile::ReadError,

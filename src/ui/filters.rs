@@ -12,7 +12,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let theme = app.theme();
     super::fill_bg(frame, area, Style::default().bg(theme.panel));
 
-    let spaces = filter::spaces_tree(app.tasks());
+    let spaces = app.store.space_tree();
     let contexts = ordered_unique(app.tasks(), |t| &t.contexts);
 
     let mut lines: Vec<Line> = Vec::new();

@@ -4,6 +4,9 @@
 //! Exams space inside Uni. That keeps every line plain todo.txt (other
 //! tools see an ordinary project) while tasq shows a tree: a task in
 //! Uni/Exams also belongs to Uni, and opening Uni shows both.
+//!
+//! With a database, every space a task has used is also a row of its own
+//! ([`Space`]), so a space outlives its last task and can carry settings.
 
 use crate::todo::Task;
 
@@ -34,6 +37,35 @@ pub fn leaf(path: &str) -> &str {
     path.rsplit(SEP).next().unwrap_or(path)
 }
 
+/// A space the database keeps, whether or not any task uses it now.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Space {
+    /// Full path, e.g. `Uni/Exams`.
+    pub path: String,
+    pub hidden: bool,
+}
+
+/// A path and every space above it: `Uni/Exams` → `Uni`, `Uni/Exams`.
+pub fn with_ancestors(path: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut prefix = String::new();
+    for part in path.split(SEP).filter(|s| !s.is_empty()) {
+        if !prefix.is_empty() {
+            prefix.push(SEP);
+        }
+        prefix.push_str(part);
+        out.push(prefix.clone());
+    }
+    out
+}
+
+/// The path `path` takes when the space `from` is renamed to `to`, or
+/// `None` when it isn't `from` or inside it: renaming `Uni` to `School`
+/// moves `Uni/Exams` to `School/Exams`.
+pub fn renamed(path: &str, from: &str, to: &str) -> Option<String> {
+    is_within(path, from).then(|| format!("{to}{}", &path[from.len()..]))
+}
+
 /// One row of the space tree.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpaceRow {
@@ -45,23 +77,18 @@ pub struct SpaceRow {
     pub count: usize,
 }
 
-/// Every space the open tasks use, with the parents of nested ones, as a
-/// tree in display order: siblings by open-task count (most first), then by
-/// name. Completed tasks don't count, like everywhere in the sidebar.
-pub fn tree(tasks: &[Task]) -> Vec<SpaceRow> {
+/// Every space the open tasks use plus the `known` ones (kept in the
+/// database, possibly empty), with the parents of nested ones, as a tree in
+/// display order: siblings by open-task count (most first), then by name.
+/// Completed tasks don't count, like everywhere in the sidebar.
+pub fn tree(tasks: &[Task], known: &[Space]) -> Vec<SpaceRow> {
     let open: Vec<&Task> = tasks.iter().filter(|t| !t.done).collect();
     let mut paths: Vec<String> = Vec::new();
-    for t in &open {
-        for p in &t.projects {
-            let mut prefix = String::new();
-            for part in p.split(SEP).filter(|s| !s.is_empty()) {
-                if !prefix.is_empty() {
-                    prefix.push(SEP);
-                }
-                prefix.push_str(part);
-                if !paths.contains(&prefix) {
-                    paths.push(prefix.clone());
-                }
+    let used = open.iter().flat_map(|t| t.projects.iter());
+    for p in used.chain(known.iter().map(|s| &s.path)) {
+        for path in with_ancestors(p) {
+            if !paths.contains(&path) {
+                paths.push(path);
             }
         }
     }
@@ -132,7 +159,7 @@ mod tests {
              x 2026-10-01 2026-09-30 gone +Archived\n\
              loose task\n",
         );
-        let rows: Vec<(String, usize, usize)> = tree(&tasks)
+        let rows: Vec<(String, usize, usize)> = tree(&tasks, &[])
             .into_iter()
             .map(|r| (r.path, r.depth, r.count))
             .collect();
@@ -146,5 +173,38 @@ mod tests {
                 ("Personal/Moving".to_string(), 1, 1),
             ]
         );
+    }
+
+    #[test]
+    fn known_spaces_show_up_empty() {
+        let tasks = parse_file("study +Uni/Exams\n");
+        let known = [Space {
+            path: "Personal/Moving".to_string(),
+            hidden: false,
+        }];
+        let rows: Vec<(String, usize)> = tree(&tasks, &known)
+            .into_iter()
+            .map(|r| (r.path, r.count))
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                ("Uni".to_string(), 1),
+                ("Uni/Exams".to_string(), 1),
+                ("Personal".to_string(), 0),
+                ("Personal/Moving".to_string(), 0),
+            ]
+        );
+    }
+
+    #[test]
+    fn renaming_moves_sub_spaces() {
+        assert_eq!(with_ancestors("Uni/Exams"), ["Uni", "Uni/Exams"]);
+        assert_eq!(renamed("Uni", "Uni", "School").as_deref(), Some("School"));
+        assert_eq!(
+            renamed("Uni/Exams", "Uni", "School").as_deref(),
+            Some("School/Exams")
+        );
+        assert_eq!(renamed("University", "Uni", "School"), None);
     }
 }

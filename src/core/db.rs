@@ -17,10 +17,11 @@ use std::path::{Path, PathBuf};
 
 use rusqlite::{Connection, OptionalExtension, params};
 
+use super::spaces::{self, Space};
 use crate::todo::{self, Task};
 
 /// The schema version this build reads and writes.
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS meta (
@@ -221,6 +222,11 @@ impl Db {
                 .map_err(io_err)?;
             rows.collect::<Result<_, _>>().map_err(io_err)?
         };
+        // Every space a live task uses gets a row of its own, so it stays
+        // around (empty) after its last task is gone.
+        let live_spaces: Option<Vec<String>> = live
+            .as_deref()
+            .map(|tasks| tasks.iter().flat_map(|t| t.projects.clone()).collect());
         let mut kept: HashSet<String> = HashSet::new();
         let mut written: Vec<List> = Vec::new();
         for (list, tasks) in [(List::Live, live), (List::Archive, archive)] {
@@ -254,6 +260,9 @@ impl Db {
                     .map_err(io_err)?;
             }
         }
+        if let Some(live) = live_spaces {
+            add_spaces(&tx, &live, &now).map_err(io_err)?;
+        }
         tx.commit().map_err(io_err)?;
         // Our own commit doesn't move our data_version; re-read anyway so a
         // commit from elsewhere that landed just before ours isn't mistaken
@@ -261,6 +270,84 @@ impl Db {
         self.data_version = self.read_data_version().map_err(io_err)?;
         Ok(())
     }
+}
+
+impl Db {
+    /// Every space kept in the database, by path.
+    pub fn load_spaces(&self) -> std::io::Result<Vec<Space>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT path, hidden FROM spaces ORDER BY path")
+            .map_err(io_err)?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok(Space {
+                    path: r.get(0)?,
+                    hidden: r.get::<_, i64>(1)? != 0,
+                })
+            })
+            .map_err(io_err)?;
+        rows.collect::<Result<_, _>>().map_err(io_err)
+    }
+
+    /// Forget the space `path` and its sub-spaces.
+    pub fn delete_space(&mut self, path: &str) -> std::io::Result<()> {
+        self.conn
+            .execute(&format!("DELETE FROM spaces WHERE {WITHIN}"), [path])
+            .map_err(io_err)?;
+        self.data_version = self.read_data_version().map_err(io_err)?;
+        Ok(())
+    }
+
+    /// Rename the space `from` (and so its sub-spaces) to `to`, keeping
+    /// their settings. A space that already exists under the new name is
+    /// merged into.
+    pub fn rename_space(&mut self, from: &str, to: &str) -> std::io::Result<()> {
+        let tx = self.conn.transaction().map_err(io_err)?;
+        let rows: Vec<(String, i64, String)> = {
+            let mut stmt = tx
+                .prepare(&format!(
+                    "SELECT path, hidden, created_at FROM spaces WHERE {WITHIN}"
+                ))
+                .map_err(io_err)?;
+            stmt.query_map([from], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+                .map_err(io_err)?
+                .collect::<Result<_, _>>()
+                .map_err(io_err)?
+        };
+        tx.execute(&format!("DELETE FROM spaces WHERE {WITHIN}"), [from])
+            .map_err(io_err)?;
+        for (path, hidden, created_at) in rows {
+            let Some(new_path) = spaces::renamed(&path, from, to) else {
+                continue;
+            };
+            tx.execute(
+                "INSERT OR IGNORE INTO spaces (path, hidden, created_at) VALUES (?1, ?2, ?3)",
+                params![new_path, hidden, created_at],
+            )
+            .map_err(io_err)?;
+        }
+        add_spaces(&tx, &[to.to_string()], &now_rfc3339()).map_err(io_err)?;
+        tx.commit().map_err(io_err)?;
+        self.data_version = self.read_data_version().map_err(io_err)?;
+        Ok(())
+    }
+}
+
+/// SQL condition: `path` is the space `?1` or inside it. Spelled with
+/// `substr` rather than `LIKE`, whose `%` and `_` could be in a name.
+const WITHIN: &str = "(path = ?1 OR substr(path, 1, length(?1) + 1) = ?1 || '/')";
+
+/// Make sure each space in `paths`, and every space above it, has a row.
+fn add_spaces(conn: &Connection, paths: &[String], now: &str) -> rusqlite::Result<()> {
+    let mut stmt =
+        conn.prepare("INSERT OR IGNORE INTO spaces (path, hidden, created_at) VALUES (?1, 0, ?2)")?;
+    for path in paths {
+        for p in spaces::with_ancestors(path) {
+            stmt.execute(params![p, now])?;
+        }
+    }
+    Ok(())
 }
 
 /// Bring a database at `from` up to [`SCHEMA_VERSION`], in one transaction.
@@ -290,6 +377,27 @@ fn migrate(conn: &Connection, from: i64) -> rusqlite::Result<()> {
                     )?;
                 }
             }
+        }
+        if from < 3 {
+            // Spaces as rows of their own, seeded from the live tasks.
+            conn.execute_batch(
+                "CREATE TABLE IF NOT EXISTS spaces (
+                     path        TEXT PRIMARY KEY,
+                     hidden      INTEGER NOT NULL DEFAULT 0,
+                     created_at  TEXT NOT NULL
+                 );",
+            )?;
+            let raws: Vec<String> = {
+                let mut stmt = conn.prepare("SELECT raw FROM tasks WHERE list = 'live'")?;
+                stmt.query_map([], |r| r.get(0))?
+                    .collect::<Result<_, _>>()?
+            };
+            let paths: Vec<String> = raws
+                .iter()
+                .filter_map(|raw| todo::parse_line(raw).ok())
+                .flat_map(|t| t.projects)
+                .collect();
+            add_spaces(conn, &paths, &now_rfc3339())?;
         }
         conn.execute(
             "INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', ?1)",
@@ -585,7 +693,7 @@ mod tests {
         .unwrap();
         conn.execute(
             "INSERT INTO tasks (id, list, position, raw, title, done, starred, created_at, updated_at)
-             VALUES ('A', 'live', 0, 'Gym plan:2026-10-05 dur:1h remind:15m,1d', 'Gym', 0, 0, 'x', 'x')",
+             VALUES ('A', 'live', 0, 'Gym plan:2026-10-05 dur:1h remind:15m,1d +Health/Gym', 'Gym', 0, 0, 'x', 'x')",
             [],
         )
         .unwrap();
@@ -605,8 +713,58 @@ mod tests {
                 Some("2026-10-05".into()),
                 Some(60),
                 Some("15,1440".into()),
-                "2".into()
+                "3".into()
             )
+        );
+        let paths: Vec<String> = db
+            .load_spaces()
+            .unwrap()
+            .into_iter()
+            .map(|s| s.path)
+            .collect();
+        assert_eq!(paths, ["Health", "Health/Gym"]);
+    }
+
+    fn space_paths(db: &Db) -> Vec<String> {
+        db.load_spaces()
+            .unwrap()
+            .into_iter()
+            .map(|s| s.path)
+            .collect()
+    }
+
+    #[test]
+    fn spaces_outlive_their_tasks() {
+        let mut db = Db::in_memory();
+        let mut live = tasks(&["study +Uni/Exams", "boxes +Personal"]);
+        db.save(Some(&mut live), None).unwrap();
+        assert_eq!(space_paths(&db), ["Personal", "Uni", "Uni/Exams"]);
+        // The last Exams task goes; the space stays.
+        let mut live = vec![live[1].clone()];
+        db.save(Some(&mut live), None).unwrap();
+        assert_eq!(space_paths(&db), ["Personal", "Uni", "Uni/Exams"]);
+        db.delete_space("Uni").unwrap();
+        assert_eq!(space_paths(&db), ["Personal"]);
+    }
+
+    #[test]
+    fn renaming_a_space_moves_its_sub_spaces_and_settings() {
+        let mut db = Db::in_memory();
+        let mut live = tasks(&["study +Uni/Exams", "a +Unicorn"]);
+        db.save(Some(&mut live), None).unwrap();
+        db.conn
+            .execute("UPDATE spaces SET hidden = 1 WHERE path = 'Uni/Exams'", [])
+            .unwrap();
+        db.rename_space("Uni", "School").unwrap();
+        let spaces = db.load_spaces().unwrap();
+        let rows: Vec<(&str, bool)> = spaces.iter().map(|s| (s.path.as_str(), s.hidden)).collect();
+        assert_eq!(
+            rows,
+            [
+                ("School", false),
+                ("School/Exams", true),
+                ("Unicorn", false)
+            ]
         );
     }
 
@@ -705,5 +863,51 @@ mod tests {
         assert_eq!(a.tasks().len(), 3);
         assert_eq!(a.reconcile(), crate::core::Reconcile::Unchanged);
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn store_keeps_renames_and_deletes_spaces() {
+        let mut s = Store::in_memory_db("2026-10-03");
+        s.add_finalized("study +Uni/Exams");
+        s.add_finalized("pay tuition +Uni");
+        let paths =
+            |s: &Store| -> Vec<String> { s.space_tree().into_iter().map(|r| r.path).collect() };
+        assert_eq!(paths(&s), ["Uni", "Uni/Exams"]);
+
+        // Renaming a space moves its sub-spaces and their tasks.
+        assert!(matches!(
+            s.rename_project("Uni", "School"),
+            crate::core::RenameOutcome::Done { renamed: 2 }
+        ));
+        assert_eq!(
+            raws(s.tasks()),
+            [
+                "2026-10-03 study +School/Exams",
+                "2026-10-03 pay tuition +School"
+            ]
+        );
+        assert_eq!(paths(&s), ["School", "School/Exams"]);
+
+        // Its last task gone, Exams stays, empty, until deleted.
+        s.delete(0);
+        assert_eq!(paths(&s), ["School", "School/Exams"]);
+        assert_eq!(s.space_tree()[1].count, 0);
+        assert!(matches!(
+            s.delete_space("School"),
+            crate::core::DeleteSpaceOutcome::InUse(1)
+        ));
+        assert!(matches!(
+            s.delete_space("School/Exams"),
+            crate::core::DeleteSpaceOutcome::Deleted
+        ));
+        assert_eq!(paths(&s), ["School"]);
+
+        // An empty space can be renamed too.
+        s.delete(0);
+        assert!(matches!(
+            s.rename_project("School", "Uni"),
+            crate::core::RenameOutcome::Done { renamed: 0 }
+        ));
+        assert_eq!(paths(&s), ["Uni"]);
     }
 }
