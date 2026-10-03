@@ -286,6 +286,31 @@ fn calendar_day() {
 }
 
 #[test]
+fn calendar_week() {
+    let body = format!(
+        "{}{}",
+        sample::TODO_RAW,
+        "Teoria AII +Uni/AII plan:2026-05-05 rec:+1w:tue,thu at:09:00 dur:2h\n\
+         (A) Trabajo TIS +Uni/TIS plan:2026-05-06 at:16:00 dur:2h\n\
+         Gym +personal plan:2026-05-04 rec:+2d at:07:00 dur:1h\n"
+    );
+    let mut app = App::new(
+        PathBuf::from(FIXTURE_PATH),
+        body,
+        "2026-05-06".to_string(),
+        Config::default(),
+    );
+    app.version_label = "tasq 0.0.0".to_string();
+    app.prefs.density = Density::Compact;
+    app.frozen_now = Some(24 * 60);
+    // Without the sidebars there's room for the seven columns of blocks.
+    app.prefs.layout.left = false;
+    app.prefs.layout.right = false;
+    app.open_cal(CalView::Week);
+    snapshot_app("calendar_week", &app);
+}
+
+#[test]
 fn list_grouped_by_due() {
     let mut app = make_app();
     // Default sort is Priority (groups by priority bucket); cycle once to
