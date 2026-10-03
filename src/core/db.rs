@@ -290,6 +290,20 @@ impl Db {
         rows.collect::<Result<_, _>>().map_err(io_err)
     }
 
+    /// Hide or show the space `path` (its sub-spaces follow it in the
+    /// views; their own setting is kept).
+    pub fn set_space_hidden(&mut self, path: &str, hidden: bool) -> std::io::Result<()> {
+        add_spaces(&self.conn, &[path.to_string()], &now_rfc3339()).map_err(io_err)?;
+        self.conn
+            .execute(
+                "UPDATE spaces SET hidden = ?2 WHERE path = ?1",
+                params![path, hidden],
+            )
+            .map_err(io_err)?;
+        self.data_version = self.read_data_version().map_err(io_err)?;
+        Ok(())
+    }
+
     /// Forget the space `path` and its sub-spaces.
     pub fn delete_space(&mut self, path: &str) -> std::io::Result<()> {
         self.conn

@@ -171,7 +171,9 @@ impl App {
         if let Some(cur) = self.filter.project.clone() {
             let pos = position_of(&all, &cur);
             let name = crate::core::spaces::display(&cur);
-            self.flash(format!("{name}  ({}/{})", pos + 1, all.len()));
+            let hidden = crate::core::spaces::hidden_by(&cur, self.store.known_spaces())
+                .map_or("", |_| "  · hidden");
+            self.flash(format!("{name}  ({}/{}){hidden}", pos + 1, all.len()));
         }
     }
 

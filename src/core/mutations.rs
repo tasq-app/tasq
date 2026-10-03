@@ -3,7 +3,7 @@ use super::outcome::{
     AddOutcome, BulkCompleteOutcome, BulkDeleteOutcome, CompleteOutcome, DeleteOutcome,
     EditOutcome, MoveOutcome, PriorityOutcome, Reconcile, StoreError, TagOutcome,
 };
-use crate::core::outcome::{DeleteSpaceOutcome, RenameOutcome};
+use crate::core::outcome::{DeleteSpaceOutcome, HideSpaceOutcome, RenameOutcome};
 use crate::recurrence::{self, RecSpec};
 use crate::todo::{self, TagError};
 
@@ -397,6 +397,22 @@ impl Store {
             Ok(()) => RenameOutcome::Done { renamed },
             Err(e) => RenameOutcome::Error(e),
         }
+    }
+
+    /// Hide or show a space. Only a database keeps the setting.
+    pub fn set_space_hidden(&mut self, path: &str, hidden: bool) -> HideSpaceOutcome {
+        match self.reconcile() {
+            Reconcile::Unchanged => {}
+            other => return HideSpaceOutcome::Aborted(other),
+        }
+        let Some(db) = self.db.as_mut() else {
+            return HideSpaceOutcome::NotKept;
+        };
+        if let Err(e) = db.set_space_hidden(path, hidden) {
+            return HideSpaceOutcome::Error(StoreError::Write(e));
+        }
+        self.refresh_spaces();
+        HideSpaceOutcome::Done
     }
 
     /// Forget a space the database keeps (and its sub-spaces). Only an
