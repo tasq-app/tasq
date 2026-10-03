@@ -4,10 +4,10 @@ expression: buffer_to_text(&buf)
 ---
  FILTERS                   ▶▮◀ /tmp/tasq-snapshot.txt  •  3 tasks  DETAIL                           
                                                                                                     
- PROJECTS                  (1)  PRIORITY A  ────────────────────── priority  (A)                    
-   tag with +project        1 ▸ (A) Buy milk                       created   —                      
-                           (1)  PRIORITY B  ────────────────────── projects                         
- CONTEXTS                   2   (B) Call mom                       contexts                         
+ SPACES                    (1)  PRIORITY A  ────────────────────── priority  (A)                    
+   tag with +space          1 ▸ (A) Buy milk                       created   —                      
+                           (1)  PRIORITY B  ────────────────────── space                            
+ TAGS                       2   (B) Call mom                       tags                             
    tag with @context       (1)  NO PRIORITY  ─────────────────────                                  
                             3       Write up notes                 RAW                              
                                                                                                     

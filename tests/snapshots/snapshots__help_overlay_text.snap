@@ -4,16 +4,16 @@ expression: buffer_to_text(&buf)
 ---
  FILTERS                   ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
      ╭ tasq · help · tasks notes (Tab) ───────────────────────────────────────────────────────╮     
- PROJ│  NAVIGATION                                  VIEW                                      │     
-   +w│    j / k  (↓ / ↑)    next / previous task      /                 fuzzy search          │     
-   +h│    gg / G            first / last task         fp / fc           filter project/context│     
-   +f│    Ctrl-d / Ctrl-u   page down / up            ff / fs           saved filter pick/save│     
-   +h│                                                S                 cycle sort            │     
-   +l│  EDITING                                       v                 visual / multi-select │     
-   +p│    n / o             new task / open notes     l                 list view             │     
-   +t│    e / i             edit (normal / insert)    a                 archive view          │     
+ SPAC│  NAVIGATION                                  VIEW                                      │     
+   wo│    j / k  (↓ / ↑)    next / previous task      /                 fuzzy search          │     
+   he│    gg / G            first / last task         fp / fc           filter project/context│     
+   fi│    Ctrl-d / Ctrl-u   page down / up            ff / fs           saved filter pick/save│     
+   ho│                                                S                 cycle sort            │     
+   le│  EDITING                                       v                 visual / multi-select │     
+   pe│    n / o             new task / open notes     l                 list view             │     
+   tr│    e / i             edit (normal / insert)    a                 archive view          │     
      │    r                 reschedule task           A                 archive completed     │rd   
- CONT│    x                 toggle complete           H                 show done in list     │     
+ TAGS│    x                 toggle complete           H                 show done in list     │     
    @e│    dd                delete task               F                 show future in list   │     
    @h│    p / *             priority A→B→C / star     [ / ]             toggle filter / detail│     
    @l│    J / K             move task down / up       T                 theme picker          │     

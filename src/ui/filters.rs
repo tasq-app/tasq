@@ -12,7 +12,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let theme = app.theme();
     super::fill_bg(frame, area, Style::default().bg(theme.panel));
 
-    let projects = ordered_unique(app.tasks(), |t| &t.projects);
+    let spaces = filter::spaces_tree(app.tasks());
     let contexts = ordered_unique(app.tasks(), |t| &t.contexts);
 
     let mut lines: Vec<Line> = Vec::new();
@@ -27,25 +27,36 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     lines.push(line_pad(
         theme,
         vec![Span::styled(
-            " PROJECTS",
+            " SPACES",
             Style::default()
                 .fg(theme.project)
                 .add_modifier(Modifier::BOLD),
         )],
     ));
-    if projects.is_empty() {
-        lines.push(hint_row(theme, "+project", theme.project));
+    if spaces.is_empty() {
+        lines.push(hint_row(theme, "+space", theme.project));
     } else {
-        for (name, count) in &projects {
-            let active = app.filter.project.as_deref() == Some(name.as_str());
-            lines.push(filter_row(theme, "+", name, *count, active, theme.project));
+        // Sub-spaces sit indented under their parent; a space's count
+        // includes them.
+        for row in &spaces {
+            let active = app.filter.project.as_deref() == Some(row.path.as_str());
+            let indent = "  ".repeat(row.depth);
+            let label = format!("{indent}{}", filter::space_leaf(&row.path));
+            lines.push(filter_row(
+                theme,
+                "",
+                &label,
+                row.count,
+                active,
+                theme.project,
+            ));
         }
     }
     lines.push(line_pad(theme, vec![Span::raw(" ")]));
     lines.push(line_pad(
         theme,
         vec![Span::styled(
-            " CONTEXTS",
+            " TAGS",
             Style::default()
                 .fg(theme.context)
                 .add_modifier(Modifier::BOLD),
@@ -97,7 +108,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
 fn filter_row<'a>(
     theme: &Theme,
     sigil: &str,
-    name: &'a str,
+    name: &str,
     count: usize,
     active: bool,
     sigil_color: ratatui::style::Color,

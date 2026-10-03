@@ -13,7 +13,7 @@ use crate::theme::Theme;
 pub fn filter_label(filter: &Filter) -> Option<String> {
     let mut parts: Vec<String> = Vec::new();
     if let Some(p) = &filter.project {
-        parts.push(format!("+{p}"));
+        parts.push(crate::core::spaces::display(p));
     }
     if let Some(c) = &filter.context {
         parts.push(format!("@{c}"));
@@ -99,7 +99,12 @@ mod tests {
     fn single_project_shows_just_the_project() {
         assert_eq!(
             filter_label(&filter(Some("shop"), None, "")),
-            Some("+shop".to_string())
+            Some("shop".to_string())
+        );
+        // A nested space reads as its path.
+        assert_eq!(
+            filter_label(&filter(Some("Uni/Exams"), None, "")),
+            Some("Uni › Exams".to_string())
         );
     }
 
@@ -115,7 +120,7 @@ mod tests {
     fn project_and_context_together_show_both() {
         assert_eq!(
             filter_label(&filter(Some("shop"), Some("home"), "")),
-            Some("+shop @home".to_string())
+            Some("shop @home".to_string())
         );
     }
 
@@ -123,7 +128,7 @@ mod tests {
     fn project_context_and_search_all_show_together() {
         assert_eq!(
             filter_label(&filter(Some("shop"), Some("home"), "milk")),
-            Some("+shop @home /milk".to_string())
+            Some("shop @home /milk".to_string())
         );
     }
 }

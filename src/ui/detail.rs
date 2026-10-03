@@ -142,13 +142,13 @@ fn build_lines<'a>(
     rows.push(line_panel(
         theme,
         vec![
-            Span::styled(" projects  ", Style::default().fg(theme.dim)),
+            Span::styled(" space     ", Style::default().fg(theme.dim)),
             Span::styled(
                 t.projects
                     .iter()
-                    .map(|p| format!("+{p}"))
+                    .map(|p| crate::core::spaces::display(p))
                     .collect::<Vec<_>>()
-                    .join(" "),
+                    .join(", "),
                 Style::default().fg(theme.project),
             ),
         ],
@@ -156,7 +156,7 @@ fn build_lines<'a>(
     rows.push(line_panel(
         theme,
         vec![
-            Span::styled(" contexts  ", Style::default().fg(theme.dim)),
+            Span::styled(" tags      ", Style::default().fg(theme.dim)),
             Span::styled(
                 t.contexts
                     .iter()

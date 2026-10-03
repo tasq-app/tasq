@@ -4,10 +4,10 @@ expression: buffer_to_text(&buf)
 ---
  FILTERS                   ▶▮◀ /tmp/tasq-snapshot.txt  •  0 tasks  DETAIL                           
                                                                                                     
- PROJECTS                                                          (no task)                        
-   tag with +project                                                                                
+ SPACES                                                            (no task)                        
+   tag with +space                                                                                  
                                                                                                     
- CONTEXTS                                                                                           
+ TAGS                                                                                               
    tag with @context                                                                                
                                                                                                     
                       ╭ tasq · welcome ──────────────────────────────────────╮                      
