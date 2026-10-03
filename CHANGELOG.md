@@ -1,0 +1,45 @@
+# Changelog
+
+## [0.1.0-alpha.1](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.0...v0.1.0-alpha.1) (2026-10-03)
+
+
+### Features
+
+* **capture:** pills and chip boxes in the add dialog ([4740939](https://github.com/tasq-app/tasq/commit/47409391a72298bfe6bd6f799294e7cb11397ffb))
+* **capture:** rounded pills like init.Tasks; weekly rules on given weekdays ([0272bc6](https://github.com/tasq-app/tasq/commit/0272bc688a6ed565b8b47e6a06427e73a3d43be3))
+* **help:** notes page in the help overlay, star and preview in hints and palette ([42fbfad](https://github.com/tasq-app/tasq/commit/42fbfad85c06a9385d1afb34676adcd88c53f39c))
+* live capture in the add dialog ([aadf8f8](https://github.com/tasq-app/tasq/commit/aadf8f864ac4e0a8d824a2085d7355c4158c7d99))
+* **nl:** every other monday, tuesday… repeats on those days every two weeks ([ee5f603](https://github.com/tasq-app/tasq/commit/ee5f60338a93257ffc6d0e6a35bf3099e1209534))
+* **notes:** add a noice-style :-command popup inside the editor ([2d1e0c3](https://github.com/tasq-app/tasq/commit/2d1e0c3ce340167c4970999460bfb4777f814366))
+* **notes:** add create-note prompt and legacy note migration ([db506e7](https://github.com/tasq-app/tasq/commit/db506e7e219887384749552bcfef61a9338e8f93))
+* **notes:** add embedded markdown editor (e/i from the notes list) ([343db6d](https://github.com/tasq-app/tasq/commit/343db6de688587e5d57dc4ae50950479b9e3ba5f))
+* **notes:** add folder-based notes data model ([ee23bb6](https://github.com/tasq-app/tasq/commit/ee23bb6b3f1959d20d17ac981cf5347b517c6242))
+* **notes:** add rename, delete-with-confirm, and unlink actions ([8345035](https://github.com/tasq-app/tasq/commit/8345035b8f9c7dd7fa3975f2fff14f329cb76dd2))
+* **notes:** advertise o in the hint bar, polish create/rename prompt ([b93a92c](https://github.com/tasq-app/tasq/commit/b93a92c42ec25c89292e9e93eff0f9716162de67))
+* **notes:** make the command palette mode-aware, add notes actions ([a9b6119](https://github.com/tasq-app/tasq/commit/a9b6119af065a3038f3ab576742b4e5982923186))
+* **notes:** mode colors prefer the usual hues once clearly distinct ([a8b9d45](https://github.com/tasq-app/tasq/commit/a8b9d459b378b6e9f1e988ddb062f45de0b72f9d))
+* **notes:** new notes start with just the task title ([b197437](https://github.com/tasq-app/tasq/commit/b197437c40c1ddabc17e5f9f363c2e0b627d9c59))
+* **notes:** pick clearly distinct mode colors from the active theme ([786d706](https://github.com/tasq-app/tasq/commit/786d70637a519bc15c249bd97bdadfda3799e043))
+* **notes:** pin a note to a right-docked half-screen panel ([3ec26b4](https://github.com/tasq-app/tasq/commit/3ec26b4ad77fe76f458f71ee638b38f5c56feeac))
+* **notes:** rendered markdown preview (M in the editor, p from the list) ([d534ad9](https://github.com/tasq-app/tasq/commit/d534ad997126e1c179c34a30d33be767a6222c6f))
+* **notes:** replace o/O single-note flow with notes popup ([43afb27](https://github.com/tasq-app/tasq/commit/43afb27b8e023e7d4084b736304974124754da39))
+* **notes:** restyle list rows, z pins directly from the list, help entry ([f636ae2](https://github.com/tasq-app/tasq/commit/f636ae2b046b126ace3fa7e2c8ec17d15f92318a))
+* **notes:** show the editor's sub-mode in the status chip and border ([f074277](https://github.com/tasq-app/tasq/commit/f0742774e439f9ad28f620d26a363ff10fed77ec))
+* **notes:** support multiple pinned notes as tabs ([e006749](https://github.com/tasq-app/tasq/commit/e0067491c3ffd61045e6c4c5c6aa4b9b561252d5))
+* **notes:** task notes live in the database ([0902d46](https://github.com/tasq-app/tasq/commit/0902d461c4bca4de0af07d913fc9de1edca00ea2))
+* **notes:** vim-style editing, smart lists and soft wrap in the note editor ([95314de](https://github.com/tasq-app/tasq/commit/95314de276f67f907c38f83cfa4b86f727bf245c))
+* planned date vs deadline, duration and reminders ([5d2f8b6](https://github.com/tasq-app/tasq/commit/5d2f8b674f0837b4b15db07a72fb0c28f04af69f))
+* rename to tasq ([ee6a555](https://github.com/tasq-app/tasq/commit/ee6a55597e4e3da64c91f8f22286a64fb47aa13d))
+* star tasks to pin them to the top of their priority group ([095bd51](https://github.com/tasq-app/tasq/commit/095bd51795b026e30f01c46ef500e3029767508d))
+* **store:** SQLite database as the task store, todo.txt as import/export ([7d6f599](https://github.com/tasq-app/tasq/commit/7d6f599739c71a32065412110a4a91ef67bf9ea7))
+
+
+### Bug Fixes
+
+* **capture:** bare 'at 6' is a time; 'every week on fridays' and plural weekdays repeat ([5375ba7](https://github.com/tasq-app/tasq/commit/5375ba7a5753e248ff8f207a44005fb97e6d55ef))
+* **install:** install as tuxedo-w-notes, not tuxedo ([a8750df](https://github.com/tasq-app/tasq/commit/a8750df3311fede17f6290315240c9d77e28b022))
+* **install:** respect CARGO_TARGET_DIR when locating the built binary ([74e05ec](https://github.com/tasq-app/tasq/commit/74e05ec6f674aa4b35dedd0340b113875b608507))
+* **notes:** arrows, Home/End and Delete work in the editor's Insert mode ([11e74db](https://github.com/tasq-app/tasq/commit/11e74db6e8ab795cd8914d22d12b25a73d9b21da))
+* **notes:** editor treats bare [ ] lines as checkbox items ([7568472](https://github.com/tasq-app/tasq/commit/75684726b4f461d6364e18e90b79fcf34dca113b))
+* **notes:** o on an empty list item opens a new item below it ([1779c9f](https://github.com/tasq-app/tasq/commit/1779c9fb86e96eac9d83599dc3ba0d8df88fa71d))
+* **notes:** preview keeps line breaks and renders bare [ ] lines as tasks ([9885a7b](https://github.com/tasq-app/tasq/commit/9885a7b2093cc82e10cb113060fe0f779f60c521))
