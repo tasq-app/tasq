@@ -615,6 +615,11 @@ completes, `n` adds a task on that day, `J` / `K` move the selected block
 half an hour later / earlier and `H` / `L` a day back / forward, `t` goes
 to today and `Esc` back to the list.
 
+`5` shows the week: seven columns of the same blocks, today's column lit,
+an all-day row on top. `←` / `→` move the selected day, `<` / `>` the
+week, and `v` switches to an agenda (each day a heading with its tasks
+below), which is also what narrow terminals get.
+
 **Spaces.** A task's `+project` is its space, and `/` nests it:
 `+Uni/Exams`. Filtering by `Uni` shows Uni's and its sub-spaces' tasks; the
 sidebar draws the tree with counts that include sub-spaces. In the add
