@@ -30,6 +30,11 @@ local database, notes, live natural-language capture and more, listed below.
 
 ### What tasq adds
 
+- **Spaces and views**: spaces are the parts of your life, as a tree —
+  `+Uni/Exams` is Exams inside Uni, and typing "in exams" in the add dialog
+  files the task there. The sidebar shows the tree, and **Today** (`1`,
+  planned or due today, and anything late), **Upcoming** (`2`, the next
+  days, then later) and **All** (`3`).
 - **Planned dates and deadlines**: "on friday" is when you'll do it
   (`plan:`), "by friday" when it's due (`due:`); plus a time (`at 6pm`),
   a duration (`for 1h`) and reminders (`remind me 15 min before`), each
@@ -562,8 +567,9 @@ The modal keys below apply in Normal mode:
 | Key | Action |
 | --- | --- |
 | `/` | search (a `due:` term filters by date range; see [todo.txt format](#todotxt-format)) |
-| `fp` | filter by project (`j` / `k` cycles, `Esc` clears) |
-| `fc` | filter by context (`j` / `k` cycles, `Esc` clears) |
+| `1` / `2` / `3` | Today / Upcoming / All |
+| `fp` | filter by space, sub-spaces included (`j` / `k` cycles, `Esc` clears) |
+| `fc` | filter by tag (`j` / `k` cycles, `Esc` clears) |
 | `ff` | pick a saved search (`j` / `k` cycles, `Enter` keeps, `Esc` reverts) |
 | `fs` | save the active `/`-search as a named filter |
 | `S` | cycle sort: priority → due → file order |
@@ -577,7 +583,19 @@ The modal keys below apply in Normal mode:
 | `o` | open the current task's existing `note:<path>` in `$VISUAL` / `$EDITOR` |
 | `O` | create the current task's note if needed, then open it |
 
-While a `+project` or `@context` filter is active, `n` seeds the add prompt
+**Views.** *Today* lists what's planned or due today or earlier, so a late
+plan or a missed deadline never drops out of sight; *Upcoming* lists every
+other task with a date, by day for the coming week and then *Later*; *All*
+lists everything. The choice is remembered (`view = …` in the config).
+
+**Spaces.** A task's `+project` is its space, and `/` nests it:
+`+Uni/Exams`. Filtering by `Uni` shows Uni's and its sub-spaces' tasks; the
+sidebar draws the tree with counts that include sub-spaces. In the add
+dialog, "in exams" (or "into labs") puts the task in an existing space whose
+name — ignoring case and accents, whole or by its first letters — matches;
+the chip shows `Uni › Exams`.
+
+While a space or `@tag` filter is active, `n` seeds the add prompt
 with the matching tags so a task added under a filter stays in view —
 backspace to drop them. A `/`-search filter seeds nothing.
 

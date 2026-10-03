@@ -130,7 +130,11 @@ impl App {
         let Some(today) = self.today_date() else {
             return Detection::default();
         };
-        let mut det = nl::detect(self.draft.text(), today, &self.draft.live.rejected);
+        let spaces: Vec<String> = crate::core::spaces::tree(self.store.tasks())
+            .into_iter()
+            .map(|r| r.path)
+            .collect();
+        let mut det = nl::detect_in(self.draft.text(), today, &self.draft.live.rejected, &spaces);
         let picked = &self.draft.live.picked;
         let p = &mut det.parsed;
         if picked.planned.is_some() {
@@ -195,7 +199,13 @@ impl App {
                     }),
                     FieldKind::Time => p.time.map(|(h, m)| format!("{h:02}:{m:02}")),
                     FieldKind::Repeat => p.rec.as_deref().map(describe_rec),
-                    FieldKind::Project => (!p.projects.is_empty()).then(|| p.projects.join(" ")),
+                    FieldKind::Project => (!p.projects.is_empty()).then(|| {
+                        p.projects
+                            .iter()
+                            .map(|s| crate::core::spaces::display(s))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    }),
                     FieldKind::Context => (!p.contexts.is_empty()).then(|| p.contexts.join(" ")),
                     FieldKind::Priority => p.priority.map(|c| format!("({c})")),
                     FieldKind::ShowFrom => p.threshold.clone(),
@@ -700,5 +710,18 @@ mod tests {
         assert_eq!(describe_rec("+2m"), "every 2 months");
         assert_eq!(describe_rec("3b"), "every 3 weekdays");
         assert_eq!(describe_rec("+1w:fri,sat,sun"), "every fri, sat, sun");
+    }
+
+    #[test]
+    fn in_a_space_fills_the_space_chip_and_saves_nested() {
+        let mut app = build_app("pay tuition +Uni\nmock exam +Uni/Exams\n");
+        typed(&mut app, "study topic 3 in exams");
+        assert_eq!(
+            chip(&app, FieldKind::Project).value.as_deref(),
+            Some("Uni › Exams")
+        );
+        assert_eq!(app.live_add(), AddOutcome::Saved);
+        let raw = &app.tasks().last().expect("added").raw;
+        assert!(raw.ends_with("study topic 3 +Uni/Exams"), "{raw}");
     }
 }
