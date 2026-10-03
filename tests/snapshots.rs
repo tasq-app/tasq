@@ -22,7 +22,7 @@ use ratatui::style::{Color, Modifier};
 
 use tasq::app::{
     App, BuilderField, CalendarState, CalendarTarget, Density, DraftOverlay, Mode,
-    PriorityChooserState, RecurrenceBuilderState, SlashMenuState, View,
+    PriorityChooserState, RecurrenceBuilderState, Scope, SlashMenuState, View,
 };
 use tasq::config::Config;
 use tasq::recurrence::RecUnit;
@@ -250,6 +250,14 @@ fn list_with_project_filter() {
     let mut app = make_app();
     app.set_project_filter(Some("work".to_string()));
     snapshot_app("list_with_project_filter", &app);
+}
+
+#[test]
+fn list_upcoming() {
+    let mut app = make_app();
+    // The coming week by day, then Later — dimmed apart from the cursor row.
+    app.set_scope(Scope::Upcoming);
+    snapshot_app("list_upcoming", &app);
 }
 
 #[test]
