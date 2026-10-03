@@ -1580,7 +1580,7 @@ dependencies = [
 
 [[package]]
 name = "tasq"
-version = "2026.10.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
  "chrono",

@@ -122,6 +122,9 @@ pub struct App {
     /// without the renderer having to reach into the environment itself.
     /// `None` in tests/examples that don't care about the value.
     pub config_path: Option<PathBuf>,
+    /// `tasq <version>` in the status bar. A field so the UI snapshot tests
+    /// can pin it and don't change with every release.
+    pub version_label: String,
     pub should_quit: bool,
     visible_cache: Vec<usize>,
     /// Parallel to `visible_cache`: `visible_groups[i]` is the group key for
@@ -262,6 +265,8 @@ impl App {
             chord: Chord::default(),
             file_path,
             config_path: None,
+            version_label: concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION"))
+                .to_string(),
             should_quit: false,
             visible_cache: Vec::new(),
             visible_groups: Vec::new(),

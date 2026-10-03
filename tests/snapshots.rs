@@ -56,6 +56,8 @@ fn make_app() -> App {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    // Pinned so the snapshots don't change with every release.
+    app.version_label = "tasq 0.0.0".to_string();
     app.config_path = Some(PathBuf::from(FIXTURE_CONFIG_PATH));
     // Compact density keeps each scene dense and stable: blank-line counts
     // shift with density, which would churn snapshots without adding signal.
@@ -280,6 +282,8 @@ fn list_sidebar_empty_hints() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    // Pinned so the snapshots don't change with every release.
+    app.version_label = "tasq 0.0.0".to_string();
     app.config_path = Some(PathBuf::from(FIXTURE_CONFIG_PATH));
     app.prefs.density = Density::Compact;
     snapshot_app("list_sidebar_empty_hints", &app);
@@ -440,6 +444,8 @@ fn empty_state() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    // Pinned so the snapshots don't change with every release.
+    app.version_label = "tasq 0.0.0".to_string();
     app.prefs.density = Density::Compact;
     app.prefs.layout.left = false;
     app.prefs.layout.right = false;
@@ -455,6 +461,8 @@ fn welcome_overlay() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    // Pinned so the snapshots don't change with every release.
+    app.version_label = "tasq 0.0.0".to_string();
     app.prefs.density = Density::Compact;
     app.mode = Mode::Welcome;
     snapshot_app("welcome_overlay", &app);
@@ -470,6 +478,8 @@ fn welcome_overlay_hides_empty_state_card() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    // Pinned so the snapshots don't change with every release.
+    app.version_label = "tasq 0.0.0".to_string();
     app.prefs.density = Density::Compact;
     app.mode = Mode::Welcome;
 
@@ -519,6 +529,8 @@ fn list_scrolls_to_keep_cursor_visible_when_below_fold() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    // Pinned so the snapshots don't change with every release.
+    app.version_label = "tasq 0.0.0".to_string();
     app.prefs.density = Density::Compact;
     app.prefs.layout.left = false;
     app.prefs.layout.right = false;
