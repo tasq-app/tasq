@@ -36,13 +36,15 @@ impl Store {
         };
         match result {
             Ok(()) => {
+                // Set when the rule has run out (`until:` / `times:`).
+                let mut ended = false;
                 let spawned = rec_spec.and_then(|spec| {
-                    let next_raw = build_next_instance(
-                        &raw_before,
-                        due_before.as_deref(),
-                        &spec,
-                        &self.today,
-                    )?;
+                    let Some(next_raw) =
+                        build_next_instance(&raw_before, due_before.as_deref(), &spec, &self.today)
+                    else {
+                        ended = true;
+                        return None;
+                    };
                     // A single occurrence yields at most one live successor.
                     let identity = recurrence_identity(&next_raw);
                     let already_live = self.tasks.iter().enumerate().any(|(i, t)| {
@@ -61,6 +63,7 @@ impl Store {
                 match (was_done, spawned) {
                     (true, _) => CompleteOutcome::Uncompleted { abs },
                     (false, Some(next)) => CompleteOutcome::CompletedSpawned { abs, next },
+                    (false, None) if ended => CompleteOutcome::CompletedLast { abs },
                     (false, None) => CompleteOutcome::Completed { abs },
                 }
             }
@@ -602,7 +605,9 @@ impl Store {
 fn recurrence_identity(raw: &str) -> String {
     todo::body_after_priority(raw)
         .split_whitespace()
-        .filter(|tok| !tok.starts_with("due:") && !tok.starts_with("plan:"))
+        .filter(|tok| {
+            !tok.starts_with("due:") && !tok.starts_with("plan:") && !tok.starts_with("times:")
+        })
         .collect::<Vec<_>>()
         .join(" ")
 }
@@ -612,8 +617,11 @@ fn recurrence_identity(raw: &str) -> String {
 /// The rule moves the task's date: its deadline (`due:`) when it has one,
 /// else its planned date (`plan:`); a task with both keeps the gap between
 /// them. Strict mode (`rec:+…`) anchors on that date, otherwise on today. A
-/// task with no date gets a planned one. Date overflow returns `None` so
-/// the caller skips spawning.
+/// task with no date gets a planned one.
+///
+/// The repeat ends — `None`, nothing spawned — once the next date would be
+/// past `until:`, or when `times:` says this was the last one (it counts
+/// down by one per occurrence). Date overflow also returns `None`.
 fn build_next_instance(
     raw: &str,
     due: Option<&str>,
@@ -636,6 +644,20 @@ fn build_next_instance(
         today_date
     };
     let next_main = recurrence::advance(anchor, spec)?;
+    if let Some(until) = todo::find_kv(body, todo::UNTIL_KEY).and_then(|d| parse(&d))
+        && next_main > until
+    {
+        return None;
+    }
+    let times_left = match todo::find_kv(body, todo::TIMES_KEY) {
+        Some(v) => match v.parse::<u32>() {
+            Ok(n) if n > 1 => Some(n - 1),
+            Ok(_) => return None,
+            // A malformed count doesn't end the repeat; it's kept as is.
+            Err(_) => None,
+        },
+        None => None,
+    };
     let shift = |d: NaiveDate| -> Option<NaiveDate> {
         let m = main?;
         let gap = d.signed_duration_since(m);
@@ -671,6 +693,12 @@ fn build_next_instance(
             plan_seen = true;
             continue;
         }
+        if tok.starts_with("times:")
+            && let Some(n) = times_left
+        {
+            out_tokens.push(format!("times:{n}"));
+            continue;
+        }
         out_tokens.push(tok.to_string());
     }
     if !due_seen && let Some(d) = next_due {
@@ -692,6 +720,44 @@ mod tests {
     use super::*;
     use crate::core::outcome::CompleteOutcome;
     use crate::core::test_support::build_store;
+
+    #[test]
+    fn a_repeat_ends_on_its_until_date() {
+        let mut store = build_store("Gym plan:2026-05-11 rec:+1w until:2026-05-20\n");
+        assert!(matches!(
+            store.toggle_complete(0),
+            CompleteOutcome::CompletedSpawned { .. }
+        ));
+        let next = &store.tasks()[1];
+        assert_eq!(next.planned.as_deref(), Some("2026-05-18"));
+        assert_eq!(next.until.as_deref(), Some("2026-05-20"));
+        // The one after would be the 25th, past the end.
+        assert!(matches!(
+            store.toggle_complete(1),
+            CompleteOutcome::CompletedLast { abs: 1 }
+        ));
+        assert_eq!(store.tasks().len(), 2);
+    }
+
+    #[test]
+    fn a_repeat_ends_after_its_times() {
+        let mut store = build_store("Pill plan:2026-05-06 rec:+1d times:2\n");
+        store.toggle_complete(0);
+        let next = &store.tasks()[1];
+        assert_eq!(next.planned.as_deref(), Some("2026-05-07"));
+        assert_eq!(next.times.as_deref(), Some("1"), "{}", next.raw);
+        assert!(matches!(
+            store.toggle_complete(1),
+            CompleteOutcome::CompletedLast { abs: 1 }
+        ));
+        assert_eq!(store.tasks().len(), 2);
+        // A count that doesn't parse leaves the repeat running.
+        let mut store = build_store("Pill plan:2026-05-06 rec:+1d times:lots\n");
+        assert!(matches!(
+            store.toggle_complete(0),
+            CompleteOutcome::CompletedSpawned { .. }
+        ));
+    }
 
     #[test]
     fn toggle_complete_marks_pending_task_done() {

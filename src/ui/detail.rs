@@ -139,6 +139,22 @@ fn build_lines<'a>(
             ],
         ));
     }
+    if let Some(rec) = &t.rec {
+        let mut text = crate::app::describe_rec(rec);
+        if let Some(until) = &t.until {
+            text.push_str(&format!(" until {until}"));
+        }
+        if let Some(n) = &t.times {
+            text.push_str(&format!(", {n} left"));
+        }
+        rows.push(line_panel(
+            theme,
+            vec![
+                Span::styled(" repeat    ", Style::default().fg(theme.dim)),
+                Span::styled(text, Style::default().fg(theme.fg)),
+            ],
+        ));
+    }
     rows.push(line_panel(
         theme,
         vec![

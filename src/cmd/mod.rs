@@ -443,7 +443,7 @@ fn cmd_done(store: &mut Store, pos: &[String], json: bool) -> i32 {
             continue;
         }
         match store.toggle_complete(abs) {
-            CompleteOutcome::Completed { abs } => {
+            CompleteOutcome::Completed { abs } | CompleteOutcome::CompletedLast { abs } => {
                 completed.push((abs + 1, store.tasks()[abs].clone(), None));
             }
             CompleteOutcome::CompletedSpawned { abs, next } => {
