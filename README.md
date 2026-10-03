@@ -9,7 +9,7 @@ a local database that stays yours — with todo.txt in and out whenever you
 want it. See [`DESIGN.md`](DESIGN.md) for where it's going.
 
 ```sh
-git clone https://github.com/tasq-app/tasq && cd tasq && ./install.sh
+brew install tasq-app/tap/tasq
 ```
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
@@ -141,11 +141,12 @@ goes in verbatim, lists and all.
 ### Install
 
 ```sh
-./install.sh          # then run: tasq
+brew install tasq-app/tap/tasq
 ```
 
-To update later: `git pull && ./install.sh`. It installs `~/.local/bin/tasq`
-(override with `$INSTALL_DIR` / `$INSTALL_NAME`).
+Or from a clone, `./install.sh` builds and installs `~/.local/bin/tasq`
+(override with `$INSTALL_DIR` / `$INSTALL_NAME`); `git pull && ./install.sh`
+updates it. See [Install](#install-1) for the other ways.
 
 **Coming from tuxedo?** The first `tasq` run copies your settings from
 `~/.config/tuxedo` (theme, notes folder, keys, themes) and imports the
@@ -261,7 +262,23 @@ another theme is skipped with a warning at startup.
 
 ## Install
 
-From source (a Homebrew tap is planned):
+tasq is in early alpha: expect rough edges, and keep your todo.txt around
+(tasq only reads it).
+
+### Homebrew (macOS, Linux)
+
+```sh
+brew install tasq-app/tap/tasq
+brew upgrade tasq                # later, for new versions
+```
+
+### Prebuilt binaries
+
+Every [release](https://github.com/tasq-app/tasq/releases) has archives for
+macOS (Apple silicon, Intel), Linux (x86_64, arm64) and Windows, each with a
+`.sha256` checksum. Unpack and put `tasq` on your `PATH`.
+
+### From source
 
 ```sh
 git clone https://github.com/tasq-app/tasq
