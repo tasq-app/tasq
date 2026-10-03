@@ -732,7 +732,9 @@ impl NoteEditorState {
             Char(':') => self.open_command_prompt(),
             Char('M') => self.enter_preview(),
             Enter => {
-                if !self.toggle_checkbox() && line + 1 < self.lines.len() {
+                // Ticks a checkbox line; anywhere else moves down a line.
+                let toggled = self.toggle_checkbox();
+                if !toggled && line + 1 < self.lines.len() {
                     self.cursor_line = line + 1;
                     self.cursor_col = self.first_non_blank(line + 1);
                 }
