@@ -256,7 +256,7 @@ Each release is usable on its own and worth a short video.
 | 2 | **tasq core** ✅ | New name. SQLite storage with stable ids, automatic migration from todo.txt and the tuxedo settings, import/export. The todo.txt line is still what the app edits, stored next to its fields as columns; notes stay Markdown files for now. |
 | 2b | **Notes and the full model** ✅ | Notes in the database (still Markdown, `$EDITOR` through a temporary file); planned date vs deadline, duration and reminders — tags in the todo.txt line (`plan:`, `dur:`, `remind:`), columns in the database. |
 | 3 | **Spaces and views** ✅ | Space tree (`+Uni/Exams`), "in exams" in the add dialog, Today / Upcoming / All with Later dimmed, spaces kept in the database (empty ones too), hiding a space. |
-| 4 | **Routines** | Full recurrence (weekdays, every N, until), week and month views. |
+| 4 | **Routines** ✅ | Full recurrence (weekdays, every N, until a date or N times); the calendar: the day in time blocks, the week in blocks or as an agenda, the month with counts or titles; tasks shown as their title and chips, a colour per space. |
 | 5 | **Calendar, local** | `.ics` feed from your machine, per-space calendars. |
 | 6 | **Accounts and sync** | Optional sign-in, end-to-end encrypted sync — the paid plan. |
 | 7 | **Phone and web** | Offline-capable web app on the same sync. |
