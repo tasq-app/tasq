@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
-   To╭ tasq · help · tasks notes (Tab) ───────────────────────────────────────────────────────╮     
-   Up│  NAVIGATION                                  VIEW                                      │     
- ▸ Al│    j / k  (↓ / ↑)    next / previous task      1-3 / 4-6         lists / calendar      │     
-   Da│    gg / G            first / last task         /                 fuzzy search          │     
-   We│    Ctrl-d / Ctrl-u   page down / up            fp / fc           filter space/tag      │     
-   Mo│                                                ff / fs           saved filter pick/save│     
-     │  EDITING                                       S                 cycle sort            │     
- SPAC│    n / o             new task / open notes     v                 visual / multi-select │     
-   ● │    e / i             edit (normal / insert)    l                 list view             │     
-   ● │    r                 reschedule task           a                 archive view          │rd   
+                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
+  ▣ t╭ tasq · help · tasks notes (Tab) ───────────────────────────────────────────────────────╮     
+     │  NAVIGATION                                  VIEW                                      │     
+   ◉ │    j / k  (↓ / ↑)    next / previous task      1-3 / 4-6         lists / calendar      │     
+   ◷ │    gg / G            first / last task         /                 fuzzy search          │y    
+   ≡ │    Ctrl-d / Ctrl-u   page down / up            fp / fc           filter space/tag      │     
+   ▦ │                                                ff / fs           saved filter pick/save│     
+   ⌕ │  EDITING                                       S                 cycle sort            │     
+     │    n / o             new task / open notes     v                 visual / multi-select │     
+  SPA│    e / i             edit (normal / insert)    l                 list view             │     
+   ● │    r                 reschedule task           a                 archive view          │oard 
    ● │    x                 toggle complete           A                 archive completed     │     
    ● │    dd                delete task               H                 show done in list     │     
    ● │    p / *             priority A→B→C / star     F                 show future in list   │     
    ● │    J / K             move task down / up       [ / ]             toggle filter / detail│     
    ● │    c                 add/remove context        T                 theme picker          │     
-     │    +                 add project               D                 cycle density         │     
- TAGS│    yy / yb           copy line / body          L                 toggle line numbers   │     
-   @e│    u                 undo                                                              │     
-   @h│                                              SYSTEM                                    │     
-   @l│  RECURRENCE (rec:)                             : / Ctrl-P        command palette       │     
-   @p│    j / k / Tab       next / prev field         s                 share capture QR      │     
+   ● │    +                 add project               D                 cycle density         │     
+     │    yy / yb           copy line / body          L                 toggle line numbers   │     
+  FIL│    u                 undo                                                              │     
+   ⚑ │                                              SYSTEM                                    │     
+   ★ │  RECURRENCE (rec:)                             : / Ctrl-P        command palette       │     
+   ◷ │    j / k / Tab       next / prev field         s                 share capture QR      │     
      │    h / l / + / -     change value              ? / ,             help / settings       │     
      │    Enter / Esc       save / cancel             q / Ctrl-c        quit                  │     
      │────────────────────────────────────────────────────────────────────────────────────────│     
      │  FORMAT                                                                                │     
      │    (A)               priority A-Z              due:YYYY-MM-DD    due date (+1w = range)│     
-     │    YYYY-MM-DD        creation / done date      rec:Nu            recur (u in d/w/m/y/b)│     
-     │    +project          project tag(s)            rec:+Nu           strict: anchor on due:│     
-     ╰────────────────────────────────────────────────────────────────────────────────────────╯     
-                                                                                                    
- HELP   Tab tasks ⇄ notes page · ? close help                     15 open · 2026-05-06 · tasq 0.0.0
+ ╭───│    YYYY-MM-DD        creation / done date      rec:Nu            recur (u in d/w/m/y/b)│     
+ │  Y│    +project          project tag(s)            rec:+Nu           strict: anchor on due:│     
+ ╰───╰────────────────────────────────────────────────────────────────────────────────────────╯     
+                           │                                                                        
+   ● help     Tab tasks ⇄ notes page · ? close help

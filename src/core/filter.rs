@@ -122,6 +122,20 @@ pub fn resolve_needle(needle: &str, today: &str) -> ResolvedNeedle {
 /// task body — chars must appear in order, gaps allowed. When it carries a
 /// resolved `due:` range, that's matched against `t.due` instead; see
 /// [`resolve_needle`].
+/// Whether `t` belongs in a built-in sidebar filter. Overdue compares
+/// against the system date, like the rest of the list's date colours.
+pub fn passes_preset(t: &Task, p: crate::app::Preset) -> bool {
+    use crate::app::Preset;
+    match p {
+        Preset::HighPriority => t.priority == Some('A'),
+        Preset::Starred => t.starred,
+        Preset::Overdue => {
+            let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+            !t.done && t.due.as_deref().is_some_and(|d| d < today.as_str())
+        }
+    }
+}
+
 pub fn passes_user_filter(t: &Task, filter: &Filter, needle: Option<&ResolvedNeedle>) -> bool {
     // A space shows its sub-spaces' tasks too.
     if let Some(p) = &filter.project
@@ -131,6 +145,11 @@ pub fn passes_user_filter(t: &Task, filter: &Filter, needle: Option<&ResolvedNee
     }
     if let Some(c) = &filter.context
         && !t.contexts.iter().any(|x| x == c)
+    {
+        return false;
+    }
+    if let Some(p) = filter.preset
+        && !passes_preset(t, p)
     {
         return false;
     }

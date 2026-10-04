@@ -87,6 +87,7 @@ mod tests {
             project: project.map(String::from),
             context: context.map(String::from),
             search: search.to_string(),
+            ..Default::default()
         }
     }
 

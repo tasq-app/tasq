@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
-   Today             1 1                                                                            
-   Upcoming          6 2   (2)  PRIORITY A  ────────────────────── priority  (A)                    
- ▸ All              15 3    1 ▸ ⚑ Finish Q2 board deck  ◷ due toda created   2026-05-01             
-   Day               1 4    2   ⚑ Call dentist to reschedule clean due       2026-05-06  today      
-   Week              3 5   (3)  PRIORITY B  ────────────────────── space     work                   
-   Month             6 6    3   ⚑ Review pull requests for auth re tags      @laptop                
-                            4   ⚑ Renew passport before summer tri                                  
- SPACES                     5   ⚑ Draft hiring rubric for senior e RAW                              
-   ● work            4     (2)  PRIORITY C  ──────────────────────                                  
-   ● health          3      6   ⚑ Pay quarterly estimated taxes  ◷ (A) 2026-05-01 Finish Q2 board   
-   ● finance         2      7   ⚑ Order new running shoes  ● healt deck +work @laptop               
-   ● home ╭──────────────────────────────────────────────────────────────────────────────╮          
-   ● learn│                                                                              │          
-   ● perso│  > ⚑ (A) Renew passport before summer trip  +travel   @errands ▏       ↑     │          
-   ● trave│                                                                              │          
-          │                       + travel     @ errands     ⚑ (A)                       │          
- TAGS     │                                                                              │          
-   @errand╰──────────────────────────────────────────────────────────────────────────────╯          
-   @home      ╭ DUE ───────────────────────────────────────────╮pe                                  
-   @laptop    │  ‹  May 2026  ›                                │                                    
-   @phone     │    S   M   T   W   T   F   S                   │                                    
-              │                        1   2                   │                                    
+                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
+  ▣ tasq                   │  15 tasks  ·  sort: priority                                           
+                           │  + filter                               priority  (A)                  
+   ◉ Today              1  │                                         created   2026-05-01           
+   ◷ Upcoming           6  │  PRIORITY A  2  ─────────────────────── due       2026-05-06  today    
+   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod space     work                 
+   ▦ Calendar              │  2  ☐ ⚑ Call dentist to reschedule clea tags      @laptop              
+   ⌕ Search             /  │  PRIORITY B  3  ───────────────────────                                
+                           │  3  ☐ ⚑ Review pull requests for auth r RAW                            
+  SPACES                   │  4  ☐ ⚑ Renew passport before summer tr                                
+   ● work               4  │  5  ☐ ⚑ Draft hiring rubric for senior  (A) 2026-05-01 Finish Q2 board 
+   ● health             3  │  PRIORITY C  2  ─────────────────────── deck +work @laptop             
+   ● finan╭──────────────────────────────────────────────────────────────────────────────╮          
+   ● home │                                                                              │          
+   ● learn│  > ⚑ (A) Renew passport before summer trip  +travel   @errands ▏       ↑     │          
+   ● perso│                                                                              │          
+   ● trave│                       + travel     @ errands     ⚑ (A)                       │          
+          │                                                                              │          
+  FILTERS ╰──────────────────────────────────────────────────────────────────────────────╯          
+   ⚑ High prio╭ DUE ───────────────────────────────────────────╮e Ap                                
+   ★ Starred  │  ‹  May 2026  ›                                │ @ho                                
+   ◷ Overdue  │    S   M   T   W   T   F   S                   │ per                                
+              │                        1   2                   │r  ●                                
               │    3   4   5   6   7   8   9                   │                                    
               │   10  11  12  13  14  15  16                   │                                    
               │   17  18  19  20  21  22  23                   │                                    
               │   24  25  26  27  28  29  30                   │                                    
-              │   31                                           │                                    
-              │                                                │                                    
-              │  Thu May 7                                     │                                    
+ ╭────────────│   31                                           │                                    
+ │  Y  you ● f│                                                │                                    
+ ╰────────────│  Thu May 7                                     │                                    
               │  t today · T tmw · w +1w · m +1mo · x clear    │                                    
- INSERT   type╰────────────────────────────────────────────────╯ro15 open · 2026-05-06 · tasq 0.0.0
+   ● insert   ╰────────────────────────────────────────────────╯at, +project @context · Tab chips ·

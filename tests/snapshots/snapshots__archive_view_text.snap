@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- VIEWS                     ▶▮◀ done.txt  •  0 tasks  •  sort:compl DETAIL                           
-   Today             1 1                                                                            
-   Upcoming          6 2     no completed tasks yet                (no task)                        
-   All              15 3                                                                            
-   Day               1 4                                                                            
-   Week              3 5                                                                            
-   Month             6 6                                                                            
-                                                                                                    
- SPACES                                                                                             
-   ● work            4                                                                              
-   ● health          3                                                                              
-   ● finance         2                                                                              
-   ● home            1                                                                              
-   ● learning        1                                                                              
-   ● personal        1                                                                              
-   ● travel          1                                                                              
-                                                                                                    
- TAGS                                                                                               
-   @errands          4                                                                              
-   @home             4                                                                              
-   @laptop           4                                                                              
-   @phone            3                                                                              
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
- ARCHIVE   j/k · n new · r reschedule · x done · * star · o not0 archived · 2026-05-06 · tasq 0.0.0
+                           │ ▶▮◀ done.txt  •  0 tasks  •  sort:compl DETAIL                         
+  ▣ tasq                   │                                                                        
+                           │   no completed tasks yet                (no task)                      
+   ◉ Today              1  │                                                                        
+   ◷ Upcoming           6  │                                                                        
+   ≡ All tasks         15  │                                                                        
+   ▦ Calendar              │                                                                        
+   ⌕ Search             /  │                                                                        
+                           │                                                                        
+  SPACES                   │                                                                        
+   ● work               4  │                                                                        
+   ● health             3  │                                                                        
+   ● finance            2  │                                                                        
+   ● home               1  │                                                                        
+   ● learning           1  │                                                                        
+   ● personal           1  │                                                                        
+   ● travel             1  │                                                                        
+                           │                                                                        
+  FILTERS                  │                                                                        
+   ⚑ High priority      2  │                                                                        
+   ★ Starred            0  │                                                                        
+   ◷ Overdue            7  │                                                                        
+                           │                                                                        
+                           │                                                                        
+                           │                                                                        
+                           │                                                                        
+                           │                                                                        
+ ╭───────────────────────╮ │                                                                        
+ │  Y  you ● file        │ │                                                                        
+ ╰───────────────────────╯ │                                                                        
+                           │                                                                        
+   ● archive     n new task · Tab sidebar                                                    ␣ menu

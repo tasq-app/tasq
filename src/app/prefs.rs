@@ -47,6 +47,8 @@ pub struct Prefs {
     pub recurrence_builder: bool,
     /// Nerd Font icons instead of plain Unicode (`icons = nerd`).
     pub nerd_icons: bool,
+    /// Short hints for what's selected in the bottom line (`hints`).
+    pub hints: bool,
 }
 
 impl Prefs {
@@ -73,6 +75,7 @@ impl Prefs {
             week_start: cfg.week_start.unwrap_or(WeekStart::Sunday),
             recurrence_builder: cfg.recurrence_builder.unwrap_or(true),
             nerd_icons: cfg.icons.as_deref() == Some("nerd"),
+            hints: cfg.hints.unwrap_or(true),
         }
     }
 

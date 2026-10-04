@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
-   Today             1 1                                                                            
-   Upcoming          6 2   (1)  TODAY  ─────────────────────────── priority  (A)                    
- ▸ All              15 3    1 ▸ ⚑ Finish Q2 board deck  ◷ due toda created   2026-05-01             
-   Day               1 4   (2)  THIS WEEK  ─────────────────────── due       2026-05-06  today      
-   Week              3 5    2   ⚑ Review pull requests for auth re space     work                   
-   Month             6 6    3   ⚑ Call dentist to reschedule clean tags      @laptop                
-                           (2)  NEXT WEEK  ───────────────────────                                  
- SPACES                     4     Migrate analytics to new pipelin RAW                              
-   ● work            4      5     Pay rent  ◷ by fri 15 may   ↻ ev                                  
-   ● health          3     (2)  LATER  ─────────────────────────── (A) 2026-05-01 Finish Q2 board   
-   ● finance         2      6   ⚑ Renew passport before summer tri deck +work @laptop               
-   ● home            1      7   ⚑ Pay quarterly estimated taxes  ◷ due:2026-05-06                   
-   ● learning        1     (8)  NO DUE DATE  ─────────────────────                                  
-   ● personal        1      8   ⚑ Draft hiring rubric for senior e                                  
-   ● travel          1      9   ⚑ Order new running shoes  ● healt                                  
-                           10     Pick up dry cleaning @errands                                     
- TAGS                      11     Schedule annual physical  ● heal                                  
-   @errands          4     12     Read "Designing Data-Intensive A                                  
-   @home             4     13     Send thank-you note to mentor @h                                  
-   @laptop           4     14     Plan Saturday hike with K.  ● pe                                  
-   @phone            3     15     Replace bathroom faucet washer                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
- NORMAL   j/k · n new · r reschedule · x done · * star · o notes ·15 open · 2026-05-06 · tasq 0.0.0
+                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
+  ▣ tasq                   │  15 tasks  ·  sort: due                                                
+                           │  + filter                               priority  (A)                  
+   ◉ Today              1  │                                         created   2026-05-01           
+   ◷ Upcoming           6  │  TODAY  1  ──────────────────────────── due       2026-05-06  today    
+   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod space     work                 
+   ▦ Calendar              │  THIS WEEK  2  ──────────────────────── tags      @laptop              
+   ⌕ Search             /  │  2  ☐ ⚑ Review pull requests for auth r                                
+                           │  3  ☐ ⚑ Call dentist to reschedule clea RAW                            
+  SPACES                   │  NEXT WEEK  2  ────────────────────────                                
+   ● work               4  │  4  ☐ Migrate analytics to new pipeline (A) 2026-05-01 Finish Q2 board 
+   ● health             3  │  5  ☐ Pay rent  ◷ by fri 15 may   ↻ eve deck +work @laptop             
+   ● finance            2  │  LATER  2  ──────────────────────────── due:2026-05-06                 
+   ● home               1  │  6  ☐ ⚑ Renew passport before summer tr                                
+   ● learning           1  │  7  ☐ ⚑ Pay quarterly estimated taxes                                  
+   ● personal           1  │  NO DUE DATE  8  ──────────────────────                                
+   ● travel             1  │  8  ☐ ⚑ Draft hiring rubric for senior                                 
+                           │  9  ☐ ⚑ Order new running shoes  ● heal                                
+  FILTERS                  │ 10  ☐ Pick up dry cleaning @errands                                    
+   ⚑ High priority      2  │ 11  ☐ Schedule annual physical  ● healt                                
+   ★ Starred            0  │ 12  ☐ Read "Designing Data-Intensive Ap                                
+   ◷ Overdue            7  │ 13  ☐ Send thank-you note to mentor @ho                                
+                           │ 14  ☐ Plan Saturday hike with K.  ● per                                
+                           │ 15  ☐ Replace bathroom faucet washer  ●                                
+                           │                                                                        
+                           │                                                                        
+                           │                                                                        
+ ╭───────────────────────╮ │                                                                        
+ │  Y  you ● file        │ │                                                                        
+ ╰───────────────────────╯ │                                                                        
+                           │                                                                        
+   ● normal     x done · e edit · r reschedule · Tab sidebar                                 ␣ menu

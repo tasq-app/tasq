@@ -61,25 +61,25 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
         spans.push(Span::styled(mark, Style::default().fg(c)));
     }
 
-    // status glyph + priority box
-    let glyph = if task.done {
-        "✓ "
-    } else if opts.cursor {
-        "▸ "
-    } else {
-        "  "
-    };
-    // makes glyph visible on the cursor row
-    let glyph_color = if task.done && !opts.cursor {
-        theme.done
-    } else {
-        theme.accent
-    };
-    let mut glyph_style = Style::default().fg(glyph_color);
+    // The cursor's accent bar, then a checkbox: ☑ in green once done.
     if opts.cursor {
-        glyph_style = glyph_style.add_modifier(Modifier::BOLD);
+        spans.push(Span::styled(
+            "▎",
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        ));
+    } else {
+        spans.push(Span::raw(" "));
     }
-    spans.push(Span::styled(glyph, glyph_style));
+    if task.done {
+        spans.push(Span::styled("☑ ", Style::default().fg(theme.pri_c)));
+    } else {
+        spans.push(Span::styled(
+            "☐ ",
+            Style::default().fg(if opts.cursor { theme.fg } else { theme.dim }),
+        ));
+    }
 
     // Priority as a flag in its colour (A red, B orange, C yellow…).
     match task.priority {
@@ -89,7 +89,7 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
                 .fg(theme.priority_color(p))
                 .add_modifier(Modifier::BOLD),
         )),
-        _ => spans.push(Span::raw("  ")),
+        _ => {}
     }
     // The `star:1` tag itself is hidden from the body below; this glyph
     // stands in for it.
@@ -653,7 +653,7 @@ mod tests {
             .iter()
             .map(|s| s.content.as_ref())
             .collect::<String>()
-            .trim_start()
+            .trim_start_matches([' ', '☐'])
             .to_string()
     }
 
@@ -787,7 +787,7 @@ mod tests {
             .collect();
         assert_eq!(
             text.trim_end(),
-            "  ⚑ ★ Trabajo TIS  today · 16:00 · 2h   ◷ by fri 8 may   ↻ every week until tue 30 jun   ● Uni › Exams  @laptop"
+            " ☐ ⚑ ★ Trabajo TIS  today · 16:00 · 2h   ◷ by fri 8 may   ↻ every week until tue 30 jun   ● Uni › Exams  @laptop"
         );
         assert_eq!(chip_date("2026-05-07", "2026-05-06"), "tomorrow");
         assert_eq!(chip_date("2027-01-02", "2026-05-06"), "2 jan 2027");

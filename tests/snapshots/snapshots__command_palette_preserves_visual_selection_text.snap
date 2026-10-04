@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
-   Today             1 1                                                                            
-   Upcoming          6 2   (2)  PRIORITY A  ────────────────────── priority  (A)                    
- ▸ All              15 3    1 [x] ▸ ⚑ Finish Q2 board deck  ◷ due  created   2026-05-01             
-   Day               1 4    2 [x]   ⚑ Call dentist to reschedule c due       2026-05-06  today      
-   Week              3 5   (3)  PRIORITY B  ────────────────────── space     work                   
-   Month            ╭ tasq · command ──────────────────────────────────────────╮ptop                
-                    │ > █                                                      │                    
- SPACES             │──────────────────────────────────────────────────────────│                    
-   ● work           │ ▶ new task                                             n │                    
-   ● health         │   edit current task (normal mode)                      e │1 Finish Q2 board   
-   ● finance        │   edit current task (insert mode)                      i │aptop               
-   ● home           │   toggle complete                                      x │6                   
-   ● learning       │   delete task                                         dd │                    
-   ● personal       │   cycle priority                                       p │                    
-   ● travel         │   star / unstar task (top of its priority)             * │                    
-                    │   move task down                                       J │                    
- TAGS               │   move task up                                         K │                    
-   @errands         │   add project to current task                          + │                    
-   @home            │   add or remove context on current task                c │                    
-   @laptop          │   copy line to clipboard                              yy │                    
-   @phone           │   copy body to clipboard                              yb │                    
+                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
+  ▣ tasq                   │  15 tasks  ·  sort: priority                                           
+                           │  + filter                               priority  (A)                  
+   ◉ Today              1  │                                         created   2026-05-01           
+   ◷ Upcoming           6  │  PRIORITY A  2  ─────────────────────── due       2026-05-06  today    
+   ≡ All tasks         15  │  1 [x] ▎☐ ⚑ Finish Q2 board deck  ◷ due space     work                 
+   ▦ Calendar       ╭ tasq · command ──────────────────────────────────────────╮laptop              
+   ⌕ Search         │ > █                                                      │                    
+                    │──────────────────────────────────────────────────────────│                    
+  SPACES            │ ▶ new task                                             n │                    
+   ● work           │   edit current task (normal mode)                      e │-01 Finish Q2 board 
+   ● health         │   edit current task (insert mode)                      i │@laptop             
+   ● finance        │   toggle complete                                      x │-06                 
+   ● home           │   delete task                                         dd │                    
+   ● learning       │   cycle priority                                       p │                    
+   ● personal       │   star / unstar task (top of its priority)             * │                    
+   ● travel         │   move task down                                       J │                    
+                    │   move task up                                         K │                    
+  FILTERS           │   add project to current task                          + │                    
+   ⚑ High priority  │   add or remove context on current task                c │                    
+   ★ Starred        │   copy line to clipboard                              yy │                    
+   ◷ Overdue        │   copy body to clipboard                              yb │                    
                     │   open task notes                                      o │                    
                     │   undo                                                 u │                    
                     │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
                     ╰──────────────────────────────────────────────────────────╯                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
- COMMAND   type to filter · Enter run · Esc cancel   15 open · 2 selected · 2026-05-06 · tasq 0.0.0
+                           │                                                                        
+ ╭───────────────────────╮ │                                                                        
+ │  Y  you ● file        │ │                                                                        
+ ╰───────────────────────╯ │                                                                        
+                           │                                                                        
+   ● command    2 selected   type to filter · Enter run · Esc cancel

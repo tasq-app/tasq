@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
-   Today             1 1                                                                            
-   Upcoming          6 2   (2)  PRIORITY A  ────────────────────── priority  (A)                    
- ▸ All              15 3    1 ▸ ⚑ Finish Q2 board deck  ◷ due toda created   2026-05-01             
-   Day               1 4    2   ⚑ Call dentist to reschedule clean due       2026-05-06  today      
-   Week              3 5   (3)  PRIORITY B  ────────────────────── space     work                   
-   Month             6 6    3   ⚑ Review pull requests for auth re tags      @laptop                
-                            4   ⚑ Renew passport before summer tri                                  
- SPACES                     5   ⚑ Draft hiring rubric for senior e RAW                              
-   ● work            4     (2)  PRIORITY C  ──────────────────────                                  
-   ● health          3      6   ⚑ Pay quarterly estimated taxes  ◷ (A) 2026-05-01 Finish Q2 board   
-   ● finance         2      7   ⚑ Order new running shoes  ● healt deck +work @laptop               
-   ● home ╭──────────────────────────────────────────────────────────────────────────────╮          
-   ● learn│                                                                              │          
-   ● perso│  > Pay rent  +home   @bank  ▦ plan:2026-06-01 ↻ rec:+1m ◐ t:-3d▏       ↑     │          
-   ● trave│                                                                              │          
-          │         ▦ mon 1 jun     ↻ every month     + home     @ bank     ◐ -3d        │          
- TAGS     │                                                                              │          
-   @errand╰──────────────────────────────────────────────────────────────────────────────╯          
-   @home             4     14     Plan Saturday hike with K.  ● pe                                  
-   @laptop           4     15     Replace bathroom faucet washer                                    
-   @phone            3                                                                              
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
- NORMAL   h/l navigate · w/b/e word · i/a insert · Enter save · Es15 open · 2026-05-06 · tasq 0.0.0
+                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
+  ▣ tasq                   │  15 tasks  ·  sort: priority                                           
+                           │  + filter                               priority  (A)                  
+   ◉ Today              1  │                                         created   2026-05-01           
+   ◷ Upcoming           6  │  PRIORITY A  2  ─────────────────────── due       2026-05-06  today    
+   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod space     work                 
+   ▦ Calendar              │  2  ☐ ⚑ Call dentist to reschedule clea tags      @laptop              
+   ⌕ Search             /  │  PRIORITY B  3  ───────────────────────                                
+                           │  3  ☐ ⚑ Review pull requests for auth r RAW                            
+  SPACES                   │  4  ☐ ⚑ Renew passport before summer tr                                
+   ● work               4  │  5  ☐ ⚑ Draft hiring rubric for senior  (A) 2026-05-01 Finish Q2 board 
+   ● health             3  │  PRIORITY C  2  ─────────────────────── deck +work @laptop             
+   ● finan╭──────────────────────────────────────────────────────────────────────────────╮          
+   ● home │                                                                              │          
+   ● learn│  > Pay rent  +home   @bank  ▦ plan:2026-06-01 ↻ rec:+1m ◐ t:-3d▏       ↑     │          
+   ● perso│                                                                              │          
+   ● trave│         ▦ mon 1 jun     ↻ every month     + home     @ bank     ◐ -3d        │          
+          │                                                                              │          
+  FILTERS ╰──────────────────────────────────────────────────────────────────────────────╯          
+   ⚑ High priority      2  │ 12  ☐ Read "Designing Data-Intensive Ap                                
+   ★ Starred            0  │ 13  ☐ Send thank-you note to mentor @ho                                
+   ◷ Overdue            7  │ 14  ☐ Plan Saturday hike with K.  ● per                                
+                           │ 15  ☐ Replace bathroom faucet washer  ●                                
+                           │                                                                        
+                           │                                                                        
+                           │                                                                        
+                           │                                                                        
+ ╭───────────────────────╮ │                                                                        
+ │  Y  you ● file        │ │                                                                        
+ ╰───────────────────────╯ │                                                                        
+                           │                                                                        
+   ● normal     h/l navigate · w/b/e word · i/a insert · Enter save · Esc cancel

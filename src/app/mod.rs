@@ -20,6 +20,7 @@ mod draft;
 mod draft_overlay;
 mod flash;
 mod live_add;
+mod menu;
 mod mutations;
 mod note_editor;
 mod notes_popup;
@@ -29,6 +30,7 @@ mod pinned_note;
 mod prefs;
 mod saved;
 mod selection;
+mod sidebar;
 mod toast;
 mod types;
 mod visibility;
@@ -50,6 +52,7 @@ pub use draft_overlay::{
 };
 pub use flash::Flash;
 pub use live_add::{CHIP_ORDER, Chip, describe_rec};
+pub use menu::{MenuDo, MenuEntry, entries as menu_entries};
 pub use note_editor::{
     EditorKey, NormalOutcome, NoteCommandResult, NoteEditorMode, NoteEditorState, Register,
     UNSAVED_WARNING, VisualSelection, wrap_indent,
@@ -58,12 +61,13 @@ pub use notes_popup::{NotePromptKind, NotesPopupState};
 pub use palette::{CommandPaletteState, NotesEntryAction, PaletteDispatch};
 pub use prefs::{Layout, Prefs};
 pub use selection::Selection;
+pub use sidebar::{NavItem, NavRow, SIDEBAR_SLIDE, SIDEBAR_W};
 pub use toast::{Toast, ToastKind, Toasts};
 pub use types::{
-    AUTOCOMPLETE_CAP, AddOutcome, Density, FLASH_TTL, Filter, LEADER_WINDOW, Mode, SavedFilter,
-    Scope, Sort, UNDO_LIMIT, View,
+    AUTOCOMPLETE_CAP, AddOutcome, Density, FLASH_TTL, Filter, LEADER_WINDOW, MenuPage, Mode,
+    Preset, SavedFilter, Scope, Sort, UNDO_LIMIT, View,
 };
-pub use visibility::GroupKey;
+pub use visibility::{GroupKey, TodaySlot};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WeekStart {
@@ -121,6 +125,16 @@ pub struct App {
     flash_state: Flash,
     /// Messages sliding in at the top right (see [`Toasts`]).
     pub toasts: Toasts,
+    /// The sidebar has the keyboard (`Tab`).
+    pub sidebar_focus: bool,
+    /// The page of the shortcut menu while it's open.
+    pub menu_page: MenuPage,
+    /// The sidebar row the keyboard is on.
+    pub sidebar_cursor: usize,
+    /// When the sidebar last started opening or closing.
+    pub sidebar_anim: Option<std::time::Instant>,
+    /// When tasq last wrote its own config file.
+    saved_config_at: Option<std::time::Instant>,
     pub chord: Chord,
     pub file_path: PathBuf,
     /// Resolved path of the on-disk config file. Set by the binary after
@@ -274,6 +288,11 @@ impl App {
             selection: Selection::default(),
             flash_state: Flash::default(),
             toasts: Toasts::default(),
+            sidebar_focus: false,
+            menu_page: MenuPage::Root,
+            sidebar_cursor: 0,
+            sidebar_anim: None,
+            saved_config_at: None,
             chord: Chord::default(),
             file_path,
             config_path: None,
@@ -446,9 +465,17 @@ impl App {
     /// sees the problem inside the TUI (writing to stderr would smash the
     /// alt-screen).
     pub fn save_prefs(&mut self) {
+        self.saved_config_at = Some(std::time::Instant::now());
         if let Err(e) = self.prefs.save() {
             self.flash(format!("config save failed: {e}"));
         }
+    }
+
+    /// Whether the config file just changed because tasq saved it itself
+    /// (a view or a sidebar toggle), not because you edited it.
+    pub fn config_change_is_ours(&self) -> bool {
+        self.saved_config_at
+            .is_some_and(|t| t.elapsed() < std::time::Duration::from_secs(2))
     }
 
     pub fn cycle_theme(&mut self) {

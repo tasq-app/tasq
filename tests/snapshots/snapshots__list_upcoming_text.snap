@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  6 tasks  DETAIL                           
-   Today             1 1                                                                            
- ▸ Upcoming          6 2   (1)  TOMORROW  ──────────────────────── priority  (B)                    
-   All              15 3    1 ▸ ⚑ Review pull requests for auth re created   2026-05-02             
-   Day               1 4   (1)  FRI 8 MAY  ─────────────────────── due       2026-05-07  tomorrow   
-   Week              3 5    2   ⚑ Call dentist to reschedule clean space     work                   
-   Month             6 6   (4)  LATER  ─────────────────────────── tags      @laptop                
-                            3     Migrate analytics to new pipelin                                  
- SPACES                     4     Pay rent  ◷ by fri 15 may   ↻ ev RAW                              
-   ● work            4      5   ⚑ Renew passport before summer tri                                  
-   ● health          3      6   ⚑ Pay quarterly estimated taxes  ◷ (B) 2026-05-02 Review pull       
-   ● finance         2                                             requests for auth refactor +work 
-   ● home            1                                             @laptop due:2026-05-07           
-   ● learning        1                                                                              
-   ● personal        1                                                                              
-   ● travel          1                                                                              
-                                                                                                    
- TAGS                                                                                               
-   @errands          4                                                                              
-   @home             4                                                                              
-   @laptop           4                                                                              
-   @phone            3                                                                              
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
- NORMAL   j/k · n new · r reschedule · x done · * star · o notes · 6 open · 2026-05-06 · tasq 0.0.0
+                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
+  ▣ tasq                   │  6 tasks  ·  sort: priority                                            
+                           │  + filter                               priority  (B)                  
+   ◉ Today              1  │                                         created   2026-05-02           
+   ◷ Upcoming           6  │  TOMORROW  1  ───────────────────────── due       2026-05-07  tomorrow 
+   ≡ All tasks         15  │  1 ▎☐ ⚑ Review pull requests for auth r space     work                 
+   ▦ Calendar              │  FRI 8 MAY  1  ──────────────────────── tags      @laptop              
+   ⌕ Search             /  │  2  ☐ ⚑ Call dentist to reschedule clea                                
+                           │  LATER  4  ──────────────────────────── RAW                            
+  SPACES                   │  3  ☐ Migrate analytics to new pipeline                                
+   ● work               4  │  4  ☐ Pay rent  ◷ by fri 15 may   ↻ eve (B) 2026-05-02 Review pull     
+   ● health             3  │  5  ☐ ⚑ Renew passport before summer tr requests for auth refactor     
+   ● finance            2  │  6  ☐ ⚑ Pay quarterly estimated taxes   +work @laptop due:2026-05-07   
+   ● home               1  │                                                                        
+   ● learning           1  │                                                                        
+   ● personal           1  │                                                                        
+   ● travel             1  │                                                                        
+                           │                                                                        
+  FILTERS                  │                                                                        
+   ⚑ High priority      2  │                                                                        
+   ★ Starred            0  │                                                                        
+   ◷ Overdue            7  │                                                                        
+                           │                                                                        
+                           │                                                                        
+                           │                                                                        
+                           │                                                                        
+                           │                                                                        
+ ╭───────────────────────╮ │                                                                        
+ │  Y  you ● file        │ │                                                                        
+ ╰───────────────────────╯ │                                                                        
+                           │                                                                        
+   ● normal     x done · e edit · r reschedule · Tab sidebar                                 ␣ menu

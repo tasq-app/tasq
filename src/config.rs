@@ -60,6 +60,9 @@ pub struct Config {
     /// terminal, e.g. JetBrainsMono Nerd Font); anything else, or unset,
     /// plain Unicode. Serialized as `icons = nerd`.
     pub icons: Option<String>,
+    /// Short hints for what's selected at the bottom (`hints = false` hides
+    /// them). On by default.
+    pub hints: Option<bool>,
 }
 
 impl Config {
@@ -183,6 +186,7 @@ fn parse(s: &str) -> Config {
             "week_start" => c.week_start = v.parse().ok(),
             "recurrence_builder" => c.recurrence_builder = parse_bool(v),
             "icons" => c.icons = Some(v.trim().to_ascii_lowercase()),
+            "hints" => c.hints = parse_bool(v),
             // Saved searches: `filter.<name> = <query>`. The name is the
             // (trimmed) text after the `filter.` prefix; the query is the
             // (unquoted) value, which may itself contain `=`. A repeated
@@ -261,6 +265,9 @@ fn serialize(c: &Config) -> String {
     if let Some(v) = &c.icons {
         let _ = writeln!(out, "icons = {v}");
     }
+    if let Some(v) = c.hints {
+        let _ = writeln!(out, "hints = {v}");
+    }
     out
 }
 
@@ -299,6 +306,7 @@ mod tests {
             show_done: Some(true),
             show_future: Some(true),
             share_token: Some("a".repeat(64)),
+            hints: Some(false),
             share_port: Some(18080),
             filters: vec![
                 ("weekly".into(), "report".into()),
@@ -461,6 +469,7 @@ mod tests {
             show_done: Some(true),
             show_future: Some(false),
             share_token: None,
+            hints: None,
             share_port: None,
             filters: vec![("errand".into(), "@errand".into())],
             notes_dir: Some("/tmp/notes".into()),
