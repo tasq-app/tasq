@@ -179,6 +179,11 @@ pub const ENTRIES: &[PaletteEntry] = &[
         dispatch: PaletteDispatch::Global(Action::GoNotes),
     },
     PaletteEntry {
+        label: "search tasks, notes and spaces",
+        keys: "Ctrl-K",
+        dispatch: PaletteDispatch::Global(Action::SearchAll),
+    },
+    PaletteEntry {
         label: "go to trash",
         keys: "",
         dispatch: PaletteDispatch::Global(Action::GoTrash),
@@ -195,8 +200,18 @@ pub const ENTRIES: &[PaletteEntry] = &[
     },
     PaletteEntry {
         label: "focus timer: stop",
-        keys: "",
+        keys: "Ctrl-X",
         dispatch: PaletteDispatch::Global(Action::PomodoroStop),
+    },
+    PaletteEntry {
+        label: "details pane narrower",
+        keys: "{",
+        dispatch: PaletteDispatch::Global(Action::NarrowDetails),
+    },
+    PaletteEntry {
+        label: "details pane wider",
+        keys: "}",
+        dispatch: PaletteDispatch::Global(Action::WidenDetails),
     },
     PaletteEntry {
         label: "go to inbox",
@@ -796,9 +811,12 @@ mod tests {
             Action::GoInbox,
             Action::GoNotes,
             Action::GoTrash,
+            Action::SearchAll,
             Action::Pomodoro,
             Action::PomodoroBreak,
             Action::PomodoroStop,
+            Action::NarrowDetails,
+            Action::WidenDetails,
             Action::PickProject,
             Action::PickContext,
             Action::CycleSort,

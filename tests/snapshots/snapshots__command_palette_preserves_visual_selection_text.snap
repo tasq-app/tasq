@@ -11,7 +11,7 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming       ╭ tasq · command ──────────────────────────────────────────╮aptop               
    ▦ Calendar       │ > █                                                      │                    
    ✎ Notes          │──────────────────────────────────────────────────────────│                    
-   ⌕ Search         │ ▶ new task                                             n │                    
+   ⌕ Search        ^│ ▶ new task                                             n │                    
                     │   edit current task (normal mode)                      e │                    
   SPACES            │   edit current task (insert mode)                      i │                    
    ● work           │   toggle complete                                      x │                    

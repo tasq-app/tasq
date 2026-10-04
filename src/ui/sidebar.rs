@@ -25,7 +25,19 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         height: area.height,
     };
     let mut own = Buffer::empty(full);
-    draw(&mut own, full, app);
+    let placed = draw(&mut own, full, app);
+    // Each row is a place to click, as far as it shows.
+    for (y, item) in placed {
+        app.hits.add(
+            Rect {
+                x: area.x,
+                y: area.y + y,
+                width: area.width.min(SIDEBAR_W),
+                height: 1,
+            },
+            crate::app::Hit::Nav(item),
+        );
+    }
     // Copy in the part that's open, its right edge sliding.
     let buf = frame.buffer_mut();
     for y in 0..area.height {
@@ -75,7 +87,9 @@ fn icon(item: &NavItem, app: &App, theme: &Theme) -> (String, Color) {
     }
 }
 
-fn draw(buf: &mut Buffer, r: Rect, app: &App) {
+/// Draw the sidebar; returns which row went where.
+fn draw(buf: &mut Buffer, r: Rect, app: &App) -> Vec<(u16, NavItem)> {
+    let mut placed = Vec::new();
     let theme = app.theme();
     let bg = Style::default().bg(theme.panel).fg(theme.fg);
     for y in r.top()..r.bottom() {
@@ -139,10 +153,12 @@ fn draw(buf: &mut Buffer, r: Rect, app: &App) {
             break;
         }
         draw_row(buf, r, y, row, app, theme, active.as_ref(), i);
+        placed.push((y, row.item.clone()));
         y += 1;
     }
 
     profile_card(buf, r, app, theme);
+    placed
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -200,7 +216,7 @@ fn draw_row(
     let label = fit(&row.label, usize::from(label_w));
     put(buf, x + 2, y, &label, label_w, text_style);
     let hint = match row.item {
-        NavItem::Search => Some("/"),
+        NavItem::Search => Some("^K"),
         _ => None,
     };
     if let Some(c) = count.as_deref().or(hint) {

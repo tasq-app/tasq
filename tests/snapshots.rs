@@ -43,6 +43,14 @@ const FIXTURE_PATH: &str = "/tmp/tasq-snapshot.txt";
 /// the snapshot and break on any other machine (CI included).
 const FIXTURE_CONFIG_PATH: &str = "/tmp/tasq-snapshot.toml";
 
+/// The default config, on every task (a snapshot picks its own view).
+fn all_tasks_cfg() -> Config {
+    Config {
+        view: Some(Scope::All),
+        ..Config::default()
+    }
+}
+
 fn make_app() -> App {
     // Seed the fixture file on disk so any snapshot test that exercises a
     // mutation (which calls `check_external_changes` and compares disk vs
@@ -54,7 +62,7 @@ fn make_app() -> App {
         PathBuf::from(FIXTURE_PATH),
         sample::TODO_RAW.to_string(),
         "2026-05-06".to_string(),
-        Config::default(),
+        all_tasks_cfg(),
     );
     app.user_name = "you".to_string();
     // Pinned so the snapshots don't change with every release.
@@ -287,7 +295,7 @@ fn calendar_day() {
         PathBuf::from(FIXTURE_PATH),
         body,
         "2026-05-06".to_string(),
-        Config::default(),
+        all_tasks_cfg(),
     );
     app.user_name = "you".to_string();
     app.version_label = "tasq 0.0.0".to_string();
@@ -310,7 +318,7 @@ fn calendar_week() {
         PathBuf::from(FIXTURE_PATH),
         body,
         "2026-05-06".to_string(),
-        Config::default(),
+        all_tasks_cfg(),
     );
     app.user_name = "you".to_string();
     app.version_label = "tasq 0.0.0".to_string();
@@ -334,7 +342,7 @@ fn calendar_month() {
         PathBuf::from(FIXTURE_PATH),
         body,
         "2026-05-06".to_string(),
-        Config::default(),
+        all_tasks_cfg(),
     );
     app.user_name = "you".to_string();
     app.version_label = "tasq 0.0.0".to_string();
@@ -375,7 +383,7 @@ fn list_sidebar_empty_hints() {
         PathBuf::from(FIXTURE_PATH),
         body.to_string(),
         "2026-05-06".to_string(),
-        Config::default(),
+        all_tasks_cfg(),
     );
     app.user_name = "you".to_string();
     // Pinned so the snapshots don't change with every release.
@@ -539,7 +547,7 @@ fn empty_state() {
         PathBuf::from(FIXTURE_PATH),
         String::new(),
         "2026-05-06".to_string(),
-        Config::default(),
+        all_tasks_cfg(),
     );
     app.user_name = "you".to_string();
     // Pinned so the snapshots don't change with every release.
@@ -557,7 +565,7 @@ fn welcome_overlay() {
         PathBuf::from(FIXTURE_PATH),
         String::new(),
         "2026-05-06".to_string(),
-        Config::default(),
+        all_tasks_cfg(),
     );
     app.user_name = "you".to_string();
     // Pinned so the snapshots don't change with every release.
@@ -575,7 +583,7 @@ fn welcome_overlay_hides_empty_state_card() {
         PathBuf::from(FIXTURE_PATH),
         String::new(),
         "2026-05-06".to_string(),
-        Config::default(),
+        all_tasks_cfg(),
     );
     app.user_name = "you".to_string();
     // Pinned so the snapshots don't change with every release.
@@ -627,7 +635,7 @@ fn list_scrolls_to_keep_cursor_visible_when_below_fold() {
         PathBuf::from(FIXTURE_PATH),
         many_tasks_body(50),
         "2026-05-06".to_string(),
-        Config::default(),
+        all_tasks_cfg(),
     );
     app.user_name = "you".to_string();
     // Pinned so the snapshots don't change with every release.

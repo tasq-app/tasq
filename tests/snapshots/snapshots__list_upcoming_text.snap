@@ -11,7 +11,7 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming       6  │▎ ☐ ⚑ Review pull requests for auth refact│  priority ⚑ medium              
    ▦ Calendar          │  FRI 8 MAY ──────────────────────────────│  tags     @laptop               
    ✎ Notes             │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
-   ⌕ Search         /  │  LATER ──────────────────────────────────│                                 
+   ⌕ Search        ^K  │  LATER ──────────────────────────────────│                                 
                        │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
   SPACES               │  ☐ Pay rent  ◷ by fri 15 may   ↻ every mo│                                 
    ● work           4  │  ☐ ⚑ Renew passport before summer trip  ◷│                                 

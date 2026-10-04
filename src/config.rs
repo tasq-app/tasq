@@ -66,6 +66,11 @@ pub struct Config {
     pub start: Option<String>,
     /// Which look the file was last saved under (5: the redesign).
     pub design: Option<u32>,
+    /// Clicks and the wheel (`mouse = false` leaves the mouse to the
+    /// terminal, to select text).
+    pub mouse: Option<bool>,
+    /// Width of the details pane, in columns.
+    pub details_width: Option<u16>,
     pub hints: Option<bool>,
 }
 
@@ -193,6 +198,8 @@ fn parse(s: &str) -> Config {
             "hints" => c.hints = parse_bool(v),
             "start" => c.start = Some(v.to_string()),
             "design" => c.design = v.parse().ok(),
+            "mouse" => c.mouse = parse_bool(v),
+            "details_width" => c.details_width = v.parse().ok(),
             // Saved searches: `filter.<name> = <query>`. The name is the
             // (trimmed) text after the `filter.` prefix; the query is the
             // (unquoted) value, which may itself contain `=`. A repeated
@@ -271,6 +278,12 @@ fn serialize(c: &Config) -> String {
     if let Some(v) = &c.icons {
         let _ = writeln!(out, "icons = {v}");
     }
+    if let Some(v) = c.mouse {
+        let _ = writeln!(out, "mouse = {v}");
+    }
+    if let Some(v) = c.details_width {
+        let _ = writeln!(out, "details_width = {v}");
+    }
     if let Some(v) = c.design {
         let _ = writeln!(out, "design = {v}");
     }
@@ -321,6 +334,8 @@ mod tests {
             hints: Some(false),
             start: Some("list".into()),
             design: Some(5),
+            mouse: None,
+            details_width: None,
             share_port: Some(18080),
             filters: vec![
                 ("weekly".into(), "report".into()),
@@ -486,6 +501,8 @@ mod tests {
             hints: None,
             start: None,
             design: None,
+            mouse: None,
+            details_width: None,
             share_port: None,
             filters: vec![("errand".into(), "@errand".into())],
             notes_dir: Some("/tmp/notes".into()),

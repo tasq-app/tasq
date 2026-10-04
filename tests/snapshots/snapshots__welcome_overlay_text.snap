@@ -10,7 +10,7 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming       0  │                                          │                                 
    ▦ Calendar          │                                          │                                 
    ✎ Notes             │                                          │                                 
-   ⌕ Search         / ╭ tasq · welcome ──────────────────────────────────────╮                      
+   ⌕ Search        ^K ╭ tasq · welcome ──────────────────────────────────────╮                      
                       │                    ██          ██                    │                      
   FILTERS             │                    ████  ██  ████                    │                      
    ⚑ High priority  0 │                    ██████████████                    │                      

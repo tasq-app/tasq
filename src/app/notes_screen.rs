@@ -17,6 +17,10 @@ pub struct NotesScreen {
     pub cursor: usize,
     /// How far the preview is scrolled.
     pub scroll: u16,
+    /// Which search hit in the note `n` / `N` are on.
+    pub hit: Option<usize>,
+    /// The note open in the built-in editor (vim keys, `:w` `:q` `:wq`).
+    pub editor: Option<crate::app::NoteEditorState>,
 }
 
 /// A note in the list.
@@ -111,6 +115,7 @@ impl App {
                 s.cursor.saturating_sub(1)
             };
             s.scroll = 0;
+            s.hit = None;
         }
     }
 
@@ -121,6 +126,7 @@ impl App {
             } else {
                 s.scroll.saturating_sub(3)
             };
+            s.hit = None;
         }
     }
 
@@ -139,7 +145,31 @@ impl App {
         }
     }
 
-    /// `e`: open the selected note in `$EDITOR`.
+    /// `Enter` / `e`: open the selected note in the built-in editor.
+    pub fn notes_screen_open_editor(&mut self) {
+        let Some(e) = self.current_note_entry() else {
+            return;
+        };
+        let editor = crate::app::NoteEditorState::load(e.path, crate::app::NoteEditorMode::Normal);
+        if let Some(s) = self.notes_screen.as_mut() {
+            s.editor = Some(editor);
+        }
+    }
+
+    /// `n` / `N`: the next (or previous) search hit in the note.
+    pub fn notes_screen_next_hit(&mut self, forward: bool) {
+        if let Some(s) = self.notes_screen.as_mut()
+            && !s.query.trim().is_empty()
+        {
+            s.hit = Some(match (s.hit, forward) {
+                (None, _) => 0,
+                (Some(h), true) => h + 1,
+                (Some(h), false) => h.saturating_sub(1),
+            });
+        }
+    }
+
+    /// `E`: open the selected note in `$EDITOR`.
     pub fn notes_screen_edit(&mut self) {
         if let Some(e) = self.current_note_entry() {
             self.queue_editor_path(e.path);

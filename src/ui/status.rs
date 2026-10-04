@@ -38,6 +38,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         Mode::Notes => "NOTES".into(),
         Mode::Menu => "MENU".into(),
         Mode::Filters => "FILTER".into(),
+        Mode::SearchAll => "SEARCH".into(),
     };
     // The focused note editor's own sub-mode wins over `app.mode`: a pinned
     // note keeps `app.mode == Mode::Normal` while it has focus, which used
@@ -111,12 +112,13 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             Mode::PickContext => "j/k or ↑↓ cycle contexts · r rename · Enter keep · Esc clear",
             Mode::PickSavedFilter => "j/k or ↑↓ cycle filters · Enter keep · Esc revert",
             Mode::PromptSaveFilter => "type a filter name · Enter save · Esc cancel",
-            Mode::PromptChecklist => "type an item · Enter add · Esc cancel",
+            Mode::PromptChecklist => "Enter add · Esc done",
             Mode::CommandPalette => "type to filter · Enter run · Esc cancel",
             Mode::Share => "scan the QR · any key dismisses",
             Mode::Welcome => "c create ./todo.txt · s open sample · q quit",
             // With an editor open, the focused-editor branch above wins.
             Mode::Menu => "press a key · Esc close",
+            Mode::SearchAll => "type to search · ↑↓ move · Enter go · Esc close",
             Mode::Filters => "type to search · ↑↓ move · Enter add/remove · ⌫ drop last · Esc close",
             Mode::Notes => {
                 "j/k navigate · e/i edit · p preview · z zoom · n new · r rename · d delete · u unlink · ? help · Esc close"
@@ -155,7 +157,14 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     }
     if app.home && app.mode == Mode::Normal && !app.sidebar_focus {
         hint = if app.prefs.hints {
-            "n new task · i inbox · Enter today · Tab sidebar".into()
+            match app.home_sel {
+                Some(crate::app::HomeSel { tile: 0, .. }) => "Enter add a task · Tab next".into(),
+                Some(crate::app::HomeSel { item: Some(_), .. }) => {
+                    "Enter open · x done · ↑↓ move · Esc back".into()
+                }
+                Some(_) => "Enter open · ←→↑↓ tiles · Tab next · Esc back".into(),
+                None => "n new task · Tab pick a tile · i inbox · Enter today".into(),
+            }
         } else {
             "".into()
         };
@@ -164,13 +173,13 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     if let Some(ns) = app
         .notes_screen
         .as_ref()
-        .filter(|_| app.mode == Mode::Normal)
+        .filter(|s| app.mode == Mode::Normal && s.editor.is_none())
         && !app.sidebar_focus
     {
         hint = if ns.searching {
             "type to search · Enter done · Esc clear".into()
         } else if app.prefs.hints {
-            "/ search · e edit · p pin · Enter its task · J/K scroll · Esc list".into()
+            "Enter edit · / search · n next hit · E $EDITOR · p pin · t its task".into()
         } else {
             "".into()
         };
@@ -253,7 +262,13 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             format!("  {} selected", app.selection.len()),
             bg.fg(theme.accent),
         ));
-    } else if app.mode == Mode::Normal && !app.home && app.calendar.is_none() {
+    } else if app.mode == Mode::Normal
+        && !app.home
+        && app.calendar.is_none()
+        && app.notes_screen.is_none()
+        && app.trash_screen.is_none()
+        && editor_mode.is_none()
+    {
         left.push(Span::styled(
             format!("  {}", where_you_are(app)),
             bg.fg(theme.dim),

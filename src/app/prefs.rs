@@ -51,7 +51,14 @@ pub struct Prefs {
     pub hints: bool,
     /// Open on Home (`start = "home"`, the default) or the list.
     pub start_home: bool,
+    /// Width of the details pane, in columns (`{` / `}` or drag its edge).
+    pub details_w: u16,
 }
+
+/// The details pane's width: by default, and how narrow or wide it goes.
+pub const DETAILS_W: u16 = 34;
+pub const DETAILS_MIN: u16 = 24;
+pub const DETAILS_MAX: u16 = 100;
 
 /// The look this build saves its config under.
 const DESIGN: u32 = 5;
@@ -76,7 +83,7 @@ impl Prefs {
             theme_idx,
             density: cfg.density.unwrap_or(Density::Comfortable),
             sort: cfg.sort.unwrap_or(Sort::Priority),
-            scope: cfg.view.unwrap_or_default(),
+            scope: cfg.view.unwrap_or(Scope::Today),
             layout: Layout {
                 left: cfg.show_left.unwrap_or(true),
                 right: cfg.show_right.unwrap_or(true),
@@ -91,6 +98,10 @@ impl Prefs {
             nerd_icons: cfg.icons.as_deref() == Some("nerd"),
             hints: cfg.hints.unwrap_or(true),
             start_home: cfg.start.as_deref() == Some("home"),
+            details_w: cfg
+                .details_width
+                .unwrap_or(DETAILS_W)
+                .clamp(DETAILS_MIN, DETAILS_MAX),
         }
     }
 
@@ -191,6 +202,7 @@ impl Prefs {
         cfg.icons = Some(if self.nerd_icons { "nerd" } else { "unicode" }.to_string());
         cfg.hints = Some(self.hints);
         cfg.design = Some(DESIGN);
+        cfg.details_width = Some(self.details_w);
         cfg.start = Some(if self.start_home { "home" } else { "list" }.to_string());
         cfg.save()
     }

@@ -11,7 +11,7 @@ use ratatui::style::{Modifier, Style};
 use crate::app::{App, Phase};
 
 /// Rows the card takes.
-pub const H: u16 = 4;
+pub const H: u16 = 5;
 const W: u16 = 40;
 
 /// Draw the timer if it runs; returns the rows it took from the top.
@@ -107,6 +107,13 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App, top: u16) -> u16 {
         line
     };
     put(buf, x + 4, y + 2, &text, room, bg.fg(theme.status_fg));
+    // Its keys, quietly.
+    let keys = if p.paused() {
+        "P resume · ^X stop"
+    } else {
+        "P pause · ^X stop · ␣tb break"
+    };
+    put(buf, x + 4, y + 3, keys, room, bg.fg(theme.dim));
     H
 }
 

@@ -24,6 +24,7 @@ mod flash;
 mod home;
 mod live_add;
 mod menu;
+mod mouse;
 mod mutations;
 mod note_editor;
 mod notes_popup;
@@ -35,6 +36,7 @@ mod pomodoro;
 mod prefs;
 mod routines;
 mod saved;
+mod search_all;
 mod selection;
 mod settings;
 mod sidebar;
@@ -61,9 +63,10 @@ pub use draft_overlay::{
 };
 pub use filter_pop::{DUE_TERMS, FilterPop, PopPick, PopRow};
 pub use flash::Flash;
-pub use home::{HeatDay, RecentNote};
+pub use home::{HOME_TILES, HeatDay, HomeItem, HomeSel, RecentNote};
 pub use live_add::{CHIP_ORDER, Chip, describe_rec};
 pub use menu::{MenuDo, MenuEntry, entries as menu_entries};
+pub use mouse::{Hit, Hits};
 pub use note_editor::{
     EditorKey, NormalOutcome, NoteCommandResult, NoteEditorMode, NoteEditorState, Register,
     UNSAVED_WARNING, VisualSelection, wrap_indent,
@@ -72,8 +75,9 @@ pub use notes_popup::{NotePromptKind, NotesPopupState};
 pub use notes_screen::{NoteEntry, NotesScreen};
 pub use palette::{CommandPaletteState, NotesEntryAction, PaletteDispatch};
 pub use pomodoro::{BREAK, FOCUS, Phase, Pomodoro};
-pub use prefs::{Layout, Prefs};
+pub use prefs::{DETAILS_W, Layout, Prefs};
 pub use routines::{DayMark, Routine};
+pub use search_all::{Found, FoundRow, SearchAll};
 pub use selection::Selection;
 pub use settings::{SECTIONS as SETTINGS_SECTIONS, SetKey, SetRow, SettingsState};
 pub use sidebar::{NavItem, NavRow, SIDEBAR_SLIDE, SIDEBAR_W};
@@ -147,6 +151,16 @@ pub struct App {
     pub inspector_focus: bool,
     /// The Home screen is up.
     pub home: bool,
+    /// What Home's keyboard is on.
+    pub home_sel: Option<HomeSel>,
+    /// What a click can land on, as last drawn.
+    pub hits: Hits,
+    /// The Search window's box and cursor.
+    pub search_all: SearchAll,
+    /// The inspector's edge is being dragged.
+    pub resizing: bool,
+    /// The screen's width, as last drawn.
+    pub screen_w: std::cell::Cell<u16>,
     /// The Notes screen, when it's up.
     pub notes_screen: Option<NotesScreen>,
     /// The Trash screen, when it's up.
@@ -326,6 +340,11 @@ impl App {
             sidebar_focus: false,
             inspector_focus: false,
             home: false,
+            home_sel: None,
+            hits: Hits::default(),
+            search_all: SearchAll::default(),
+            resizing: false,
+            screen_w: std::cell::Cell::new(0),
             notes_screen: None,
             trash_screen: None,
             settings: SettingsState::default(),

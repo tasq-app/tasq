@@ -83,7 +83,7 @@ impl App {
                 self.toast(
                     ToastKind::Info,
                     "Focus",
-                    Some("25 min · P pauses".into()),
+                    Some("25 min · P pauses · ^X stops".into()),
                     "focus",
                 );
             }

@@ -11,7 +11,7 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming       6  │▎ ☐ ⚑ Finish Q2 board deck  ◷ due today   │  tags     @laptop               
    ▦ Calendar          │  PRIORITY B ─────────────────────────────│                                 
    ✎ Notes             │  ☐ ⚑ Review pull requests for auth refact│                                 
-   ⌕ Search         /  │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
+   ⌕ Search        ^K  │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
                        │  NO PRIORITY ────────────────────────────│                                 
   SPACES               │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
    ● work           4  │                                          │                                 

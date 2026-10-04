@@ -329,7 +329,20 @@ impl App {
     /// whichever note has one, else to `checklist.md`, creating the task's
     /// notes folder (and linking it) if it has none yet.
     pub fn add_check_item(&mut self, text: &str) {
-        let text = text.trim();
+        // A pasted list keeps its bullets out: "- [ ] a", "* b", "• c", "1. d".
+        let mut text = text.trim();
+        for prefix in ["- [ ] ", "- [x] ", "- [X] ", "- ", "* ", "• "] {
+            if let Some(rest) = text.strip_prefix(prefix) {
+                text = rest.trim();
+                break;
+            }
+        }
+        if let Some((n, rest)) = text.split_once(". ")
+            && !n.is_empty()
+            && n.chars().all(|c| c.is_ascii_digit())
+        {
+            text = rest.trim();
+        }
         if text.is_empty() {
             return;
         }

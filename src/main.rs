@@ -288,6 +288,9 @@ fn run(
                     handle_paste(app, &text, keybinds);
                     dirty = true;
                 }
+                Event::Mouse(m) if handle_mouse(app, m) => {
+                    dirty = true;
+                }
                 // A terminal resize must trigger an immediate redraw;
                 // otherwise the screen stays stale until the next keystroke.
                 Event::Resize(_, _) => {
@@ -369,10 +372,18 @@ fn poll_config_reload(app: &mut App, rx: &Option<mpsc::Receiver<()>>) -> bool {
 /// rather than each newline acting as a list-continuing Enter.
 fn enable_bracketed_paste() {
     let _ = crossterm::execute!(io::stdout(), crossterm::event::EnableBracketedPaste);
+    // Clicks and the wheel, unless `mouse = false` (to select text with it).
+    if tasq::config::Config::load().mouse != Some(false) {
+        let _ = crossterm::execute!(io::stdout(), crossterm::event::EnableMouseCapture);
+    }
 }
 
 fn disable_bracketed_paste() {
-    let _ = crossterm::execute!(io::stdout(), crossterm::event::DisableBracketedPaste);
+    let _ = crossterm::execute!(
+        io::stdout(),
+        crossterm::event::DisableBracketedPaste,
+        crossterm::event::DisableMouseCapture
+    );
 }
 
 /// A bracketed paste. Into a note editor in Insert mode it goes in verbatim;
@@ -380,7 +391,9 @@ fn disable_bracketed_paste() {
 /// bracketed paste, so pasting into the task dialog, search, prompts… works
 /// exactly as before.
 fn handle_paste(app: &mut App, text: &str, keybinds: &KeyBindings) {
-    let insert_editor = if app.pinned_focus {
+    let insert_editor = if let Some(e) = app.notes_screen.as_mut().and_then(|s| s.editor.as_mut()) {
+        Some(e)
+    } else if app.pinned_focus {
         app.active_pinned_note_mut()
     } else if app.mode == Mode::Notes {
         app.notes_popup.active_editor.as_mut()
@@ -393,6 +406,23 @@ fn handle_paste(app: &mut App, text: &str, keybinds: &KeyBindings) {
         editor.insert_text(text);
         return;
     }
+    // A pasted list goes in item by item.
+    if app.mode == Mode::PromptChecklist && text.contains('\n') {
+        let typed = app.draft.text().to_string();
+        app.draft_clear();
+        for (i, line) in text.lines().enumerate() {
+            let line = if i == 0 {
+                format!("{typed}{line}")
+            } else {
+                line.to_string()
+            };
+            if !line.trim().is_empty() {
+                app.add_check_item(&line);
+            }
+        }
+        app.mode = Mode::PromptChecklist;
+        return;
+    }
     for c in text.chars() {
         let code = match c {
             '\n' | '\r' => KeyCode::Enter,
@@ -401,6 +431,38 @@ fn handle_paste(app: &mut App, text: &str, keybinds: &KeyBindings) {
         };
         handle_key(app, KeyEvent::new(code, KeyModifiers::NONE), keybinds);
     }
+}
+
+/// A click, a drag or the wheel. Only in the list's own modes; dialogs
+/// keep to the keyboard. True when something changed.
+fn handle_mouse(app: &mut App, m: crossterm::event::MouseEvent) -> bool {
+    use crossterm::event::{MouseButton, MouseEventKind};
+    if !matches!(app.mode, Mode::Normal) {
+        return false;
+    }
+    app.notes_cache.clear();
+    let action = match m.kind {
+        MouseEventKind::Down(MouseButton::Left) => app.click(m.column, m.row),
+        MouseEventKind::Drag(MouseButton::Left) if app.resizing => {
+            app.drag_details_to(m.column);
+            None
+        }
+        MouseEventKind::Up(MouseButton::Left) => {
+            if app.resizing {
+                app.resizing = false;
+                app.save_prefs();
+            }
+            None
+        }
+        MouseEventKind::ScrollDown => app.wheel(true),
+        MouseEventKind::ScrollUp => app.wheel(false),
+        _ => return false,
+    };
+    if let Some(a) = action {
+        apply_action(app, a);
+    }
+    app.clamp_cursor();
+    true
 }
 
 fn open_path_in_editor(path: &std::path::Path) -> Result<()> {
@@ -531,6 +593,7 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::Welcome => handle_welcome(app, key),
         Mode::Menu => handle_menu(app, key),
         Mode::Filters => handle_filters(app, key),
+        Mode::SearchAll => handle_search_all(app, key),
         Mode::Normal if app.sidebar_focus => handle_sidebar(app, key, keybinds),
         Mode::Normal if app.inspector_focus => handle_inspector(app, key, keybinds),
         Mode::Normal if app.home => handle_home(app, key, keybinds),
@@ -573,6 +636,22 @@ fn handle_inspector(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     }
 }
 
+/// Keys in the Search window: type, move, go.
+fn handle_search_all(app: &mut App, key: KeyEvent) {
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+    match key.code {
+        KeyCode::Esc => app.close_search_all(),
+        KeyCode::Enter => app.search_all_go(),
+        KeyCode::Down | KeyCode::Tab => app.search_all_move(true),
+        KeyCode::Up | KeyCode::BackTab => app.search_all_move(false),
+        KeyCode::Char('n' | 'j') if ctrl => app.search_all_move(true),
+        KeyCode::Char('p' | 'k') if ctrl => app.search_all_move(false),
+        KeyCode::Backspace => app.search_all_backspace(),
+        KeyCode::Char(c) if !ctrl => app.search_all_type(c),
+        _ => {}
+    }
+}
+
 /// Keys in the "+ filter" popover: type to search, move, pick, close.
 fn handle_filters(app: &mut App, key: KeyEvent) {
     let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
@@ -592,7 +671,22 @@ fn handle_filters(app: &mut App, key: KeyEvent) {
 /// Keys on Home: `Enter` or `Esc` goes to Today, `i` to the inbox; the
 /// rest are the list's keys (`n` adds, `␣` opens the menu…).
 fn handle_home(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    let picked = app.home_sel.is_some();
     match key.code {
+        KeyCode::Tab => app.home_tab(true),
+        KeyCode::BackTab => app.home_tab(false),
+        KeyCode::Left | KeyCode::Char('h') if picked => app.home_arrow(-1, 0),
+        KeyCode::Right | KeyCode::Char('l') if picked => app.home_arrow(1, 0),
+        KeyCode::Up | KeyCode::Char('k') if picked => app.home_arrow(0, -1),
+        KeyCode::Down | KeyCode::Char('j') if picked => app.home_arrow(0, 1),
+        KeyCode::Down | KeyCode::Char('j') | KeyCode::Right => app.home_arrow(0, 0),
+        KeyCode::Char('x') if picked => app.home_toggle(),
+        KeyCode::Enter if picked => {
+            if let Some(a) = app.home_enter() {
+                apply_action(app, a);
+            }
+        }
+        KeyCode::Esc if app.home_back() => {}
         KeyCode::Enter | KeyCode::Esc => app.close_home(),
         KeyCode::Char('i') => app.open_inbox(),
         _ => handle_normal(app, key, keybinds),
@@ -603,6 +697,24 @@ fn handle_home(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
 /// the preview, `e` edits in `$EDITOR`, `p` pins it beside the list,
 /// `Enter` goes to its task, `Esc` back to the list.
 fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    // The note open in the built-in editor takes every key.
+    if let Some(editor) = app.notes_screen.as_mut().and_then(|s| s.editor.as_mut()) {
+        let signal = match editor.mode() {
+            NoteEditorMode::Insert => handle_note_editor_insert(editor, key),
+            _ => handle_note_editor_normal(editor, key),
+        };
+        match signal {
+            NoteEditorSignal::Handled => {}
+            NoteEditorSignal::SaveFailed(msg) => app.flash(msg),
+            NoteEditorSignal::OpenExternal(path) => app.queue_editor_path(path),
+            NoteEditorSignal::Esc | NoteEditorSignal::CloseRequested => {
+                if let Some(s) = app.notes_screen.as_mut() {
+                    s.editor = None;
+                }
+            }
+        }
+        return;
+    }
     let searching = app.notes_screen.as_ref().is_some_and(|s| s.searching);
     if searching {
         match key.code {
@@ -634,9 +746,14 @@ fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Char('k') | KeyCode::Up => app.notes_screen_move(false),
         KeyCode::Char('J') | KeyCode::PageDown => app.notes_screen_scroll(true),
         KeyCode::Char('K') | KeyCode::PageUp => app.notes_screen_scroll(false),
-        KeyCode::Char('e') => app.notes_screen_edit(),
+        KeyCode::Enter | KeyCode::Char('e' | 'l') | KeyCode::Right => {
+            app.notes_screen_open_editor();
+        }
+        KeyCode::Char('E') => app.notes_screen_edit(),
+        KeyCode::Char('n') => app.notes_screen_next_hit(true),
+        KeyCode::Char('N') => app.notes_screen_next_hit(false),
         KeyCode::Char('p') => app.notes_screen_pin(),
-        KeyCode::Enter => app.notes_screen_open_task(),
+        KeyCode::Char('t') => app.notes_screen_open_task(),
         _ => handle_normal(app, key, keybinds),
     }
 }
@@ -680,7 +797,7 @@ fn handle_sidebar(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
                 app.sidebar_open(&item);
                 app.sidebar_focus = false;
                 if item == tasq::app::NavItem::Search {
-                    apply_action(app, Action::BeginSearch);
+                    apply_action(app, Action::SearchAll);
                 }
             }
         }
@@ -1861,6 +1978,19 @@ fn handle_prompt(app: &mut App, key: KeyEvent) {
         }
     }
 
+    // The checklist prompt stays open: each Enter adds an item, an empty
+    // one (or Esc) is done.
+    if app.mode == Mode::PromptChecklist && key.code == KeyCode::Enter {
+        let value = app.draft.text().trim().to_string();
+        app.draft_clear();
+        if value.is_empty() {
+            app.mode = Mode::Normal;
+        } else {
+            app.add_check_item(&value);
+            app.mode = Mode::PromptChecklist;
+        }
+        return;
+    }
     match key.code {
         KeyCode::Esc => {
             app.mode = Mode::Normal;
@@ -1914,6 +2044,8 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
             KeyCode::Char('d') => Some(Action::HalfPageDown),
             KeyCode::Char('u') => Some(Action::HalfPageUp),
             KeyCode::Char('p') => Some(Action::OpenCommandPalette),
+            KeyCode::Char('k' | 'f') => Some(Action::SearchAll),
+            KeyCode::Char('x') => Some(Action::PomodoroStop),
             _ => None,
         };
     }
@@ -1993,6 +2125,8 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('S') => Action::CycleSort,
         KeyCode::Char('+') => Action::BeginPromptProject,
         KeyCode::Char('[') => Action::ToggleLeftPane,
+        KeyCode::Char('{') => Action::NarrowDetails,
+        KeyCode::Char('}') => Action::WidenDetails,
         KeyCode::Char(']') => Action::ToggleRightPane,
         KeyCode::Char('T') => Action::OpenThemePicker,
         KeyCode::Char('D') => Action::CycleDensity,
@@ -2196,9 +2330,12 @@ fn apply_action(app: &mut App, action: Action) {
         Action::GoInbox => app.open_inbox(),
         Action::GoNotes => app.open_notes_screen(),
         Action::GoTrash => app.open_trash(),
+        Action::SearchAll => app.open_search_all(),
         Action::Pomodoro => app.pomodoro_toggle(),
         Action::PomodoroBreak => app.pomodoro_break(),
         Action::PomodoroStop => app.pomodoro_stop(),
+        Action::NarrowDetails => app.resize_details(false),
+        Action::WidenDetails => app.resize_details(true),
         Action::PickProject => app.enter_pick_project(),
         Action::PickContext => app.enter_pick_context(),
         Action::PickSavedFilter => app.enter_pick_saved(),
@@ -2373,6 +2510,14 @@ fn copy_payload(app: &App, body_only: bool) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    /// The default config, on every task (tests don't start on Today).
+    fn test_cfg() -> Config {
+        Config {
+            view: Some(tasq::app::Scope::All),
+            ..Config::default()
+        }
+    }
+
     use super::*;
     use chrono::NaiveDate;
     use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -2406,12 +2551,7 @@ mod tests {
             std::thread::current().id()
         ));
         let _ = std::fs::remove_file(&path);
-        let mut app = App::new(
-            path.clone(),
-            String::new(),
-            "2026-05-07".into(),
-            Config::default(),
-        );
+        let mut app = App::new(path.clone(), String::new(), "2026-05-07".into(), test_cfg());
         app.mode = Mode::Welcome;
         (app, path)
     }
@@ -2545,12 +2685,7 @@ mod tests {
             std::thread::current().id()
         ));
         let _ = std::fs::write(&path, "a\nb\nc\n");
-        App::new(
-            path,
-            "a\nb\nc\n".into(),
-            "2026-05-07".into(),
-            Config::default(),
-        )
+        App::new(path, "a\nb\nc\n".into(), "2026-05-07".into(), test_cfg())
     }
 
     fn build_app_with_due() -> App {
@@ -2564,7 +2699,7 @@ mod tests {
             path,
             "Buy milk due:2026-06-30\n".into(),
             "2026-05-07".into(),
-            Config::default(),
+            test_cfg(),
         )
     }
 
@@ -2955,12 +3090,7 @@ mod tests {
         if let Some(body) = done_raw {
             std::fs::write(dir.join("done.txt"), body).expect("write done.txt");
         }
-        let mut app = App::new(
-            todo_path,
-            todo_raw.into(),
-            "2026-05-06".into(),
-            Config::default(),
-        );
+        let mut app = App::new(todo_path, todo_raw.into(), "2026-05-06".into(), test_cfg());
         if done_raw.is_some() {
             // Drain the startup archive loader so app.archive is populated.
             let deadline = Instant::now() + Duration::from_secs(2);
@@ -3392,7 +3522,7 @@ mod tests {
         std::fs::write(&path, raw).expect("write todo.txt");
         let cfg = Config {
             notes_dir: Some(dir.to_string_lossy().into_owned()),
-            ..Config::default()
+            ..test_cfg()
         };
         let mut app = App::new(path, raw.into(), "2026-05-07".into(), cfg);
         app.open_notes_for_current();
@@ -3779,7 +3909,7 @@ mod tests {
         std::fs::write(&path, raw).expect("write todo.txt");
         let cfg = Config {
             notes_dir: Some(dir.to_string_lossy().into_owned()),
-            ..Config::default()
+            ..test_cfg()
         };
         let mut app = App::new(path, raw.into(), "2026-05-07".into(), cfg);
         app.open_notes_for_current();
@@ -4390,7 +4520,7 @@ mod tests {
         std::fs::write(&path, raw).expect("write todo.txt");
         let cfg = Config {
             notes_dir: Some(dir.to_string_lossy().into_owned()),
-            ..Config::default()
+            ..test_cfg()
         };
         let mut app = App::new(path, raw.into(), "2026-05-07".into(), cfg);
 
@@ -4704,7 +4834,7 @@ mod tests {
         std::fs::write(&path, raw).expect("write todo.txt");
         let cfg = Config {
             notes_dir: Some(dir.to_string_lossy().into_owned()),
-            ..Config::default()
+            ..test_cfg()
         };
         let mut app = App::new(path, raw.into(), "2026-05-07".into(), cfg);
         app.open_notes_for_current();

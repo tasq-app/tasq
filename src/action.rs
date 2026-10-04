@@ -52,11 +52,16 @@ pub enum Action {
     GoNotes,
     /// The Trash screen.
     GoTrash,
+    /// Search everything: tasks, notes, spaces.
+    SearchAll,
     /// Start the focus timer, or pause / resume it.
     Pomodoro,
     /// A 5-minute break now.
     PomodoroBreak,
     PomodoroStop,
+    /// The details pane a few columns narrower / wider.
+    NarrowDetails,
+    WidenDetails,
     /// The "+ filter" popover.
     OpenFilters,
     PickProject,
@@ -145,9 +150,12 @@ impl Action {
             "go_inbox" | "inbox" => Some(Self::GoInbox),
             "go_notes" | "notes_screen" => Some(Self::GoNotes),
             "go_trash" | "trash" => Some(Self::GoTrash),
+            "search_all" | "search_everything" => Some(Self::SearchAll),
             "pomodoro" | "timer" => Some(Self::Pomodoro),
             "pomodoro_break" => Some(Self::PomodoroBreak),
             "pomodoro_stop" => Some(Self::PomodoroStop),
+            "narrow_details" => Some(Self::NarrowDetails),
+            "widen_details" => Some(Self::WidenDetails),
             "open_filters" | "filters" | "filter" => Some(Self::OpenFilters),
             "pick_project" => Some(Self::PickProject),
             "pick_context" => Some(Self::PickContext),

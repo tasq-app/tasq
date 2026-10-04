@@ -42,6 +42,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         r: inner,
         y: inner.y,
         bg: Style::default().bg(ibg),
+        marks: Vec::new(),
     };
     let Some(t) = app.cur_task() else {
         p.text(0, "no task selected", p.bg.fg(theme.dim));
@@ -58,6 +59,23 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         .flatten();
     checklist(&mut p, &notes, focus.as_ref(), theme);
     note_cards(&mut p, t, &notes, focus.as_ref(), theme);
+    let used = p.y;
+    // In Today, your day at a glance at the foot of the column.
+    if app.prefs.scope == crate::app::Scope::Today && app.calendar.is_none() {
+        your_day(p.buf, inner, used, app, theme, ibg);
+    }
+    for (r, h) in p.marks {
+        app.hits.add(r, h);
+    }
+    // The edge between the list and the inspector, to drag wider.
+    app.hits.add(
+        Rect {
+            x: area.x,
+            width: 1,
+            ..area
+        },
+        crate::app::Hit::DetailsEdge,
+    );
 }
 
 /// Writes down the inspector, a row at a time, clipped to its area.
@@ -66,6 +84,8 @@ struct Pen<'a> {
     r: Rect,
     y: u16,
     bg: Style,
+    /// What was drawn where, for the mouse.
+    marks: Vec<(Rect, crate::app::Hit)>,
 }
 
 impl Pen<'_> {
@@ -228,6 +248,139 @@ fn facts(p: &mut Pen, t: &Task, app: &App, theme: &Theme) {
     }
 }
 
+/// YOUR DAY: today's timed blocks in their space's colour, the free
+/// stretches between them, and how full the next three days are. Drawn
+/// at the foot of `r`, below `used` (the details above it).
+fn your_day(buf: &mut Buffer, r: Rect, used: u16, app: &App, theme: &Theme, bg: Color) {
+    use crate::core::calendar;
+    let today = app.today_naive();
+    let tasks = app.tasks();
+    let occs = calendar::occurrences(tasks, today, today, today);
+    let mut timed: Vec<&calendar::Occurrence> = occs
+        .iter()
+        .filter(|o| o.start.is_some() && !o.late)
+        .collect();
+    timed.sort_by_key(|o| o.start);
+    // The rows: a block per timed thing, a "free until" line for a gap of
+    // an hour or more.
+    enum Row {
+        Block(u32, String, Color, bool),
+        Free(u32, u32),
+    }
+    let mut rows: Vec<Row> = Vec::new();
+    let mut prev_end: Option<u32> = None;
+    for o in &timed {
+        let start = o.start.unwrap_or(0);
+        if let Some(end) = prev_end
+            && start >= end + 60
+        {
+            rows.push(Row::Free(end, start));
+        }
+        let t = &tasks[o.abs];
+        let color = t
+            .projects
+            .first()
+            .map_or(theme.accent, |p| app.space_color(p));
+        rows.push(Row::Block(
+            start,
+            crate::todo::body_only(&t.raw),
+            color,
+            t.done,
+        ));
+        prev_end = Some(prev_end.map_or(o.end().unwrap_or(start), |e| {
+            e.max(o.end().unwrap_or(start))
+        }));
+    }
+    let need = 2 + rows.len().max(1) as u16 + 3;
+    if r.bottom() < need || r.bottom() - need <= used + 1 {
+        return;
+    }
+    let mut y = r.bottom() - need;
+    let base = Style::default().bg(bg);
+    let hm = |m: u32| format!("{:02}:{:02}", m / 60, m % 60);
+    let put = |buf: &mut Buffer, x: u16, y: u16, s: &str, max: u16, st: Style| {
+        if max > 0 {
+            buf.set_stringn(x, y, s, usize::from(max), st);
+        }
+    };
+    put(buf, r.x, y, "YOUR DAY", r.width, base.fg(theme.dim));
+    y += 1;
+    if rows.is_empty() {
+        put(
+            buf,
+            r.x,
+            y,
+            "nothing with a time today",
+            r.width,
+            base.fg(theme.dim),
+        );
+        y += 1;
+    }
+    let block_x = r.x + 6;
+    let block_w = r.width.saturating_sub(7);
+    for row in &rows {
+        match row {
+            Row::Block(start, title, color, done) => {
+                put(buf, r.x, y, &hm(*start), 5, base.fg(theme.dim));
+                let tint = crate::ui::task_row::tint(*color, theme.bg, 0.2).unwrap_or(bg);
+                let st = Style::default().bg(tint).fg(*color);
+                put(
+                    buf,
+                    block_x,
+                    y,
+                    &" ".repeat(usize::from(block_w)),
+                    block_w,
+                    st,
+                );
+                put(buf, block_x, y, "▌", 1, st);
+                let label = if *done {
+                    format!("{title} ✓")
+                } else {
+                    title.clone()
+                };
+                put(buf, block_x + 2, y, &label, block_w.saturating_sub(3), st);
+            }
+            Row::Free(from, until) => {
+                put(buf, r.x, y, &hm(*from), 5, base.fg(theme.dim));
+                put(
+                    buf,
+                    block_x,
+                    y,
+                    &format!("· free until {}", hm(*until)),
+                    block_w,
+                    base.fg(theme.dim),
+                );
+            }
+        }
+        y += 1;
+    }
+    y += 1;
+    put(buf, r.x, y, "NEXT 3 DAYS", r.width, base.fg(theme.dim));
+    y += 1;
+    let mut x = r.x;
+    for k in 1..=3u64 {
+        let Some(d) = today.checked_add_days(chrono::Days::new(k)) else {
+            continue;
+        };
+        let n = calendar::occurrences(tasks, d, d, today)
+            .iter()
+            .filter(|o| !tasks[o.abs].done)
+            .count();
+        let day = d.format("%a").to_string().to_lowercase();
+        let text = if k == 1 {
+            format!("{day} · {n} {}", if n == 1 { "task" } else { "tasks" })
+        } else {
+            format!("{day} · {n}")
+        };
+        let w = text.chars().count() as u16;
+        if x + w > r.right() {
+            break;
+        }
+        put(buf, x, y, &text, w, base.fg(theme.status_fg));
+        x += w + 2;
+    }
+}
+
 /// `at` plus `minutes`, as `HH:MM`.
 fn end_time(at: &str, minutes: u32) -> String {
     let Some((h, m)) = at.split_once(':') else {
@@ -260,6 +413,12 @@ fn checklist(p: &mut Pen, notes: &TaskNotes, focus: Option<&InspectorRow>, theme
         };
         p.text(0, glyph, bg.fg(color));
         p.text(2, &item.text, bg.fg(theme.fg));
+        let row = Rect {
+            y: p.y,
+            height: 1,
+            ..p.r
+        };
+        p.marks.push((row, crate::app::Hit::CheckItem(i)));
         p.y += 1;
     }
     // Adding is a key away once the inspector has the keyboard.
@@ -304,6 +463,14 @@ fn note_cards(
         }
         let here = focus == Some(&InspectorRow::Note(i));
         let border = card.fg(if here { theme.accent } else { theme.border });
+        p.marks.push((
+            Rect {
+                y: p.y,
+                height: h,
+                ..p.r
+            },
+            crate::app::Hit::NoteCard(i),
+        ));
         p.text(0, &format!("╭{line}╮"), border);
         p.y += 1;
         let body_row = |p: &mut Pen| {
@@ -362,6 +529,99 @@ fn wrap(s: &str, width: usize) -> Vec<String> {
         out.push(String::new());
     }
     out
+}
+
+/// The checklist prompt: the task, what's on its list already, and a line
+/// to type the next item on. It stays open for item after item.
+pub fn render_checklist_prompt(frame: &mut Frame, screen: Rect, app: &App) {
+    let theme = app.theme();
+    let Some(t) = app.cur_task() else {
+        return;
+    };
+    let notes = app.task_notes(t);
+    let shown: Vec<&crate::app::CheckItem> = notes
+        .items
+        .iter()
+        .rev()
+        .take(8)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    let w = 64.min(screen.width.saturating_sub(4));
+    let h = (8 + shown.len() as u16).min(screen.height.saturating_sub(2));
+    let r = super::centered_in(screen, w, h);
+    frame.render_widget(ratatui::widgets::Clear, r);
+    let buf = frame.buffer_mut();
+    let bg = Style::default().bg(theme.panel);
+    for y in r.top()..r.bottom() {
+        for x in r.left()..r.right() {
+            if let Some(c) = buf.cell_mut((x, y)) {
+                let last_x = x == r.right() - 1;
+                let last_y = y == r.bottom() - 1;
+                let sym = match (y == r.top(), last_y, x == r.left(), last_x) {
+                    (true, _, true, _) => "╭",
+                    (true, _, _, true) => "╮",
+                    (_, true, true, _) => "╰",
+                    (_, true, _, true) => "╯",
+                    (true, ..) | (_, true, ..) => "─",
+                    (_, _, true, _) | (_, _, _, true) => "│",
+                    _ => " ",
+                };
+                c.set_symbol(sym);
+                c.set_style(bg.fg(theme.accent));
+            }
+        }
+    }
+    let mut p = Pen {
+        buf,
+        r: Rect {
+            x: r.x + 3,
+            y: r.y + 1,
+            width: r.width.saturating_sub(6),
+            height: r.height.saturating_sub(2),
+        },
+        y: r.y + 1,
+        bg,
+        marks: Vec::new(),
+    };
+    p.text(
+        0,
+        "☐ ADD TO CHECKLIST",
+        bg.fg(theme.accent).add_modifier(Modifier::BOLD),
+    );
+    p.y += 1;
+    let title = crate::todo::body_only(&t.raw);
+    p.text(0, &fit(&title, usize::from(p.r.width)), bg.fg(theme.dim));
+    p.y += 2;
+    for item in &shown {
+        let (g, c) = if item.done {
+            ("☑", theme.ok)
+        } else {
+            ("☐", theme.dim)
+        };
+        p.text(0, g, bg.fg(c));
+        p.text(
+            2,
+            &fit(&item.text, usize::from(p.r.width) - 2),
+            bg.fg(theme.fg),
+        );
+        p.y += 1;
+    }
+    // The line you're typing on.
+    p.text(0, "☐", bg.fg(theme.accent));
+    let x = p.r.x + 2;
+    let y = p.y;
+    let spans = crate::ui::dialog::draft_cursor_spans(
+        app.draft.text(),
+        app.draft.cursor(),
+        theme.fg,
+        theme.panel,
+    );
+    let line = ratatui::text::Line::from(spans);
+    p.buf.set_line(x, y, &line, p.r.width.saturating_sub(2));
+    p.y += 2;
+    p.text(0, "Enter add · paste a list · Esc done", bg.fg(theme.dim));
 }
 
 #[cfg(test)]

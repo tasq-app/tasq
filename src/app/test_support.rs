@@ -17,7 +17,9 @@ pub(crate) fn build_app(raw: &str) -> App {
     build_app_with_config(raw, Config::default())
 }
 
-pub(crate) fn build_app_with_config(raw: &str, cfg: Config) -> App {
+pub(crate) fn build_app_with_config(raw: &str, mut cfg: Config) -> App {
+    // Tests see every task unless they pick a view.
+    cfg.view.get_or_insert(crate::app::Scope::All);
     let path = test_path();
     std::fs::write(&path, raw).unwrap();
     App::new(path, raw.to_string(), "2026-05-06".into(), cfg)

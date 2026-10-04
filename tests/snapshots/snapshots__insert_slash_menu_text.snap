@@ -11,7 +11,7 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming       6  │▎ ☐ ⚑ Finish Q2 board deck  ◷ due today   │  tags     @laptop               
    ▦ Calendar          │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
    ✎ Notes             │  PRIORITY B ─────────────────────────────│                                 
-   ⌕ Search         /  │  ☐ ⚑ Review pull requests for auth refact│                                 
+   ⌕ Search        ^K  │  ☐ ⚑ Review pull requests for auth refact│                                 
                        │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
   SPACES               │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
    ● work ╭──────────────────────────────────────────────────────────────────────────────╮          

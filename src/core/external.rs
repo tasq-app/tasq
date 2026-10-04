@@ -19,6 +19,15 @@ impl Store {
                         .and_then(|l| Ok((l, db.load(super::db::List::Archive)?)));
                     match lists {
                         Ok((live, archived)) => {
+                            // Something else wrote (a note, maybe): only
+                            // a change to the tasks themselves is news.
+                            let same = |a: &[todo::Task], b: &[todo::Task]| {
+                                a.len() == b.len()
+                                    && a.iter().zip(b).all(|(x, y)| x.id == y.id && x.raw == y.raw)
+                            };
+                            if same(&live, &self.tasks) && same(&archived, &self.archive.tasks) {
+                                return Reconcile::Unchanged;
+                            }
                             self.tasks = live;
                             self.archive.tasks = archived;
                             self.history.clear();

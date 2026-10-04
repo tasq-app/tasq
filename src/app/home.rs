@@ -20,6 +20,7 @@ pub struct HeatDay {
 /// A note you changed lately.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecentNote {
+    pub path: std::path::PathBuf,
     pub title: String,
     /// "2h ago", "yesterday", "thu"…
     pub when: String,
@@ -175,6 +176,7 @@ impl App {
                 RecentNote {
                     title: note_title(&path, &body),
                     when: ago(at, today),
+                    path,
                 }
             })
             .collect()
@@ -194,6 +196,211 @@ impl App {
     /// Open the inbox in the list.
     pub fn open_inbox(&mut self) {
         self.sidebar_open(&super::NavItem::Inbox);
+    }
+}
+
+/// The tiles of Home, in reading order; 0 is the "Add a task" bar.
+pub const HOME_TILES: usize = 7;
+
+/// Something on Home you can go to or act on.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HomeItem {
+    Task(usize),
+    Day(NaiveDate),
+    Space(String),
+    Note(std::path::PathBuf),
+}
+
+/// Where Home's keyboard selection is: a tile, and maybe an item in it.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct HomeSel {
+    pub tile: usize,
+    pub item: Option<usize>,
+}
+
+impl App {
+    /// The items of `tile` (1 today, 2 week, 3 routines, 4 spaces, 5
+    /// notes, 6 inbox), as Home lists them.
+    pub fn home_items(&self, tile: usize) -> Vec<HomeItem> {
+        match tile {
+            1 => self
+                .home_today()
+                .2
+                .into_iter()
+                .map(HomeItem::Task)
+                .collect(),
+            2 => self
+                .home_week()
+                .into_iter()
+                .map(|d| HomeItem::Day(d.date))
+                .collect(),
+            3 => self
+                .routines()
+                .into_iter()
+                .map(|r| HomeItem::Task(r.abs))
+                .collect(),
+            4 => self
+                .home_spaces()
+                .into_iter()
+                .map(|(p, _)| HomeItem::Space(p))
+                .collect(),
+            5 => self
+                .home_recent_notes(8)
+                .into_iter()
+                .map(|n| HomeItem::Note(n.path))
+                .collect(),
+            6 => self.inbox().into_iter().map(HomeItem::Task).collect(),
+            _ => Vec::new(),
+        }
+    }
+
+    /// `Tab` on Home: the next tile (after the last, the sidebar).
+    pub fn home_tab(&mut self, forward: bool) {
+        let next = match self.home_sel {
+            None if forward => Some(0),
+            None => Some(HOME_TILES - 1),
+            Some(s) if forward && s.tile + 1 < HOME_TILES => Some(s.tile + 1),
+            Some(s) if !forward && s.tile > 0 => Some(s.tile - 1),
+            Some(_) => None,
+        };
+        match next {
+            Some(tile) => self.home_sel = Some(HomeSel { tile, item: None }),
+            None => {
+                self.home_sel = None;
+                self.sidebar_toggle_focus();
+            }
+        }
+    }
+
+    /// Arrows between tiles (three across, the bar on top); inside a tile,
+    /// up and down move between its items.
+    pub fn home_arrow(&mut self, dx: i32, dy: i32) {
+        let Some(mut s) = self.home_sel else {
+            self.home_sel = Some(HomeSel::default());
+            return;
+        };
+        if let Some(i) = s.item {
+            let n = self.home_items(s.tile).len();
+            let step = if s.tile == 2 { dx } else { dy };
+            let i = (i as i32 + step).clamp(0, n.saturating_sub(1) as i32) as usize;
+            s.item = Some(i);
+            self.home_sel = Some(s);
+            return;
+        }
+        s.tile = match (s.tile, dx, dy) {
+            (0, _, 1) => 1,
+            (0, ..) => 0,
+            (t, _, -1) if t <= 3 => 0,
+            (t, _, -1) => t - 3,
+            (t, _, 1) if t <= 3 => t + 3,
+            (t, -1, _) if t != 1 && t != 4 => t - 1,
+            (t, 1, _) if t != 3 && t != 6 => t + 1,
+            (t, ..) => t,
+        };
+        self.home_sel = Some(s);
+    }
+
+    /// `Enter` on Home: into a tile, or do what an item says.
+    pub fn home_enter(&mut self) -> Option<crate::action::Action> {
+        let s = self.home_sel?;
+        if s.tile == 0 {
+            return Some(crate::action::Action::BeginAdd);
+        }
+        match s.item {
+            None => {
+                if self.home_items(s.tile).is_empty() {
+                    if s.tile == 6 {
+                        self.open_inbox();
+                    }
+                } else {
+                    self.home_sel = Some(HomeSel {
+                        tile: s.tile,
+                        item: Some(0),
+                    });
+                }
+                None
+            }
+            Some(i) => {
+                let item = self.home_items(s.tile).into_iter().nth(i)?;
+                self.home_go(s.tile, &item);
+                None
+            }
+        }
+    }
+
+    /// Go where an item points.
+    pub fn home_go(&mut self, tile: usize, item: &HomeItem) {
+        self.home_sel = None;
+        match item {
+            HomeItem::Task(abs) => {
+                let raw = self.store.tasks().get(*abs).map(|t| t.raw.clone());
+                match tile {
+                    6 => self.open_inbox(),
+                    1 => self.close_home(),
+                    _ => {
+                        self.home = false;
+                        self.filter.clear();
+                        self.set_scope(Scope::All);
+                    }
+                }
+                if let Some(abs) =
+                    raw.and_then(|r| self.store.tasks().iter().position(|t| t.raw == r))
+                {
+                    self.follow_cursor(abs);
+                }
+            }
+            HomeItem::Day(d) => {
+                self.home = false;
+                self.open_cal(super::CalView::Day);
+                if let Some(c) = self.calendar.as_mut() {
+                    c.date = *d;
+                }
+            }
+            HomeItem::Space(p) => self.sidebar_open(&super::NavItem::Space(p.clone())),
+            HomeItem::Note(path) => {
+                self.open_notes_screen();
+                let pos = self.note_entries().iter().position(|e| e.path == *path);
+                if let (Some(pos), Some(s)) = (pos, self.notes_screen.as_mut()) {
+                    s.cursor = pos;
+                }
+            }
+        }
+    }
+
+    /// `x` on a task in a Home tile: done (or not).
+    pub fn home_toggle(&mut self) {
+        let Some(HomeSel {
+            tile,
+            item: Some(i),
+        }) = self.home_sel
+        else {
+            return;
+        };
+        if let Some(HomeItem::Task(abs)) = self.home_items(tile).into_iter().nth(i) {
+            self.toggle_complete(abs);
+            let n = self.home_items(tile).len();
+            if let Some(s) = self.home_sel.as_mut() {
+                s.item = if n == 0 { None } else { Some(i.min(n - 1)) };
+            }
+        }
+    }
+
+    /// `Esc` on Home: out of an item, then out of the tile.
+    pub fn home_back(&mut self) -> bool {
+        match self.home_sel {
+            Some(HomeSel {
+                item: Some(_),
+                tile,
+            }) => {
+                self.home_sel = Some(HomeSel { tile, item: None });
+                true
+            }
+            Some(_) => {
+                self.home_sel = None;
+                true
+            }
+            None => false,
+        }
     }
 }
 

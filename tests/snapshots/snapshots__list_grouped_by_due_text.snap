@@ -11,7 +11,7 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming       6  │▎ ☐ ⚑ Finish Q2 board deck  ◷ due today   │  tags     @laptop               
    ▦ Calendar          │  THIS WEEK ──────────────────────────────│                                 
    ✎ Notes             │  ☐ ⚑ Review pull requests for auth refact│                                 
-   ⌕ Search         /  │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
+   ⌕ Search        ^K  │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
                        │  NEXT WEEK ──────────────────────────────│                                 
   SPACES               │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
    ● work           4  │  ☐ Pay rent  ◷ by fri 15 may   ↻ every mo│                                 
