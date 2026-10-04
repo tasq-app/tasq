@@ -31,6 +31,19 @@ pub enum Hit {
     DetailsEdge,
     /// The "+ filter" chip.
     AddFilter,
+    /// An active filter's chip: a click takes it off.
+    ClearFilter(FilterPart),
+}
+
+/// Which of the active filters a chip is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FilterPart {
+    Space,
+    Tag,
+    Search,
+    Preset,
+    /// The "clear all" chip.
+    All,
 }
 
 /// Where the clickable things were drawn this frame.
@@ -91,7 +104,7 @@ impl App {
             Hit::Nav(item) => {
                 self.sidebar_open(&item);
                 if item == NavItem::Search {
-                    return Some(Action::BeginSearch);
+                    return Some(Action::SearchAll);
                 }
             }
             Hit::Row(i) => {
@@ -128,6 +141,7 @@ impl App {
             }
             Hit::DetailsEdge => self.resizing = true,
             Hit::AddFilter => return Some(Action::OpenFilters),
+            Hit::ClearFilter(part) => self.clear_filter_part(part),
         }
         None
     }

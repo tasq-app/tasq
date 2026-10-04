@@ -66,7 +66,7 @@ pub use flash::Flash;
 pub use home::{HOME_TILES, HeatDay, HomeItem, HomeSel, RecentNote};
 pub use live_add::{CHIP_ORDER, Chip, describe_rec};
 pub use menu::{MenuDo, MenuEntry, entries as menu_entries};
-pub use mouse::{Hit, Hits};
+pub use mouse::{FilterPart, Hit, Hits};
 pub use note_editor::{
     EditorKey, NormalOutcome, NoteCommandResult, NoteEditorMode, NoteEditorState, Register,
     UNSAVED_WARNING, VisualSelection, wrap_indent,

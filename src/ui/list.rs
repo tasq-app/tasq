@@ -326,26 +326,45 @@ fn title_block(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
     // Row 3: the active filters as chips you can clear, then the way to add one.
     let mut chips: Vec<Span> = vec![Span::raw("  ")];
     // A chip: its words in its colour on a tint of it, and a quiet ×.
-    let chip = |chips: &mut Vec<Span<'static>>, text: String, color: Color| {
+    // A click anywhere on it takes it off.
+    use crate::app::{FilterPart, Hit};
+    let chip = |chips: &mut Vec<Span<'static>>, text: String, color: Color, part: FilterPart| {
         let mut style = Style::default().fg(color);
         if let Some(bg) = crate::ui::task_row::tint(color, theme.bg, 0.2) {
             style = style.bg(bg);
         }
-        chips.push(Span::styled(format!(" {text} "), style));
+        let x: usize = chips.iter().map(|s| s.content.chars().count()).sum();
+        let text = format!(" {text} ");
+        let w = text.chars().count() + 2;
+        chips.push(Span::styled(text, style));
         chips.push(Span::styled("× ", style.fg(theme.dim)));
         chips.push(Span::raw(" "));
+        app.hits.add(
+            Rect {
+                x: area.x.saturating_add(x as u16),
+                y: area.y + 2,
+                width: (w as u16).min(area.width.saturating_sub(x as u16)),
+                height: 1,
+            },
+            Hit::ClearFilter(part),
+        );
     };
+    let mut active = 0;
     if let Some(p) = &app.filter.project {
+        active += 1;
         chip(
             &mut chips,
             format!("● {}", crate::core::spaces::display(p)),
             app.space_color(p),
+            FilterPart::Space,
         );
     }
     if let Some(c) = &app.filter.context {
-        chip(&mut chips, format!("@{c}"), theme.context);
+        active += 1;
+        chip(&mut chips, format!("@{c}"), theme.context, FilterPart::Tag);
     }
     if !app.filter.search.is_empty() {
+        active += 1;
         let label = crate::app::DUE_TERMS
             .iter()
             .find(|(_, t)| *t == app.filter.search)
@@ -358,13 +377,29 @@ fn title_block(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
         } else {
             theme.accent
         };
-        chip(&mut chips, label, color);
+        chip(&mut chips, label, color, FilterPart::Search);
     }
     if let Some(p) = app.filter.preset {
+        active += 1;
         chip(
             &mut chips,
             format!("{} {}", p.icon(), p.label().to_lowercase()),
             theme.accent,
+            FilterPart::Preset,
+        );
+    }
+    // With two or more, one click clears them all.
+    if active >= 2 {
+        let x: usize = chips.iter().map(|s| s.content.chars().count()).sum();
+        chips.push(Span::styled(" × clear ", dim));
+        app.hits.add(
+            Rect {
+                x: area.x.saturating_add(x as u16),
+                y: area.y + 2,
+                width: 9u16.min(area.width.saturating_sub(x as u16)),
+                height: 1,
+            },
+            Hit::ClearFilter(FilterPart::All),
         );
     }
     // The way to add one, lit while its popover is open.
@@ -376,7 +411,7 @@ fn title_block(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
             width: 10,
             height: 1,
         },
-        crate::app::Hit::AddFilter,
+        Hit::AddFilter,
     );
     if app.mode == Mode::Filters {
         chips.push(Span::styled(

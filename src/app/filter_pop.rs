@@ -215,6 +215,21 @@ impl App {
         self.filter_pop.cursor = 0;
     }
 
+    /// Takes one active filter off (a click on its chip), or all of them.
+    pub fn clear_filter_part(&mut self, part: super::FilterPart) {
+        use super::FilterPart;
+        let f = &mut self.filter;
+        match part {
+            FilterPart::Space => f.project = None,
+            FilterPart::Tag => f.context = None,
+            FilterPart::Search => f.search.clear(),
+            FilterPart::Preset => f.preset = None,
+            FilterPart::All => f.clear(),
+        }
+        self.cursor = 0;
+        self.recompute_visible();
+    }
+
     pub fn filter_pop_move(&mut self, forward: bool) {
         let n = self.filter_rows().len();
         self.filter_pop.cursor = if forward {
