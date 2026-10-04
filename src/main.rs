@@ -2465,6 +2465,14 @@ fn copy_payload(app: &App, body_only: bool) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    /// The default config, on every task (tests don't start on Today).
+    fn test_cfg() -> Config {
+        Config {
+            view: Some(tasq::app::Scope::All),
+            ..Config::default()
+        }
+    }
+
     use super::*;
     use chrono::NaiveDate;
     use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -2498,12 +2506,7 @@ mod tests {
             std::thread::current().id()
         ));
         let _ = std::fs::remove_file(&path);
-        let mut app = App::new(
-            path.clone(),
-            String::new(),
-            "2026-05-07".into(),
-            Config::default(),
-        );
+        let mut app = App::new(path.clone(), String::new(), "2026-05-07".into(), test_cfg());
         app.mode = Mode::Welcome;
         (app, path)
     }
@@ -2637,12 +2640,7 @@ mod tests {
             std::thread::current().id()
         ));
         let _ = std::fs::write(&path, "a\nb\nc\n");
-        App::new(
-            path,
-            "a\nb\nc\n".into(),
-            "2026-05-07".into(),
-            Config::default(),
-        )
+        App::new(path, "a\nb\nc\n".into(), "2026-05-07".into(), test_cfg())
     }
 
     fn build_app_with_due() -> App {
@@ -2656,7 +2654,7 @@ mod tests {
             path,
             "Buy milk due:2026-06-30\n".into(),
             "2026-05-07".into(),
-            Config::default(),
+            test_cfg(),
         )
     }
 
@@ -3047,12 +3045,7 @@ mod tests {
         if let Some(body) = done_raw {
             std::fs::write(dir.join("done.txt"), body).expect("write done.txt");
         }
-        let mut app = App::new(
-            todo_path,
-            todo_raw.into(),
-            "2026-05-06".into(),
-            Config::default(),
-        );
+        let mut app = App::new(todo_path, todo_raw.into(), "2026-05-06".into(), test_cfg());
         if done_raw.is_some() {
             // Drain the startup archive loader so app.archive is populated.
             let deadline = Instant::now() + Duration::from_secs(2);
@@ -3484,7 +3477,7 @@ mod tests {
         std::fs::write(&path, raw).expect("write todo.txt");
         let cfg = Config {
             notes_dir: Some(dir.to_string_lossy().into_owned()),
-            ..Config::default()
+            ..test_cfg()
         };
         let mut app = App::new(path, raw.into(), "2026-05-07".into(), cfg);
         app.open_notes_for_current();
@@ -3871,7 +3864,7 @@ mod tests {
         std::fs::write(&path, raw).expect("write todo.txt");
         let cfg = Config {
             notes_dir: Some(dir.to_string_lossy().into_owned()),
-            ..Config::default()
+            ..test_cfg()
         };
         let mut app = App::new(path, raw.into(), "2026-05-07".into(), cfg);
         app.open_notes_for_current();
@@ -4482,7 +4475,7 @@ mod tests {
         std::fs::write(&path, raw).expect("write todo.txt");
         let cfg = Config {
             notes_dir: Some(dir.to_string_lossy().into_owned()),
-            ..Config::default()
+            ..test_cfg()
         };
         let mut app = App::new(path, raw.into(), "2026-05-07".into(), cfg);
 
@@ -4796,7 +4789,7 @@ mod tests {
         std::fs::write(&path, raw).expect("write todo.txt");
         let cfg = Config {
             notes_dir: Some(dir.to_string_lossy().into_owned()),
-            ..Config::default()
+            ..test_cfg()
         };
         let mut app = App::new(path, raw.into(), "2026-05-07".into(), cfg);
         app.open_notes_for_current();
