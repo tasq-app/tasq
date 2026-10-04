@@ -337,6 +337,8 @@ fn list_grouped_by_due() {
     // Default sort is Priority (groups by priority bucket); cycle once to
     // exercise the Due grouping path which has different bucket logic.
     app.cycle_sort();
+    // The sort's toast slides on a real clock; keep the frame still.
+    app.toasts = Default::default();
     snapshot_app("list_grouped_by_due", &app);
 }
 
@@ -445,6 +447,7 @@ fn insert_dialog_after_nl_parse() {
     // surfaces *what* changed if the rewrite drifts. The outcome assertion
     // runs after as a contract check on AddOutcome::Parsed — a regression
     // either way will fail the test.
+    app.toasts = Default::default();
     snapshot_app("insert_dialog_after_nl_parse", &app);
     assert_eq!(outcome, tasq::app::AddOutcome::Parsed);
 }

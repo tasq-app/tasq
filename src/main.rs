@@ -104,6 +104,9 @@ fn main() -> Result<()> {
     {
         app_state.flash(format!("notes stay files: {e}"));
     }
+    // Copying the old note files in (first run only) is a write from the
+    // notes' own connection; it isn't news to the task list.
+    app_state.settle_external_changes();
     app_state.config_path = Config::path();
     if let Some(i) = &imported {
         app_state.flash(format!(
@@ -294,6 +297,11 @@ fn run(
             app.clear_flash();
             dirty = true;
         }
+        // Toasts animate: redraw while any is on screen, and drop the gone.
+        if !app.toasts.is_empty() {
+            app.toasts.sweep(Instant::now());
+            dirty = true;
+        }
         if app.chord.should_clear() {
             app.chord.clear();
             dirty = true;
@@ -403,11 +411,16 @@ fn next_timeout(app: &App) -> Duration {
         (Some(f), Some(c)) => Some(f.min(c)),
         (a, b) => a.or(b),
     };
-    match earliest {
+    let wait = match earliest {
         Some(deadline) => deadline
             .saturating_duration_since(Instant::now())
             .min(EVENT_POLL),
         None => EVENT_POLL,
+    };
+    // A toast sliding in or out wants a frame every ~16 ms.
+    match app.toasts.next_wake(Instant::now()) {
+        Some(t) => wait.min(t),
+        None => wait,
     }
 }
 

@@ -579,7 +579,9 @@ fn render_chips(frame: &mut Frame, area: Rect, app: &App) {
     };
     let total: u16 = chips.iter().map(label_w).sum();
     let compact = total > area.width;
-    let mut x = area.x;
+    // Lay the chips out first, then centre the row.
+    let mut row: Vec<(String, Style, ratatui::style::Color, u16)> = Vec::new();
+    let mut used: u16 = 0;
     for (i, chip) in chips.into_iter().enumerate() {
         if compact && chip.value.is_none() && focus != Some(i) {
             continue;
@@ -597,7 +599,8 @@ fn render_chips(frame: &mut Frame, area: Rect, app: &App) {
             None => icon_alone(icon, nerd),
         };
         let w = width(&label) + 2;
-        if x + w > area.x + area.width {
+        let gap = if row.is_empty() { 0 } else { 1 };
+        if used + gap + w > area.width {
             break;
         }
         let focused = focus == Some(i);
@@ -611,6 +614,11 @@ fn render_chips(frame: &mut Frame, area: Rect, app: &App) {
         if focused {
             style = style.add_modifier(Modifier::BOLD);
         }
+        used += gap + w;
+        row.push((label, style, bg, w));
+    }
+    let mut x = area.x + area.width.saturating_sub(used) / 2;
+    for (label, style, bg, w) in row {
         pill(frame, x, area.y, Span::styled(label, style), bg, app);
         x += w + 1;
     }

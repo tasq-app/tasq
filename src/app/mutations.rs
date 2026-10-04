@@ -4,6 +4,7 @@
 //! All task logic (recurrence, persistence, reconciliation) lives in the store.
 
 use super::App;
+use super::ToastKind;
 use super::types::{AddOutcome, Mode, Sort};
 use crate::app::WeekStart;
 use crate::core::AddOutcome as CoreAdd;
@@ -26,18 +27,47 @@ fn same_sort_key(sort: Sort, a: &Task, b: &Task) -> bool {
 }
 
 impl App {
+    /// A task's title for a toast: its words without tags or keys.
+    pub fn task_title(&self, abs: usize) -> Option<String> {
+        let t = self.store.tasks().get(abs)?;
+        let words: Vec<&str> = crate::todo::body_after_priority(&t.clean_raw)
+            .split_whitespace()
+            .filter(|w| {
+                let tag = w.starts_with('+') || w.starts_with('@');
+                let key = w.split_once(':').is_some_and(|(k, v)| {
+                    !k.is_empty() && !v.is_empty() && k.chars().all(|c| c.is_ascii_lowercase())
+                });
+                !tag && !key
+            })
+            .collect();
+        let out = words.join(" ");
+        (!out.is_empty()).then_some(out)
+    }
+
     pub fn toggle_complete(&mut self, abs: usize) {
         match self.store.toggle_complete(abs) {
             CompleteOutcome::Completed { abs } => {
-                self.flash("completed");
+                let title = self.task_title(abs);
+                self.toast(ToastKind::Done, "Done", title, "completed");
                 self.after_mutation(abs);
             }
             CompleteOutcome::CompletedLast { abs } => {
-                self.flash("completed · that was the last one");
+                let title = self
+                    .task_title(abs)
+                    .map(|t| format!("{t} · that was the last one"));
+                self.toast(
+                    ToastKind::Done,
+                    "Done",
+                    title,
+                    "completed · that was the last one",
+                );
                 self.after_mutation(abs);
             }
-            CompleteOutcome::CompletedSpawned { next, .. } => {
-                self.flash("completed +next");
+            CompleteOutcome::CompletedSpawned { abs, next } => {
+                let title = self
+                    .task_title(abs)
+                    .map(|t| format!("{t} · next one added"));
+                self.toast(ToastKind::Done, "Done", title, "completed +next");
                 self.after_mutation(next);
             }
             CompleteOutcome::Uncompleted { abs } => {

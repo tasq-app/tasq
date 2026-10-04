@@ -29,6 +29,7 @@ mod pinned_note;
 mod prefs;
 mod saved;
 mod selection;
+mod toast;
 mod types;
 mod visibility;
 
@@ -57,6 +58,7 @@ pub use notes_popup::{NotePromptKind, NotesPopupState};
 pub use palette::{CommandPaletteState, NotesEntryAction, PaletteDispatch};
 pub use prefs::{Layout, Prefs};
 pub use selection::Selection;
+pub use toast::{Toast, ToastKind, Toasts};
 pub use types::{
     AUTOCOMPLETE_CAP, AddOutcome, Density, FLASH_TTL, Filter, LEADER_WINDOW, Mode, SavedFilter,
     Scope, Sort, UNDO_LIMIT, View,
@@ -117,6 +119,8 @@ pub struct App {
     pub draft: DraftState,
     pub selection: Selection,
     flash_state: Flash,
+    /// Messages sliding in at the top right (see [`Toasts`]).
+    pub toasts: Toasts,
     pub chord: Chord,
     pub file_path: PathBuf,
     /// Resolved path of the on-disk config file. Set by the binary after
@@ -269,6 +273,7 @@ impl App {
             draft: DraftState::default(),
             selection: Selection::default(),
             flash_state: Flash::default(),
+            toasts: Toasts::default(),
             chord: Chord::default(),
             file_path,
             config_path: None,
@@ -746,6 +751,11 @@ impl App {
     /// Reconcile against disk and drain the inbox. Returns `true` when it is
     /// safe to proceed (disk unchanged); `false` when the file was reloaded or
     /// unreadable. The TUI run loop and `handle_key` call this each tick.
+    /// See [`crate::core::Store::settle_external_changes`].
+    pub fn settle_external_changes(&mut self) {
+        self.store.settle_external_changes();
+    }
+
     pub fn check_external_changes(&mut self) -> bool {
         let reconcile = self.store.reconcile();
         if matches!(reconcile, Reconcile::Reloaded) {
