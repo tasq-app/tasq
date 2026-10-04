@@ -161,6 +161,7 @@ fn icon(pick: &PopPick, app: &App, theme: &Theme) -> (String, Color) {
         PopPick::Space(p) => ("●".into(), app.space_color(p)),
         PopPick::Tag(_) => ("@".into(), theme.context),
         PopPick::Due(_) => ("◷".into(), theme.due),
+        PopPick::Text(_) => ("⌕".into(), theme.accent),
         PopPick::Preset(Preset::Overdue) => ("◷".into(), theme.overdue),
         PopPick::Preset(Preset::HighPriority) => ("⚑".into(), theme.pri_a),
         PopPick::Preset(Preset::Starred) => ("★".into(), theme.matched),

@@ -27,10 +27,10 @@ expression: buffer_to_text(&buf)
    ★ Starred        0  │  │  ◷ overdue                       7  │ │                                 
    ◷ Overdue        7  │  │  PRIORITY                           │ │                                 
                        │  │  ★ starred                       0  │ │                                 
-                       │  │  SAVE                               │ │                                 
- ╭───────────────────╮ │  │  + Save "work" as a view…           │ │                                 
- │  Y  you           │ │  │  × Clear all filters                │ │                                 
- │     ● todo.txt    │ │  ╰─────────────────────────────────────╯ │                                 
- ╰───────────────────╯ │                                          │                                 
+                       │  │  TEXT                               │ │                                 
+ ╭───────────────────╮ │  │  ⌕ tasks with “e”               16  │ │                                 
+ │  Y  you           │ │  │  SAVE                               │ │                                 
+ │     ● todo.txt    │ │  │  + Save "work" as a view…           │ │                                 
+ ╰───────────────────╯ │  ╰──────────────────────────────────↓──╯ │                                 
                        │                                          │                                 
   ● filter                  type to search   ↑↓ move   Enter add/remove   ⌫ drop last   Esc close

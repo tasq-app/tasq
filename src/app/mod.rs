@@ -61,7 +61,7 @@ pub use draft_overlay::{
     REC_UNIT_ORDER, RecurrenceBuilderState, SLASH_ENTRIES, SlashEntry, SlashKind, SlashMenuState,
     format_rec_value, recurrence_next_preview,
 };
-pub use filter_pop::{DUE_TERMS, FilterPop, PopPick, PopRow};
+pub use filter_pop::{DUE_TERMS, FilterPop, PopPick, PopRow, search_label};
 pub use flash::Flash;
 pub use home::{HOME_TILES, HeatDay, HomeItem, HomeSel, RecentNote};
 pub use live_add::{CHIP_ORDER, Chip, describe_rec};

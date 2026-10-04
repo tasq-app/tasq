@@ -365,17 +365,13 @@ fn title_block(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
     }
     if !app.filter.search.is_empty() {
         active += 1;
-        let label = crate::app::DUE_TERMS
-            .iter()
-            .find(|(_, t)| *t == app.filter.search)
-            .map_or_else(
-                || format!("⌕ {}", app.filter.search),
-                |(l, _)| format!("◷ {l}"),
-            );
-        let color = if label.starts_with('◷') {
-            theme.overdue
+        let is_date =
+            app.filter.search.starts_with("due:") || app.filter.search.starts_with("when:");
+        let label = crate::app::search_label(&app.filter.search);
+        let (label, color) = if is_date {
+            (format!("◷ {label}"), theme.overdue)
         } else {
-            theme.accent
+            (format!("⌕ {label}"), theme.accent)
         };
         chip(&mut chips, label, color, FilterPart::Search);
     }

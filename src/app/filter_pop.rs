@@ -20,7 +20,10 @@ pub const DUE_TERMS: [(&str, &str); 3] = [
 pub enum PopPick {
     Space(String),
     Tag(String),
-    Due(&'static str),
+    /// A date search term: `due:+1w`, `when:..2026-10-09`.
+    Due(String),
+    /// Plain text to look for in the tasks.
+    Text(String),
     Preset(Preset),
     Saved(usize),
     Clear,
@@ -103,7 +106,7 @@ impl App {
                 label.to_string(),
                 Some(open_through(&f)),
                 on,
-                PopPick::Due(term),
+                PopPick::Due(term.to_string()),
             );
         }
         let over = Filter {
@@ -163,6 +166,46 @@ impl App {
             rows.retain(|r| {
                 matches!(r.pick, PopPick::Save | PopPick::Clear) || label_matches(&r.label, q)
             });
+            // A date you typed ("tomorrow", "next friday", "next week")
+            // comes first; anything else can still be looked for as text,
+            // last, so Enter never applies something you didn't ask for.
+            let dates = date_terms(q, today, self.week_start);
+            let mut first: Vec<PopRow> = Vec::new();
+            for term in &dates {
+                let f = Filter {
+                    search: term.clone(),
+                    ..Filter::default()
+                };
+                first.push(PopRow {
+                    section: "WHEN",
+                    label: search_label(term),
+                    count: Some(open_through(&f)),
+                    on: self.filter.search == *term,
+                    pick: PopPick::Due(term.clone()),
+                });
+            }
+            if dates.is_empty() {
+                let f = Filter {
+                    search: q.to_string(),
+                    ..Filter::default()
+                };
+                let at = rows
+                    .iter()
+                    .position(|r| matches!(r.pick, PopPick::Save | PopPick::Clear))
+                    .unwrap_or(rows.len());
+                rows.insert(
+                    at,
+                    PopRow {
+                        section: "TEXT",
+                        label: format!("tasks with \u{201c}{q}\u{201d}"),
+                        count: Some(open_through(&f)),
+                        on: self.filter.search == q,
+                        pick: PopPick::Text(q.to_string()),
+                    },
+                );
+            }
+            first.append(&mut rows);
+            rows = first;
         }
         rows
     }
@@ -177,10 +220,8 @@ impl App {
         if let Some(c) = &f.context {
             parts.push(format!("@{c}"));
         }
-        if let Some((label, _)) = DUE_TERMS.iter().find(|(_, t)| *t == f.search) {
-            parts.push((*label).to_string());
-        } else if !f.search.is_empty() {
-            parts.push(f.search.clone());
+        if !f.search.is_empty() {
+            parts.push(search_label(&f.search));
         }
         if let Some(p) = f.preset {
             parts.push(p.label().to_lowercase());
@@ -249,12 +290,8 @@ impl App {
         match row.pick {
             PopPick::Space(p) => f.project = if row.on { None } else { Some(p) },
             PopPick::Tag(c) => f.context = if row.on { None } else { Some(c) },
-            PopPick::Due(term) => {
-                f.search = if row.on {
-                    String::new()
-                } else {
-                    term.to_string()
-                };
+            PopPick::Due(term) | PopPick::Text(term) => {
+                f.search = if row.on { String::new() } else { term };
             }
             PopPick::Preset(p) => f.preset = if row.on { None } else { Some(p) },
             PopPick::Saved(i) => {
@@ -273,6 +310,77 @@ impl App {
         self.cursor = 0;
         self.recompute_visible();
     }
+}
+
+/// What a search term reads as on a chip: `due today`, `on Fri 9 Oct`,
+/// `by Fri 9 Oct`, `Mon 12 – Sun 18 Oct`, or the text itself.
+pub fn search_label(search: &str) -> String {
+    if let Some((label, _)) = DUE_TERMS.iter().find(|(_, t)| *t == search) {
+        return (*label).to_string();
+    }
+    let day = |s: &str| {
+        chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
+            .map(|d| d.format("%a %-d %b").to_string())
+            .ok()
+    };
+    if let Some((from, to)) = search
+        .strip_prefix("when:")
+        .and_then(|v| v.split_once(".."))
+        && let Some(to_s) = day(to)
+    {
+        if from.is_empty() {
+            return format!("by {to_s}");
+        }
+        if from == to {
+            return format!("on {to_s}");
+        }
+        if let Some(from_s) = day(from) {
+            return format!("{from_s} – {to_s}");
+        }
+    }
+    search.to_string()
+}
+
+/// The date filters what you typed could mean: a day ("tomorrow", "next
+/// friday", "oct 12") gives "on" that day and "by" it; "this week" and
+/// "next week" give the week. Nothing when it isn't a date.
+fn date_terms(q: &str, today: &str, week_start: super::WeekStart) -> Vec<String> {
+    use chrono::{Days, NaiveDate};
+    let Ok(today_d) = NaiveDate::parse_from_str(today, "%Y-%m-%d") else {
+        return Vec::new();
+    };
+    let lc = q.trim().to_lowercase();
+    let lc = lc.strip_prefix("due ").unwrap_or(&lc);
+    if let Some((this_end, next_end)) = filter::get_week_cutoff(today, &week_start) {
+        match lc {
+            "this week" => return vec![format!("when:{today}..{this_end}")],
+            "next week" => {
+                let start = NaiveDate::parse_from_str(&this_end, "%Y-%m-%d")
+                    .ok()
+                    .and_then(|d| d.checked_add_days(Days::new(1)));
+                if let Some(start) = start {
+                    return vec![format!("when:{start}..{next_end}")];
+                }
+            }
+            _ => {}
+        }
+    }
+    let Some(p) = crate::nl::try_parse(lc, today_d) else {
+        return Vec::new();
+    };
+    let Some(d) = p.planned.or(p.due) else {
+        return Vec::new();
+    };
+    // Only when the whole thing is a date: "milk tomorrow" is text.
+    if !p.body.trim().is_empty()
+        || p.time.is_some()
+        || p.rec.is_some()
+        || !p.projects.is_empty()
+        || !p.contexts.is_empty()
+    {
+        return Vec::new();
+    }
+    vec![format!("when:{d}..{d}"), format!("when:..{d}")]
 }
 
 /// Whether what you typed is in a row's label: whole letters in a row, not
@@ -358,11 +466,69 @@ mod tests {
                 .collect::<Vec<_>>()
         };
         let git = labels(&mut app, "git");
-        assert_eq!(git, ["git"], "{git:?}");
+        assert_eq!(git, ["git", "tasks with \u{201c}git\u{201d}"], "{git:?}");
         assert!(labels(&mut app, "pri").contains(&"high priority".to_string()));
         assert!(labels(&mut app, "@lab").contains(&"lab".to_string()));
         assert!(labels(&mut app, "uni/ex").contains(&"Uni › Exams".to_string()));
         assert!(!labels(&mut app, "hp").contains(&"high priority".to_string()));
+    }
+
+    #[test]
+    fn typing_a_date_offers_that_day_and_up_to_it() {
+        // Today is Wed 2026-05-06 in tests.
+        let mut app = build_app(
+            "late due:2026-05-01\nplan tmrw plan:2026-05-07\nbill due:2026-05-07\nlater due:2026-05-20\n",
+        );
+        app.open_filters();
+        for c in "tomorrow".chars() {
+            app.filter_pop_type(c);
+        }
+        let rows = app.filter_rows();
+        assert_eq!(rows[0].label, "on Thu 7 May");
+        assert_eq!(rows[0].count, Some(2), "planned or due that day");
+        assert_eq!(rows[1].label, "by Thu 7 May");
+        assert_eq!(rows[1].count, Some(3), "late ones too");
+        app.filter_pop_pick();
+        assert_eq!(app.visible_indices().len(), 2);
+        assert_eq!(app.filter_summary(), "on Thu 7 May");
+
+        for q in ["next friday", "this week", "next week", "due may 20"] {
+            app.open_filters();
+            for c in q.chars() {
+                app.filter_pop_type(c);
+            }
+            let first = &app.filter_rows()[0];
+            assert!(matches!(first.pick, PopPick::Due(_)), "{q}: {first:?}");
+        }
+    }
+
+    #[test]
+    fn anything_else_can_be_looked_for_as_text() {
+        let mut app = build_app("buy milk tomorrow\nwrite essay\n");
+        app.open_filters();
+        for c in "milk".chars() {
+            app.filter_pop_type(c);
+        }
+        let rows = app.filter_rows();
+        let at = rows
+            .iter()
+            .position(|r| matches!(r.pick, PopPick::Text(_)))
+            .unwrap();
+        assert_eq!(rows[at].pick, PopPick::Text("milk".into()));
+        assert_eq!(rows[at].count, Some(1));
+        app.filter_pop.cursor = at;
+        app.filter_pop_pick();
+        assert_eq!(app.visible_indices().len(), 1);
+        // "milk tomorrow" isn't a date: it's text.
+        app.open_filters();
+        for c in "milk tomorrow".chars() {
+            app.filter_pop_type(c);
+        }
+        assert!(
+            app.filter_rows()
+                .iter()
+                .all(|r| !matches!(r.pick, PopPick::Due(_)))
+        );
     }
 
     #[test]
