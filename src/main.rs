@@ -288,6 +288,9 @@ fn run(
                     handle_paste(app, &text, keybinds);
                     dirty = true;
                 }
+                Event::Mouse(m) if handle_mouse(app, m) => {
+                    dirty = true;
+                }
                 // A terminal resize must trigger an immediate redraw;
                 // otherwise the screen stays stale until the next keystroke.
                 Event::Resize(_, _) => {
@@ -369,10 +372,18 @@ fn poll_config_reload(app: &mut App, rx: &Option<mpsc::Receiver<()>>) -> bool {
 /// rather than each newline acting as a list-continuing Enter.
 fn enable_bracketed_paste() {
     let _ = crossterm::execute!(io::stdout(), crossterm::event::EnableBracketedPaste);
+    // Clicks and the wheel, unless `mouse = false` (to select text with it).
+    if tasq::config::Config::load().mouse != Some(false) {
+        let _ = crossterm::execute!(io::stdout(), crossterm::event::EnableMouseCapture);
+    }
 }
 
 fn disable_bracketed_paste() {
-    let _ = crossterm::execute!(io::stdout(), crossterm::event::DisableBracketedPaste);
+    let _ = crossterm::execute!(
+        io::stdout(),
+        crossterm::event::DisableBracketedPaste,
+        crossterm::event::DisableMouseCapture
+    );
 }
 
 /// A bracketed paste. Into a note editor in Insert mode it goes in verbatim;
@@ -418,6 +429,38 @@ fn handle_paste(app: &mut App, text: &str, keybinds: &KeyBindings) {
         };
         handle_key(app, KeyEvent::new(code, KeyModifiers::NONE), keybinds);
     }
+}
+
+/// A click, a drag or the wheel. Only in the list's own modes; dialogs
+/// keep to the keyboard. True when something changed.
+fn handle_mouse(app: &mut App, m: crossterm::event::MouseEvent) -> bool {
+    use crossterm::event::{MouseButton, MouseEventKind};
+    if !matches!(app.mode, Mode::Normal) {
+        return false;
+    }
+    app.notes_cache.clear();
+    let action = match m.kind {
+        MouseEventKind::Down(MouseButton::Left) => app.click(m.column, m.row),
+        MouseEventKind::Drag(MouseButton::Left) if app.resizing => {
+            app.drag_details_to(m.column);
+            None
+        }
+        MouseEventKind::Up(MouseButton::Left) => {
+            if app.resizing {
+                app.resizing = false;
+                app.save_prefs();
+            }
+            None
+        }
+        MouseEventKind::ScrollDown => app.wheel(true),
+        MouseEventKind::ScrollUp => app.wheel(false),
+        _ => return false,
+    };
+    if let Some(a) = action {
+        apply_action(app, a);
+    }
+    app.clamp_cursor();
+    true
 }
 
 fn open_path_in_editor(path: &std::path::Path) -> Result<()> {
@@ -609,7 +652,22 @@ fn handle_filters(app: &mut App, key: KeyEvent) {
 /// Keys on Home: `Enter` or `Esc` goes to Today, `i` to the inbox; the
 /// rest are the list's keys (`n` adds, `␣` opens the menu…).
 fn handle_home(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    let picked = app.home_sel.is_some();
     match key.code {
+        KeyCode::Tab => app.home_tab(true),
+        KeyCode::BackTab => app.home_tab(false),
+        KeyCode::Left | KeyCode::Char('h') if picked => app.home_arrow(-1, 0),
+        KeyCode::Right | KeyCode::Char('l') if picked => app.home_arrow(1, 0),
+        KeyCode::Up | KeyCode::Char('k') if picked => app.home_arrow(0, -1),
+        KeyCode::Down | KeyCode::Char('j') if picked => app.home_arrow(0, 1),
+        KeyCode::Down | KeyCode::Char('j') | KeyCode::Right => app.home_arrow(0, 0),
+        KeyCode::Char('x') if picked => app.home_toggle(),
+        KeyCode::Enter if picked => {
+            if let Some(a) = app.home_enter() {
+                apply_action(app, a);
+            }
+        }
+        KeyCode::Esc if app.home_back() => {}
         KeyCode::Enter | KeyCode::Esc => app.close_home(),
         KeyCode::Char('i') => app.open_inbox(),
         _ => handle_normal(app, key, keybinds),
@@ -2023,6 +2081,8 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('S') => Action::CycleSort,
         KeyCode::Char('+') => Action::BeginPromptProject,
         KeyCode::Char('[') => Action::ToggleLeftPane,
+        KeyCode::Char('{') => Action::NarrowDetails,
+        KeyCode::Char('}') => Action::WidenDetails,
         KeyCode::Char(']') => Action::ToggleRightPane,
         KeyCode::Char('T') => Action::OpenThemePicker,
         KeyCode::Char('D') => Action::CycleDensity,
@@ -2229,6 +2289,8 @@ fn apply_action(app: &mut App, action: Action) {
         Action::Pomodoro => app.pomodoro_toggle(),
         Action::PomodoroBreak => app.pomodoro_break(),
         Action::PomodoroStop => app.pomodoro_stop(),
+        Action::NarrowDetails => app.resize_details(false),
+        Action::WidenDetails => app.resize_details(true),
         Action::PickProject => app.enter_pick_project(),
         Action::PickContext => app.enter_pick_context(),
         Action::PickSavedFilter => app.enter_pick_saved(),

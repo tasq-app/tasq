@@ -42,6 +42,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         r: inner,
         y: inner.y,
         bg: Style::default().bg(ibg),
+        marks: Vec::new(),
     };
     let Some(t) = app.cur_task() else {
         p.text(0, "no task selected", p.bg.fg(theme.dim));
@@ -58,6 +59,18 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         .flatten();
     checklist(&mut p, &notes, focus.as_ref(), theme);
     note_cards(&mut p, t, &notes, focus.as_ref(), theme);
+    for (r, h) in p.marks {
+        app.hits.add(r, h);
+    }
+    // The edge between the list and the inspector, to drag wider.
+    app.hits.add(
+        Rect {
+            x: area.x,
+            width: 1,
+            ..area
+        },
+        crate::app::Hit::DetailsEdge,
+    );
 }
 
 /// Writes down the inspector, a row at a time, clipped to its area.
@@ -66,6 +79,8 @@ struct Pen<'a> {
     r: Rect,
     y: u16,
     bg: Style,
+    /// What was drawn where, for the mouse.
+    marks: Vec<(Rect, crate::app::Hit)>,
 }
 
 impl Pen<'_> {
@@ -260,6 +275,12 @@ fn checklist(p: &mut Pen, notes: &TaskNotes, focus: Option<&InspectorRow>, theme
         };
         p.text(0, glyph, bg.fg(color));
         p.text(2, &item.text, bg.fg(theme.fg));
+        let row = Rect {
+            y: p.y,
+            height: 1,
+            ..p.r
+        };
+        p.marks.push((row, crate::app::Hit::CheckItem(i)));
         p.y += 1;
     }
     // Adding is a key away once the inspector has the keyboard.
@@ -304,6 +325,14 @@ fn note_cards(
         }
         let here = focus == Some(&InspectorRow::Note(i));
         let border = card.fg(if here { theme.accent } else { theme.border });
+        p.marks.push((
+            Rect {
+                y: p.y,
+                height: h,
+                ..p.r
+            },
+            crate::app::Hit::NoteCard(i),
+        ));
         p.text(0, &format!("╭{line}╮"), border);
         p.y += 1;
         let body_row = |p: &mut Pen| {
@@ -416,6 +445,7 @@ pub fn render_checklist_prompt(frame: &mut Frame, screen: Rect, app: &App) {
         },
         y: r.y + 1,
         bg,
+        marks: Vec::new(),
     };
     p.text(
         0,

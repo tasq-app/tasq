@@ -43,6 +43,8 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let visible = app.visible_indices();
     let groups = app.visible_groups();
     let mut lines: Vec<Line> = Vec::new();
+    // Which line each task row landed on, for the mouse.
+    let mut row_lines: Vec<(usize, usize)> = Vec::new();
     let mut cursor_line: Option<usize> = None;
 
     if visible.is_empty() {
@@ -92,6 +94,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             if matches!(gk, GroupKey::Day(None)) && i != app.cursor {
                 dim_line(&mut line, theme);
             }
+            row_lines.push((lines.len(), i));
             lines.push(line);
             if matches!(gk, GroupKey::None) && i != last {
                 for _ in 0..blank {
@@ -114,6 +117,28 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         .style(Style::default().bg(theme.bg).fg(theme.fg))
         .scroll((scroll, 0));
     frame.render_widget(para, body_area);
+    for (l, i) in row_lines {
+        let Some(dy) = (l as u16)
+            .checked_sub(scroll)
+            .filter(|dy| *dy < body_area.height)
+        else {
+            continue;
+        };
+        let row = Rect {
+            y: body_area.y + dy,
+            height: 1,
+            ..body_area
+        };
+        app.hits.add(row, crate::app::Hit::Row(i));
+        app.hits.add(
+            Rect {
+                x: body_area.x + 2,
+                width: 2,
+                ..row
+            },
+            crate::app::Hit::Check(i),
+        );
+    }
     // The cursor's row is shaded edge to edge, chips and all.
     if let Some(l) = cursor_line
         && let Some(dy) = (l as u16).checked_sub(scroll)
@@ -331,6 +356,16 @@ fn title_block(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
         );
     }
     // The way to add one, lit while its popover is open.
+    let before: usize = chips.iter().map(|s| s.content.chars().count()).sum();
+    app.hits.add(
+        Rect {
+            x: area.x + before as u16,
+            y: area.y + 2,
+            width: 10,
+            height: 1,
+        },
+        crate::app::Hit::AddFilter,
+    );
     if app.mode == Mode::Filters {
         chips.push(Span::styled(
             " + filter ",

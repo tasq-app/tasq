@@ -40,7 +40,8 @@ pub mod welcome;
 // Pane and overlay sizing. Promoted out of inline literals so the three
 // `MIN_BODY_W` references below stay in sync, and so tweaking a sidebar
 // width is a one-line change.
-const RIGHT_PANE_W: u16 = 34;
+#[cfg(test)]
+const RIGHT_PANE_W: u16 = crate::app::DETAILS_W;
 const MIN_BODY_W: u16 = 40;
 
 const DIALOG_H: u16 = 8;
@@ -59,6 +60,8 @@ const PALETTE_MIN_W: u16 = 50;
 const PALETTE_MAX_W: u16 = 80;
 
 pub fn draw(frame: &mut Frame, app: &App) {
+    app.hits.clear();
+    app.screen_w.set(frame.area().width);
     let theme = app.theme();
     let area = frame.area();
 
@@ -82,7 +85,13 @@ pub fn draw(frame: &mut Frame, app: &App) {
     // recomputed fresh every frame from `pinned_notes.is_empty()`.
     let pinned = !app.pinned_notes.is_empty();
     let show_right = app.prefs.layout.right || pinned;
-    let right_w = right_pane_width(show_right, pinned, body_area.width, left_w);
+    let right_w = right_pane_width(
+        show_right,
+        pinned,
+        body_area.width,
+        left_w,
+        app.prefs.details_w,
+    );
 
     let constraints = match (show_left, show_right) {
         (true, true) => vec![
@@ -268,14 +277,16 @@ pub(crate) fn right_pane_width(
     pinned: bool,
     body_width: u16,
     left_w: u16,
+    want: u16,
 ) -> u16 {
     if !show_right {
         return 0;
     }
-    if !pinned {
-        return RIGHT_PANE_W;
-    }
     let ceiling = body_width.saturating_sub(left_w).saturating_sub(MIN_BODY_W);
+    if !pinned {
+        // As wide as you made it, as long as the list keeps its room.
+        return want.min(ceiling);
+    }
     (body_width / 2).min(ceiling)
 }
 
@@ -337,27 +348,45 @@ mod tests {
 
     #[test]
     fn right_pane_width_is_zero_when_not_shown_regardless_of_pinned() {
-        assert_eq!(right_pane_width(false, false, 200, 0), 0);
-        assert_eq!(right_pane_width(false, true, 200, 0), 0);
+        assert_eq!(
+            right_pane_width(false, false, 200, 0, super::RIGHT_PANE_W),
+            0
+        );
+        assert_eq!(
+            right_pane_width(false, true, 200, 0, super::RIGHT_PANE_W),
+            0
+        );
     }
 
     #[test]
     fn right_pane_width_is_fixed_when_shown_and_not_pinned() {
-        assert_eq!(right_pane_width(true, false, 200, 0), super::RIGHT_PANE_W);
-        assert_eq!(right_pane_width(true, false, 200, 26), super::RIGHT_PANE_W);
+        assert_eq!(
+            right_pane_width(true, false, 200, 0, super::RIGHT_PANE_W),
+            super::RIGHT_PANE_W
+        );
+        assert_eq!(
+            right_pane_width(true, false, 200, 26, super::RIGHT_PANE_W),
+            super::RIGHT_PANE_W
+        );
     }
 
     #[test]
     fn right_pane_width_is_roughly_half_body_when_pinned() {
-        assert_eq!(right_pane_width(true, true, 100, 0), 50);
-        assert_eq!(right_pane_width(true, true, 200, 0), 100);
+        assert_eq!(
+            right_pane_width(true, true, 100, 0, super::RIGHT_PANE_W),
+            50
+        );
+        assert_eq!(
+            right_pane_width(true, true, 200, 0, super::RIGHT_PANE_W),
+            100
+        );
     }
 
     #[test]
     fn right_pane_width_when_pinned_never_pushes_center_below_min_body_w() {
         // body 100, left 26: half of 100 is 50, but 100 - 26 - MIN_BODY_W(40)
         // = 34 is the ceiling, so the clamp (not the naive half) must win.
-        let w = right_pane_width(true, true, 100, 26);
+        let w = right_pane_width(true, true, 100, 26, super::RIGHT_PANE_W);
         assert_eq!(w, 34);
         assert!(
             26 + super::MIN_BODY_W + w <= 100,
@@ -369,7 +398,7 @@ mod tests {
     fn right_pane_width_when_pinned_degrades_to_zero_on_a_very_narrow_terminal_without_panicking() {
         // body narrower than left_w + MIN_BODY_W: saturating arithmetic must
         // clamp to 0, never underflow/panic.
-        let w = right_pane_width(true, true, 30, 26);
+        let w = right_pane_width(true, true, 30, 26, super::RIGHT_PANE_W);
         assert_eq!(w, 0);
     }
 

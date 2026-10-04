@@ -199,6 +199,16 @@ pub const ENTRIES: &[PaletteEntry] = &[
         dispatch: PaletteDispatch::Global(Action::PomodoroStop),
     },
     PaletteEntry {
+        label: "details pane narrower",
+        keys: "{",
+        dispatch: PaletteDispatch::Global(Action::NarrowDetails),
+    },
+    PaletteEntry {
+        label: "details pane wider",
+        keys: "}",
+        dispatch: PaletteDispatch::Global(Action::WidenDetails),
+    },
+    PaletteEntry {
         label: "go to inbox",
         keys: "",
         dispatch: PaletteDispatch::Global(Action::GoInbox),
@@ -799,6 +809,8 @@ mod tests {
             Action::Pomodoro,
             Action::PomodoroBreak,
             Action::PomodoroStop,
+            Action::NarrowDetails,
+            Action::WidenDetails,
             Action::PickProject,
             Action::PickContext,
             Action::CycleSort,

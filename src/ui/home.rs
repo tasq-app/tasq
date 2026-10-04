@@ -60,7 +60,14 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         width: inner.width,
         height: 3,
     };
-    rounded(buf, cap, Style::default().bg(theme.panel).fg(theme.border));
+    let sel = app.home_sel;
+    let cap_border = if sel.is_some_and(|s| s.tile == 0) {
+        theme.accent
+    } else {
+        theme.border
+    };
+    rounded(buf, cap, Style::default().bg(theme.panel).fg(cap_border));
+    app.hits.add(cap, crate::app::Hit::HomeCapture);
     let pbg = Style::default().bg(theme.panel);
     let mut x = cap.x + 2;
     x += put(
@@ -79,13 +86,25 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         cap.right().saturating_sub(x + 6),
         pbg.fg(theme.dim),
     );
+    // The key that does it: n (or a click).
     put(
         buf,
-        cap.right() - 5,
+        cap.right() - 11,
         cap.y + 1,
         " n ",
         3,
-        Style::default().bg(theme.cursor).fg(theme.fg),
+        Style::default()
+            .bg(theme.cursor)
+            .fg(theme.fg)
+            .add_modifier(Modifier::BOLD),
+    );
+    put(
+        buf,
+        cap.right() - 7,
+        cap.y + 1,
+        " to add",
+        7,
+        pbg.fg(theme.dim),
     );
 
     // The tiles.
@@ -120,7 +139,14 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             width: tw,
             height: th,
         };
-        rounded(buf, r, Style::default().bg(theme.panel).fg(theme.border));
+        let tile = usize::from(i) + 1;
+        let picked = sel.filter(|s| s.tile == tile);
+        let border = if picked.is_some() {
+            theme.accent
+        } else {
+            theme.border
+        };
+        rounded(buf, r, Style::default().bg(theme.panel).fg(border));
         let body = Rect {
             x: r.x + 2,
             y: r.y + 1,
@@ -128,6 +154,43 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             height: r.height.saturating_sub(2),
         };
         draw(buf, body, app, theme);
+        app.hits.add(r, crate::app::Hit::HomeTile(tile));
+        // Its items: a row each (the week: a column each).
+        let n = app.home_items(tile).len();
+        let cell = (body.width / 7).clamp(2, 5);
+        for k in 0..n {
+            let spot = if tile == 2 {
+                Rect {
+                    x: body.x + k as u16 * cell,
+                    y: body.y + 2,
+                    width: cell,
+                    height: 3,
+                }
+            } else {
+                let y = body.y + 2 + k as u16;
+                if y >= body.bottom() {
+                    break;
+                }
+                Rect {
+                    x: body.x,
+                    y,
+                    width: body.width,
+                    height: 1,
+                }
+            };
+            app.hits.add(spot, crate::app::Hit::HomeItem(tile, k));
+            if picked.and_then(|s| s.item) == Some(k) {
+                for y in spot.top()..spot.bottom() {
+                    for x in spot.left().saturating_sub(1)..(spot.right() + 1).min(r.right() - 1) {
+                        if let Some(c) = buf.cell_mut((x, y))
+                            && c.bg == theme.panel
+                        {
+                            c.set_bg(theme.cursor);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

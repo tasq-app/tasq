@@ -155,7 +155,14 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     }
     if app.home && app.mode == Mode::Normal && !app.sidebar_focus {
         hint = if app.prefs.hints {
-            "n new task · i inbox · Enter today · Tab sidebar".into()
+            match app.home_sel {
+                Some(crate::app::HomeSel { tile: 0, .. }) => "Enter add a task · Tab next".into(),
+                Some(crate::app::HomeSel { item: Some(_), .. }) => {
+                    "Enter open · x done · ↑↓ move · Esc back".into()
+                }
+                Some(_) => "Enter open · ←→↑↓ tiles · Tab next · Esc back".into(),
+                None => "n new task · Tab pick a tile · i inbox · Enter today".into(),
+            }
         } else {
             "".into()
         };

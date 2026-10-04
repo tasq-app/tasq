@@ -57,6 +57,9 @@ pub enum Action {
     /// A 5-minute break now.
     PomodoroBreak,
     PomodoroStop,
+    /// The details pane a few columns narrower / wider.
+    NarrowDetails,
+    WidenDetails,
     /// The "+ filter" popover.
     OpenFilters,
     PickProject,
@@ -148,6 +151,8 @@ impl Action {
             "pomodoro" | "timer" => Some(Self::Pomodoro),
             "pomodoro_break" => Some(Self::PomodoroBreak),
             "pomodoro_stop" => Some(Self::PomodoroStop),
+            "narrow_details" => Some(Self::NarrowDetails),
+            "widen_details" => Some(Self::WidenDetails),
             "open_filters" | "filters" | "filter" => Some(Self::OpenFilters),
             "pick_project" => Some(Self::PickProject),
             "pick_context" => Some(Self::PickContext),
