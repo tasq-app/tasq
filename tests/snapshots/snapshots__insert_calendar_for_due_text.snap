@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  /tmp/tasq-snapshot.txt                │                               
-  ▣ tasq                   │  15 tasks  ·  sort: priority           │  ⚑ Finish Q2 board deck       
-                           │  + filter                              │                               
-   ⌂ Home                  │                                        │  due       today              
-   ▤ Inbox              3  │  PRIORITY A  2  ───────────────────────│  space     ● work             
-   ◉ Today              1  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
-   ◷ Upcoming           6  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
-   ≡ All tasks         15  │  PRIORITY B  3  ───────────────────────│                               
-   ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
-   ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
-   ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-   ⌫ Trash              0  │  PRIORITY C  2  ───────────────────────│                               
-          ╭──────────────────────────────────────────────────────────────────────────────╮          
-  SPACES  │                                                                              │          
-   ● work │  > ⚑ (A) Renew passport before summer trip  +travel   @errands ▏       ↑     │          
+                       │                                          │                                 
+  ■ tasq               │  All tasks  wednesday 6 may              │  Finish Q2 board deck           
+                       │  15 tasks                                │                                 
+   ⌂ Home              │   + filter            sort · priority ▾  │  due      today                 
+   ▤ Inbox          3  │                                          │  space    ● work                
+   ◉ Today          1  │  PRIORITY A ─────────────────────────────│  priority ⚑ high                
+   ◷ Upcoming       6  │▎ ☐ ⚑ Finish Q2 board deck  ◷ due today   │  tags     @laptop               
+   ▦ Calendar          │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
+   ✎ Notes             │  PRIORITY B ─────────────────────────────│                                 
+   ⌕ Search         /  │  ☐ ⚑ Review pull requests for auth refact│                                 
+                       │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
+  SPACES               │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
+   ● work ╭──────────────────────────────────────────────────────────────────────────────╮          
    ● healt│                                                                              │          
-   ● finan│                       + travel     @ errands     ⚑ (A)                       │          
+   ● finan│  > ⚑ (A) Renew passport before summer trip  +travel   @errands ▏       ↑     │          
    ● home │                                                                              │          
-   ● learn╰──────────────────────────────────────────────────────────────────────────────╯          
-   ● personal ╭ DUE ───────────────────────────────────────────╮e Ap│                               
-   ● travel   │  ‹  May 2026  ›                                │ @ho│                               
-              │    S   M   T   W   T   F   S                   │ per│                               
-  FILTERS     │                        1   2                   │r  ●│                               
-   ⚑ High prio│    3   4   5   6   7   8   9                   │    │                               
-   ★ Starred  │   10  11  12  13  14  15  16                   │    │                               
-   ◷ Overdue  │   17  18  19  20  21  22  23                   │    │                               
-              │   24  25  26  27  28  29  30                   │    │                               
- ╭────────────│   31                                           │    │                               
- │  Y  you ● f│                                                │    │                               
- ╰────────────│  Thu May 7                                     │    │                               
-              │  t today · T tmw · w +1w · m +1mo · x clear    │    │                               
-   ● insert   ╰────────────────────────────────────────────────╯at, +project @context · Tab chips ·
+   ● learn│                       + travel     @ errands     ⚑ (A)                       │          
+   ● perso│                                                                              │          
+   ● trave╰──────────────────────────────────────────────────────────────────────────────╯          
+              ╭ DUE ───────────────────────────────────────────╮@p│                                 
+  FILTERS     │  ‹  May 2026  ›                                │ca│                                 
+   ⚑ High prio│    S   M   T   W   T   F   S                   │  │                                 
+   ★ Starred  │                        1   2                   │al│                                 
+   ◷ Overdue  │    3   4   5   6   7   8   9                   │me│                                 
+              │   10  11  12  13  14  15  16                   │  │                                 
+              │   17  18  19  20  21  22  23                   │  │                                 
+ ╭────────────│   24  25  26  27  28  29  30                   │  │                                 
+ │  Y  you    │   31                                           │  │                                 
+ │     ● todo.│                                                │  │                                 
+ ╰────────────│  Thu May 7                                     │  │                                 
+              │  t today · T tmw · w +1w · m +1mo · x clear    │  │                                 
+  ● insert  ty╰────────────────────────────────────────────────╯+project @context   Tab chips   Ctrl

@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  /tmp/tasq-snapshot.txt                │                               
-  ▣ tasq                   │  15 tasks  ·  sort: priority           │  ⚑ Finish Q2 board deck       
-                           │  + filter                              │                               
-   ⌂ Home                  │                                        │  due       today              
-   ▤ Inbox              3  │  PRIORITY A  2  ───────────────────────│  space     ● work             
-   ◉ Today              1  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
-   ◷ Upcoming       ╭ tasq · command ──────────────────────────────────────────╮ @laptop            
-   ≡ All tasks      │ > █                                                      │                    
-   ▦ Calendar       │──────────────────────────────────────────────────────────│                    
-   ✎ Notes          │ ▶ new task                                             n │m                   
-   ⌕ Search         │   edit current task (normal mode)                      e │                    
-   ⌫ Trash          │   edit current task (insert mode)                      i │                    
-                    │   toggle complete                                      x │                    
-  SPACES            │   delete task                                         dd │                    
-   ● work           │   cycle priority                                       p │                    
-   ● health         │   star / unstar task (top of its priority)             * │                    
-   ● finance        │   move task down                                       J │                    
-   ● home           │   move task up                                         K │                    
-   ● learning       │   add project to current task                          + │                    
-   ● personal       │   add or remove context on current task                c │                    
-   ● travel         │   copy line to clipboard                              yy │                    
-                    │   copy body to clipboard                              yb │                    
-  FILTERS           │   open task notes                                      o │                    
-   ⚑ High priority  │   undo                                                 u │                    
-   ★ Starred        │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
-   ◷ Overdue        ╰──────────────────────────────────────────────────────────╯                    
-                           │                                        │                               
- ╭───────────────────────╮ │                                        │                               
- │  Y  you ● file        │ │                                        │                               
- ╰───────────────────────╯ │                                        │                               
-                           │                                        │                               
-   ● command     type to filter · Enter run · Esc cancel
+                       │                                          │                                 
+  ■ tasq               │  All tasks  wednesday 6 may              │  Finish Q2 board deck           
+                       │  15 tasks                                │                                 
+   ⌂ Home              │   + filter            sort · priority ▾  │  due      today                 
+   ▤ Inbox          3  │                                          │  space    ● work                
+   ◉ Today          1  │  PRIORITY A ─────────────────────────────│  priority ⚑ high                
+   ◷ Upcoming       ╭ tasq · command ──────────────────────────────────────────╮aptop               
+   ▦ Calendar       │ > █                                                      │                    
+   ✎ Notes          │──────────────────────────────────────────────────────────│                    
+   ⌕ Search         │ ▶ new task                                             n │                    
+                    │   edit current task (normal mode)                      e │                    
+  SPACES            │   edit current task (insert mode)                      i │                    
+   ● work           │   toggle complete                                      x │                    
+   ● health         │   delete task                                         dd │                    
+   ● finance        │   cycle priority                                       p │                    
+   ● home           │   star / unstar task (top of its priority)             * │                    
+   ● learning       │   move task down                                       J │                    
+   ● personal       │   move task up                                         K │                    
+   ● travel         │   add project to current task                          + │                    
+                    │   add or remove context on current task                c │                    
+  FILTERS           │   copy line to clipboard                              yy │                    
+   ⚑ High priority  │   copy body to clipboard                              yb │                    
+   ★ Starred        │   open task notes                                      o │                    
+   ◷ Overdue        │   undo                                                 u │                    
+                    │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
+                    ╰──────────────────────────────────────────────────────────╯                    
+ ╭───────────────────╮ │                                          │                                 
+ │  Y  you           │ │                                          │                                 
+ │     ● todo.txt    │ │                                          │                                 
+ ╰───────────────────╯ │                                          │                                 
+                       │                                          │                                 
+  ● command                                               type to filter   Enter run   Esc cancel

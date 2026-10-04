@@ -13,11 +13,13 @@ use crate::todo::Task;
 use crate::ui::task_row::{chip_date, due_label, tint};
 
 /// Width of the labels column.
-const KEY_W: u16 = 10;
+const KEY_W: u16 = 9;
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let theme = app.theme();
-    super::fill_bg(frame, area, Style::default().bg(theme.panel));
+    // Halfway between the sidebar's shade and the list's.
+    let ibg = tint(theme.panel, theme.bg, 0.5).unwrap_or(theme.panel);
+    super::fill_bg(frame, area, Style::default().bg(ibg));
     if area.width < 12 || area.height < 3 {
         return;
     }
@@ -26,20 +28,20 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     for y in area.top()..area.bottom() {
         if let Some(c) = buf.cell_mut((area.x, y)) {
             c.set_symbol("│");
-            c.set_style(Style::default().fg(theme.border).bg(theme.panel));
+            c.set_style(Style::default().fg(theme.border).bg(ibg));
         }
     }
     let inner = Rect {
         x: area.x + 3,
         y: area.y + 1,
-        width: area.width - 5,
+        width: area.width - 4,
         height: area.height - 1,
     };
     let mut p = Pen {
         buf,
         r: inner,
         y: inner.y,
-        bg: Style::default().bg(theme.panel),
+        bg: Style::default().bg(ibg),
     };
     let Some(t) = app.cur_task() else {
         p.text(0, "no task selected", p.bg.fg(theme.dim));
@@ -120,28 +122,15 @@ impl Pen<'_> {
 }
 
 fn title(p: &mut Pen, t: &Task, theme: &Theme) {
-    let mut lead: Vec<(&str, Color)> = Vec::new();
-    if let Some(pri) = t.priority {
-        lead.push(("⚑", theme.priority_color(pri)));
-    }
-    if t.starred {
-        lead.push(("★", theme.matched));
-    }
-    let lead_w = 2 * lead.len() as u16;
     let body = crate::todo::body_only(&t.raw);
     let style = if t.done {
         p.bg.fg(theme.done).add_modifier(Modifier::CROSSED_OUT)
     } else {
         p.bg.fg(theme.fg).add_modifier(Modifier::BOLD)
     };
-    let width = usize::from(p.r.width.saturating_sub(lead_w)).max(8);
-    for (i, line) in wrap(&body, width).iter().take(3).enumerate() {
-        if i == 0 {
-            for (j, (glyph, color)) in lead.iter().enumerate() {
-                p.text(2 * j as u16, glyph, p.bg.fg(*color));
-            }
-        }
-        p.text(lead_w, line, style);
+    let width = usize::from(p.r.width).max(8);
+    for line in wrap(&body, width).iter().take(3) {
+        p.text(0, line, style);
         p.y += 1;
     }
 }
@@ -235,7 +224,7 @@ fn facts(p: &mut Pen, t: &Task, app: &App, theme: &Theme) {
             .done_date
             .as_deref()
             .map_or_else(String::new, |d| chip_date(d, today));
-        fact(p, "done", &format!("☑ {on}"), theme.pri_c, theme);
+        fact(p, "done", &format!("☑ {on}"), theme.ok, theme);
     }
 }
 
@@ -252,39 +241,38 @@ fn end_time(at: &str, minutes: u32) -> String {
 }
 
 fn checklist(p: &mut Pen, notes: &TaskNotes, focus: Option<&InspectorRow>, theme: &Theme) {
-    let heading = p.bg.fg(theme.dim).add_modifier(Modifier::BOLD);
-    if let Some((done, total)) = notes.progress() {
-        const BAR: usize = 10;
-        let w = p.text(0, &format!("CHECKLIST · {done}/{total}"), heading);
-        let filled = (done * BAR).checked_div(total).unwrap_or(0);
-        p.text(w + 2, &"━".repeat(filled), p.bg.fg(theme.pri_c));
-        p.text(
-            w + 2 + filled as u16,
-            &"━".repeat(BAR - filled),
-            p.bg.fg(theme.border),
-        );
-    } else {
-        p.text(0, "CHECKLIST", heading);
+    // Nothing to show and nothing being added: no section at all.
+    if notes.items.is_empty() && focus.is_none() {
+        return;
     }
+    let heading = p.bg.fg(theme.dim);
+    match notes.progress() {
+        Some((done, total)) => p.text(0, &format!("CHECKLIST · {done}/{total}"), heading),
+        None => p.text(0, "CHECKLIST", heading),
+    };
     p.y += 1;
     for (i, item) in notes.items.iter().enumerate() {
         let bg = p.cursor(focus == Some(&InspectorRow::Item(i)), theme);
-        let (glyph, color, text) = if item.done {
-            ("☑", theme.pri_c, bg.fg(theme.dim))
+        let (glyph, color) = if item.done {
+            ("☑", theme.ok)
         } else {
-            ("☐", theme.dim, bg.fg(theme.fg))
+            ("☐", theme.dim)
         };
         p.text(0, glyph, bg.fg(color));
-        p.text(2, &item.text, text);
+        p.text(2, &item.text, bg.fg(theme.fg));
         p.y += 1;
     }
-    let here = focus == Some(&InspectorRow::AddItem);
-    let bg = p.cursor(here, theme);
-    p.text(
-        0,
-        "+ add item",
-        bg.fg(if here { theme.accent } else { theme.dim }),
-    );
+    // Adding is a key away once the inspector has the keyboard.
+    if focus.is_some() {
+        let here = focus == Some(&InspectorRow::AddItem);
+        let bg = p.cursor(here, theme);
+        p.text(
+            0,
+            "+ add item",
+            bg.fg(if here { theme.accent } else { theme.dim }),
+        );
+        p.y += 1;
+    }
     p.y += 1;
 }
 
@@ -295,12 +283,6 @@ fn note_cards(
     focus: Option<&InspectorRow>,
     theme: &Theme,
 ) {
-    if notes.notes.is_empty() && t.notes.is_empty() {
-        return;
-    }
-    p.y += 1;
-    p.text(0, "NOTES", p.bg.fg(theme.dim).add_modifier(Modifier::BOLD));
-    p.y += 1;
     for line in &t.notes {
         p.text(0, line, p.bg.fg(theme.status_fg));
         p.y += 1;
@@ -308,33 +290,44 @@ fn note_cards(
     let w = p.r.width;
     let inner = usize::from(w.saturating_sub(4));
     let line = "─".repeat(usize::from(w.saturating_sub(2)));
+    // A card: the list's own shade, a hairline round it, the title and a
+    // couple of lines of what's in it.
+    let card = Style::default().bg(theme.bg);
     for (i, n) in notes.notes.iter().enumerate() {
-        if p.y + 3 > p.r.bottom() {
+        let preview = wrap(&n.preview, inner);
+        let lines: Vec<&String> = preview.iter().filter(|l| !l.is_empty()).take(2).collect();
+        let h = 3 + lines.len() as u16;
+        if p.y + h > p.r.bottom() {
             let left = notes.notes.len() - i;
             p.text(0, &format!("+{left} more"), p.bg.fg(theme.dim));
             break;
         }
         let here = focus == Some(&InspectorRow::Note(i));
-        let border = p.bg.fg(if here { theme.accent } else { theme.border });
+        let border = card.fg(if here { theme.accent } else { theme.border });
         p.text(0, &format!("╭{line}╮"), border);
         p.y += 1;
-        p.text(0, "│", border);
-        p.text(w - 1, "│", border);
-        let tw = p.text(2, "≡ ", p.bg.fg(theme.accent));
+        let body_row = |p: &mut Pen| {
+            p.text(
+                0,
+                &format!("│{}│", " ".repeat(usize::from(w.saturating_sub(2)))),
+                border,
+            );
+        };
+        body_row(p);
+        let title = format!("≡ {}", n.title);
         p.text(
-            2 + tw,
-            &fit(&n.title, inner.saturating_sub(usize::from(tw))),
-            p.bg.fg(theme.fg).add_modifier(Modifier::BOLD),
+            2,
+            &fit(&title, inner),
+            card.fg(theme.fg).add_modifier(Modifier::BOLD),
         );
         p.y += 1;
-        if !n.preview.is_empty() {
-            p.text(0, "│", border);
-            p.text(w - 1, "│", border);
-            p.text(2, &fit(&n.preview, inner), p.bg.fg(theme.status_fg));
+        for l in &lines {
+            body_row(p);
+            p.text(2, &fit(l, inner), card.fg(theme.status_fg));
             p.y += 1;
         }
         p.text(0, &format!("╰{line}╯"), border);
-        p.y += 1;
+        p.y += 2;
     }
 }
 

@@ -23,6 +23,8 @@ pub struct RowOpts<'a> {
     pub space_color: &'a dyn Fn(&str) -> Color,
     /// `(done, total)` of the task's checklist, if it has one.
     pub checklist: Option<(usize, usize)>,
+    /// Drawn in Today, where "today" on a chip goes without saying.
+    pub in_today: bool,
 }
 
 impl Default for RowOpts<'_> {
@@ -39,6 +41,7 @@ impl Default for RowOpts<'_> {
             hidden_keys: &[],
             space_color: &|_| Color::Reset,
             checklist: None,
+            in_today: false,
         }
     }
 }
@@ -67,16 +70,16 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
     // The cursor's accent bar, then a checkbox: ☑ in green once done.
     if opts.cursor {
         spans.push(Span::styled(
-            "▎",
+            "▎ ",
             Style::default()
                 .fg(theme.accent)
                 .add_modifier(Modifier::BOLD),
         ));
     } else {
-        spans.push(Span::raw(" "));
+        spans.push(Span::raw("  "));
     }
     if task.done {
-        spans.push(Span::styled("☑ ", Style::default().fg(theme.pri_c)));
+        spans.push(Span::styled("■ ", Style::default().fg(theme.ok)));
     } else {
         spans.push(Span::styled(
             "☐ ",
@@ -100,7 +103,7 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
         spans.push(Span::styled(
             "★ ",
             Style::default()
-                .fg(theme.pri_b)
+                .fg(theme.matched)
                 .add_modifier(Modifier::BOLD),
         ));
     }
@@ -227,11 +230,7 @@ fn push_token_spans<'a>(
 
     // plain word — highlight each matched subsequence char inside this token.
     // makes the task body text visible on the cursor row
-    let base_color = if task.done && !opts.cursor {
-        theme.done
-    } else {
-        theme.fg
-    };
+    let base_color = if task.done { theme.done } else { theme.fg };
     let base_style = apply_dim(Style::default().fg(base_color), task.done);
     let hl_style = Style::default()
         .fg(theme.bg)
@@ -300,14 +299,16 @@ pub(crate) fn tint(color: Color, bg: Color, amount: f32) -> Option<Color> {
     }
 }
 
-/// One chip: ` text ` in `color` on a tint of it. A done task's chips are
-/// plain and dim.
-fn push_chip<'a>(spans: &mut Vec<Span<'a>>, text: String, color: Color, done: bool, theme: &Theme) {
+/// One chip: ` text ` in `color` on a tint of it (a done task's too: only
+/// its title is struck through).
+fn push_chip<'a>(
+    spans: &mut Vec<Span<'a>>,
+    text: String,
+    color: Color,
+    _done: bool,
+    theme: &Theme,
+) {
     spans.push(Span::raw(" "));
-    if done {
-        spans.push(Span::styled(text, Style::default().fg(theme.done)));
-        return;
-    }
     let mut style = Style::default().fg(color);
     if let Some(bg) = tint(color, theme.bg, 0.2) {
         style = style.bg(bg);
@@ -342,9 +343,26 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
         .flatten();
 
     // When: the planned day, else (with no deadline) just the time.
+    // A day you've missed reads as late, in red.
+    let late = task
+        .planned
+        .as_deref()
+        .filter(|p| !done && *p < opts.today && shown("plan"));
     let mut when: Vec<String> = Vec::new();
     if let Some(p) = task.planned.as_deref().filter(|_| shown("plan")) {
-        when.push(chip_date(p, opts.today));
+        // Inside Today, "today" goes without saying.
+        if late.is_none() && !(opts.in_today && p == opts.today) {
+            when.push(chip_date(p, opts.today));
+        }
+    }
+    if let Some(p) = late {
+        push_chip(
+            spans,
+            format!("◷ {}", chip_date(p, opts.today)),
+            theme.overdue,
+            done,
+            theme,
+        );
     }
     if let Some(t) = time {
         when.push(t);
@@ -381,7 +399,15 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
         push_chip(spans, format!("shows from {from}"), theme.dim, done, theme);
     }
     if let Some(r) = task.rec.as_deref().filter(|_| shown("rec")) {
-        let mut text = format!("↻ {}", crate::app::describe_rec(r));
+        // "every mon, wed, fri" reads "mon wed fri" on a chip.
+        let said = crate::app::describe_rec(r);
+        let short = match said.strip_prefix("every ") {
+            Some(days) if days.starts_with(['m', 't', 'w', 'f', 's']) && days.contains(", ") => {
+                days.replace(", ", " ")
+            }
+            _ => said.clone(),
+        };
+        let mut text = format!("↻ {short}");
         if let Some(u) = task.until.as_deref() {
             text.push_str(&format!(" until {}", chip_date(u, opts.today)));
         }
@@ -407,11 +433,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
         ));
     }
     if let Some((d, n)) = opts.checklist {
-        let color = if d == n && !done {
-            theme.pri_c
-        } else {
-            theme.dim
-        };
+        let color = if d == n && !done { theme.ok } else { theme.dim };
         spans.push(Span::styled(
             format!("  ≡ {d}/{n}"),
             Style::default().fg(color),
@@ -465,9 +487,10 @@ fn sigil_token_color(token: &str, task: &Task, theme: &Theme) -> Option<Color> {
     }
 }
 
+/// A done task's title: struck through.
 fn apply_dim(style: Style, dim: bool) -> Style {
     if dim {
-        style.add_modifier(Modifier::DIM)
+        style.add_modifier(Modifier::CROSSED_OUT)
     } else {
         style
     }
@@ -610,6 +633,7 @@ mod tests {
             hidden_keys: &[],
             space_color: &|_| Color::Reset,
             checklist: None,
+            in_today: false,
         };
         // Build must not panic; we don't assert on the rendered spans.
         let _ = build_line(&task, opts, &MUTED);
@@ -633,6 +657,7 @@ mod tests {
             hidden_keys: &[],
             space_color: &|_| Color::Reset,
             checklist: None,
+            in_today: false,
         };
         let line = build_line(&task, opts, &MUTED);
         let highlight_bg = MUTED.matched;
@@ -663,6 +688,7 @@ mod tests {
             hidden_keys: hidden,
             space_color: &|_| Color::Reset,
             checklist: None,
+            in_today: false,
         };
         let line = build_line(&task, opts, &MUTED);
         line.spans
@@ -733,6 +759,7 @@ mod tests {
             hidden_keys: &[],
             space_color: &|_| Color::Reset,
             checklist: None,
+            in_today: false,
         };
         let line = build_line(&task, opts, &MUTED);
         let url_span = line
@@ -766,6 +793,7 @@ mod tests {
             hidden_keys: &[],
             space_color: &|_| Color::Reset,
             checklist: None,
+            in_today: false,
         };
         let line = build_line(&task, opts, &MUTED);
         let url_span = line
@@ -805,7 +833,7 @@ mod tests {
             .collect();
         assert_eq!(
             text.trim_end(),
-            " ☐ ⚑ ★ Trabajo TIS  today · 16:00 · 2h   ◷ by fri 8 may   ↻ every week until tue 30 jun   ● Uni › Exams  @laptop"
+            "  ☐ ⚑ ★ Trabajo TIS  today · 16:00 · 2h   ◷ by fri 8 may   ↻ every week until tue 30 jun   ● Uni › Exams  @laptop"
         );
         assert_eq!(chip_date("2026-05-07", "2026-05-06"), "tomorrow");
         assert_eq!(chip_date("2027-01-02", "2026-05-06"), "2 jan 2027");

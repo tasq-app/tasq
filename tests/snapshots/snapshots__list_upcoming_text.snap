@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  /tmp/tasq-snapshot.txt                │                               
-  ▣ tasq                   │  6 tasks  ·  sort: priority            │  ⚑ Review pull requests for   
-                           │  + filter                              │    auth refactor              
-   ⌂ Home                  │                                        │                               
-   ▤ Inbox              3  │  TOMORROW  1  ─────────────────────────│  due       tomorrow           
-   ◉ Today              1  │  1 ▎☐ ⚑ Review pull requests for auth r│  space     ● work             
-   ◷ Upcoming           6  │  FRI 8 MAY  1  ────────────────────────│  priority  ⚑ medium           
-   ≡ All tasks         15  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
-   ▦ Calendar              │  LATER  4  ────────────────────────────│                               
-   ✎ Notes                 │  3  ☐ Migrate analytics to new pipeline│  CHECKLIST                    
-   ⌕ Search             /  │  4  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│  + add item                   
-   ⌫ Trash              0  │  5  ☐ ⚑ Renew passport before summer tr│                               
-                           │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
-  SPACES                   │                                        │                               
-   ● work               4  │                                        │                               
-   ● health             3  │                                        │                               
-   ● finance            2  │                                        │                               
-   ● home               1  │                                        │                               
-   ● learning           1  │                                        │                               
-   ● personal           1  │                                        │                               
-   ● travel             1  │                                        │                               
-                           │                                        │                               
-  FILTERS                  │                                        │                               
-   ⚑ High priority      2  │                                        │                               
-   ★ Starred            0  │                                        │                               
-   ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
- ╭───────────────────────╮ │                                        │                               
- │  Y  you ● file        │ │                                        │                               
- ╰───────────────────────╯ │                                        │                               
-                           │                                        │                               
-   ● normal     x done · e edit · r reschedule · Tab details                                 ␣ menu
+                       │                                          │                                 
+  ■ tasq               │  Upcoming  wednesday 6 may               │  Review pull requests for auth  
+                       │  6 tasks                                 │  refactor                       
+   ⌂ Home              │   + filter            sort · priority ▾  │                                 
+   ▤ Inbox          3  │                                          │  due      tomorrow              
+   ◉ Today          1  │  TOMORROW ───────────────────────────────│  space    ● work                
+   ◷ Upcoming       6  │▎ ☐ ⚑ Review pull requests for auth refact│  priority ⚑ medium              
+   ▦ Calendar          │  FRI 8 MAY ──────────────────────────────│  tags     @laptop               
+   ✎ Notes             │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
+   ⌕ Search         /  │  LATER ──────────────────────────────────│                                 
+                       │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
+  SPACES               │  ☐ Pay rent  ◷ by fri 15 may   ↻ every mo│                                 
+   ● work           4  │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
+   ● health         3  │  ☐ ⚑ Pay quarterly estimated taxes  ◷ by │                                 
+   ● finance        2  │                                          │                                 
+   ● home           1  │                                          │                                 
+   ● learning       1  │                                          │                                 
+   ● personal       1  │                                          │                                 
+   ● travel         1  │                                          │                                 
+                       │                                          │                                 
+  FILTERS              │                                          │                                 
+   ⚑ High priority  2  │                                          │                                 
+   ★ Starred        0  │                                          │                                 
+   ◷ Overdue        7  │                                          │                                 
+                       │                                          │                                 
+                       │                                          │                                 
+ ╭───────────────────╮ │                                          │                                 
+ │  Y  you           │ │                                          │                                 
+ │     ● todo.txt    │ │                                          │                                 
+ ╰───────────────────╯ │                                          │                                 
+                       │                                          │                                 
+  ● normal   Upcoming · 6 tasks              x done   e edit   r reschedule   Tab details   ␣ more…

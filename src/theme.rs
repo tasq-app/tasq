@@ -33,6 +33,9 @@ pub struct Theme {
     pub done: Color,
     pub selected: Color,
     pub matched: Color,
+    /// Success: done boxes, progress, "on". (A theme file may leave it out;
+    /// it then takes `pri_c`.)
+    pub ok: Color,
     /// Colours spaces are painted in, in slot order. Empty means "derive
     /// them from the theme's other colours" (see [`Theme::palette`]).
     pub palette: &'static [Color],
@@ -83,6 +86,47 @@ const fn rgb(r: u8, g: u8, b: u8) -> Color {
     Color::Rgb(r, g, b)
 }
 
+/// Catppuccin Macchiato: the palette the redesign was drawn in.
+pub const CATPPUCCIN: Theme = Theme {
+    name: "Catppuccin Macchiato",
+    bg: rgb(0x24, 0x27, 0x3a),
+    panel: rgb(0x1e, 0x20, 0x30),
+    border: rgb(0x36, 0x3a, 0x4f),
+    fg: rgb(0xca, 0xd3, 0xf5),
+    dim: rgb(0x6e, 0x73, 0x8d),
+    accent: rgb(0xc6, 0xa0, 0xf6),
+    cursor: rgb(0x36, 0x3a, 0x4f),
+    selection: rgb(0x49, 0x4d, 0x64),
+    statusbar: rgb(0x1e, 0x20, 0x30),
+    status_fg: rgb(0xa5, 0xad, 0xcb),
+    mode_fg: rgb(0x18, 0x19, 0x26),
+    mode_bg: rgb(0xc6, 0xa0, 0xf6),
+    pri_a: rgb(0xed, 0x87, 0x96),
+    pri_b: rgb(0xf5, 0xa9, 0x7f),
+    pri_c: rgb(0xee, 0xd4, 0x9f),
+    pri_d: rgb(0x8a, 0xad, 0xf4),
+    pri_other: rgb(0xb7, 0xbd, 0xf8),
+    project: rgb(0x8a, 0xad, 0xf4),
+    context: rgb(0xf5, 0xbd, 0xe6),
+    due: rgb(0xee, 0xd4, 0x9f),
+    overdue: rgb(0xed, 0x87, 0x96),
+    today: rgb(0x91, 0xd7, 0xe3),
+    done: rgb(0x6e, 0x73, 0x8d),
+    selected: rgb(0x36, 0x3a, 0x4f),
+    matched: rgb(0xee, 0xd4, 0x9f),
+    ok: rgb(0xa6, 0xda, 0x95),
+    palette: &[
+        rgb(0x8a, 0xad, 0xf4), // blue
+        rgb(0xc6, 0xa0, 0xf6), // mauve
+        rgb(0xa6, 0xda, 0x95), // green
+        rgb(0xf5, 0xa9, 0x7f), // peach
+        rgb(0x91, 0xd7, 0xe3), // sky
+        rgb(0x8b, 0xd5, 0xca), // teal
+        rgb(0xf5, 0xbd, 0xe6), // pink
+        rgb(0xb7, 0xbd, 0xf8), // lavender
+    ],
+};
+
 pub const MUTED: Theme = Theme {
     name: "Muted Slate",
     bg: rgb(0x1a, 0x1d, 0x23),
@@ -110,6 +154,7 @@ pub const MUTED: Theme = Theme {
     done: rgb(0x5a, 0x62, 0x70),
     selected: rgb(0x2f, 0x39, 0x47),
     matched: rgb(0xd4, 0xb0, 0x6a),
+    ok: rgb(0x7a, 0xa6, 0x7a),
     palette: &[],
 };
 
@@ -140,6 +185,7 @@ pub const DAWN: Theme = Theme {
     done: rgb(0xa8, 0x9a, 0x82),
     selected: rgb(0xed, 0xe0, 0xc8),
     matched: rgb(0xa3, 0x72, 0x2a),
+    ok: rgb(0x5a, 0x7a, 0x3a),
     palette: &[],
 };
 
@@ -170,6 +216,7 @@ pub const NORD: Theme = Theme {
     done: rgb(0x4c, 0x56, 0x6a),
     selected: rgb(0x43, 0x4c, 0x5e),
     matched: rgb(0xeb, 0xcb, 0x8b),
+    ok: rgb(0xa3, 0xbe, 0x8c),
     palette: &[],
 };
 
@@ -200,6 +247,7 @@ pub const MATRIX: Theme = Theme {
     done: rgb(0x3f, 0x6a, 0x3f),
     selected: rgb(0x1f, 0x3a, 0x1f),
     matched: rgb(0xff, 0xd6, 0x6e),
+    ok: rgb(0x9f, 0xff, 0x9f),
     palette: &[],
 };
 
@@ -230,10 +278,11 @@ pub const TERMINAL: Theme = Theme {
     done: Color::DarkGray,
     selected: Color::DarkGray,
     matched: Color::Yellow,
+    ok: Color::Green,
     palette: &[],
 };
 
-pub const BUILT_IN: &[&Theme] = &[&MUTED, &DAWN, &NORD, &MATRIX, &TERMINAL];
+pub const BUILT_IN: &[&Theme] = &[&CATPPUCCIN, &MUTED, &DAWN, &NORD, &MATRIX, &TERMINAL];
 
 static REGISTRY: OnceLock<Vec<&'static Theme>> = OnceLock::new();
 
@@ -421,6 +470,7 @@ fn parse_theme(s: &str) -> Result<Theme, String> {
         done: get("done")?,
         selected: get("selected")?,
         matched: get("matched")?,
+        ok: get("ok").or_else(|_| get("pri_c"))?,
         palette: Box::leak(palette.into_boxed_slice()),
     })
 }

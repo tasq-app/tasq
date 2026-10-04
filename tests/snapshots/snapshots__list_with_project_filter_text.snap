@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  ● work                                │                               
-  ▣ tasq                   │  4 tasks  ·  sort: priority            │  ⚑ Finish Q2 board deck       
-                           │   ● work ×  + filter                   │                               
-   ⌂ Home                  │                                        │  due       today              
-   ▤ Inbox              3  │  PRIORITY A  1  ───────────────────────│  space     ● work             
-   ◉ Today              1  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
-   ◷ Upcoming           6  │  PRIORITY B  2  ───────────────────────│  tags      @laptop            
-   ≡ All tasks         15  │  2  ☐ ⚑ Review pull requests for auth r│                               
-   ▦ Calendar              │  3  ☐ ⚑ Draft hiring rubric for senior │  CHECKLIST                    
-   ✎ Notes                 │  NO PRIORITY  1  ──────────────────────│  + add item                   
-   ⌕ Search             /  │  4  ☐ Migrate analytics to new pipeline│                               
-   ⌫ Trash              0  │                                        │                               
-                           │                                        │                               
-  SPACES                   │                                        │                               
-   ● work               4  │                                        │                               
-   ● health             3  │                                        │                               
-   ● finance            2  │                                        │                               
-   ● home               1  │                                        │                               
-   ● learning           1  │                                        │                               
-   ● personal           1  │                                        │                               
-   ● travel             1  │                                        │                               
-                           │                                        │                               
-  FILTERS                  │                                        │                               
-   ⚑ High priority      2  │                                        │                               
-   ★ Starred            0  │                                        │                               
-   ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
- ╭───────────────────────╮ │                                        │                               
- │  Y  you ● file        │ │                                        │                               
- ╰───────────────────────╯ │                                        │                               
-                           │                                        │                               
-   ● normal     x done · e edit · r reschedule · Tab details                                 ␣ menu
+                       │                                          │                                 
+  ■ tasq               │  ● work                                  │  Finish Q2 board deck           
+                       │  4 tasks                                 │                                 
+   ⌂ Home              │   ● work ×   + filter                    │  due      today                 
+   ▤ Inbox          3  │                                          │  space    ● work                
+   ◉ Today          1  │  PRIORITY A ─────────────────────────────│  priority ⚑ high                
+   ◷ Upcoming       6  │▎ ☐ ⚑ Finish Q2 board deck  ◷ due today   │  tags     @laptop               
+   ▦ Calendar          │  PRIORITY B ─────────────────────────────│                                 
+   ✎ Notes             │  ☐ ⚑ Review pull requests for auth refact│                                 
+   ⌕ Search         /  │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
+                       │  NO PRIORITY ────────────────────────────│                                 
+  SPACES               │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
+   ● work           4  │                                          │                                 
+   ● health         3  │                                          │                                 
+   ● finance        2  │                                          │                                 
+   ● home           1  │                                          │                                 
+   ● learning       1  │                                          │                                 
+   ● personal       1  │                                          │                                 
+   ● travel         1  │                                          │                                 
+                       │                                          │                                 
+  FILTERS              │                                          │                                 
+   ⚑ High priority  2  │                                          │                                 
+   ★ Starred        0  │                                          │                                 
+   ◷ Overdue        7  │                                          │                                 
+                       │                                          │                                 
+                       │                                          │                                 
+ ╭───────────────────╮ │                                          │                                 
+ │  Y  you           │ │                                          │                                 
+ │     ● todo.txt    │ │                                          │                                 
+ ╰───────────────────╯ │                                          │                                 
+                       │                                          │                                 
+  ● normal   work · 4 tasks                  x done   e edit   r reschedule   Tab details   ␣ more…

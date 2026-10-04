@@ -17,7 +17,7 @@ const MAX_W: u16 = 56;
 
 fn colors(kind: ToastKind, theme: &Theme) -> (Color, &'static str) {
     match kind {
-        ToastKind::Done => (theme.pri_c, "✓"),
+        ToastKind::Done => (theme.ok, "✓"),
         ToastKind::Info => (theme.accent, "●"),
         ToastKind::Error => (theme.overdue, "!"),
     }
@@ -48,17 +48,12 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App, top: u16) {
         // Fully in: one column from the right edge. Out: past the edge.
         let rest_x = area.right().saturating_sub(w + 1);
         let x = rest_x + ((f32::from(w + 1) * offset).round() as u16);
-        card(buf, area, x, y, w, color, theme);
+        // A raised card: a soft border, the icon in plain text, the title
+        // in the notice's colour.
+        card(buf, area, x, y, w, theme.selection, theme);
         let mut cx = x + 2;
         let bg = Style::default().bg(theme.panel);
-        cx += put(
-            buf,
-            area,
-            cx,
-            y + 1,
-            icon,
-            bg.fg(color).add_modifier(Modifier::BOLD),
-        );
+        cx += put(buf, area, cx, y + 1, icon, bg.fg(theme.fg));
         cx += put(buf, area, cx, y + 1, " ", bg);
         let room = usize::from((x + w).saturating_sub(cx + 1));
         let title: String = toast.title.chars().take(room).collect();
@@ -68,7 +63,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App, top: u16) {
             cx,
             y + 1,
             &title,
-            bg.fg(theme.fg).add_modifier(Modifier::BOLD),
+            bg.fg(color).add_modifier(Modifier::BOLD),
         );
         if !detail.is_empty() {
             let room = usize::from((x + w).saturating_sub(cx + 1));
@@ -76,7 +71,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App, top: u16) {
             if d.chars().count() > room {
                 d = d.chars().take(room.saturating_sub(1)).collect::<String>() + "…";
             }
-            put(buf, area, cx, y + 1, &d, bg.fg(theme.dim));
+            put(buf, area, cx, y + 1, &d, bg.fg(theme.fg));
         }
         y += H;
     }

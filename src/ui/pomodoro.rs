@@ -32,7 +32,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App, top: u16) -> u16 {
     } else {
         match p.phase {
             Phase::Focus => theme.pri_a,
-            Phase::Break => theme.pri_c,
+            Phase::Break => theme.ok,
         }
     };
     let buf = frame.buffer_mut();

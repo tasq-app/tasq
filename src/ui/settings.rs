@@ -66,7 +66,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         nav.y + 2,
         place,
         NAV_W - 8,
-        pbg.fg(theme.pri_c),
+        pbg.fg(theme.ok),
     );
 
     // The sections.
@@ -196,7 +196,7 @@ fn draw_row(buf: &mut Buffer, card: Rect, y: u16, row: &SetRow, here: bool, them
     let x = card.x + 22;
     let room = card.right().saturating_sub(x + 2);
     let (text, style) = match row.value.as_str() {
-        "on" => ("● on".to_string(), base.fg(theme.pri_c)),
+        "on" => ("● on".to_string(), base.fg(theme.ok)),
         "off" => ("○ off".to_string(), base.fg(theme.dim)),
         v if row.soon => (v.to_string(), base.fg(theme.dim)),
         v if row.key.is_some() => (format!("{v} ›"), base.fg(theme.accent)),

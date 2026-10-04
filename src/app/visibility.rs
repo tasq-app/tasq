@@ -52,7 +52,7 @@ impl TodaySlot {
         let slot = match (late, at) {
             (true, _) => TodaySlot::Late,
             (false, Some(m)) if m < 12 * 60 => TodaySlot::Morning,
-            (false, Some(m)) if m < 18 * 60 => TodaySlot::Afternoon,
+            (false, Some(m)) if m < 20 * 60 => TodaySlot::Afternoon,
             (false, Some(_)) => TodaySlot::Evening,
             (false, None) => TodaySlot::AnyTime,
         };

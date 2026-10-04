@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_styled(&buf)
 ---
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}  {/}{fg=#1a1d23 bg=#d4b06a mod=bold} Y {/}{fg=#2a2f38 bg=#1f232b} {/}{fg=#c8ccd4 bg=#1f232b mod=bold}you{/}{fg=#2a2f38 bg=#1f232b}                    │{/}{bg=#1a1d23}  {/}{fg=#c8ccd4 bg=#1a1d23 mod=bold}Sync & calendars{/}{bg=#1a1d23}                                                    {/}
-{fg=#2a2f38 bg=#1f232b}      {/}{fg=#7aa67a bg=#1f232b}● file{/}{fg=#2a2f38 bg=#1f232b}                 │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}  {/}{fg=#2a2f38 bg=#1f232b}╭────────────────────────────────────────────────────────────────╮{/}{bg=#1a1d23}  {/}
-{fg=#2a2f38 bg=#1f232b} {/}{fg=#8aa9c9 bg=#37404e}▎{/}{fg=#2a2f38 bg=#37404e} {/}{fg=#c8ccd4 bg=#37404e mod=bold}Sync & calendars{/}{fg=#2a2f38 bg=#37404e}         {/}{fg=#2a2f38 bg=#1f232b} │{/}{bg=#1a1d23}  {/}{fg=#2a2f38 bg=#1f232b}│ {/}{fg=#6b7280 bg=#1f232b mod=bold}SYNC{/}{fg=#2a2f38 bg=#1f232b}                                                           │{/}{bg=#1a1d23}  {/}
-{fg=#2a2f38 bg=#1f232b}   {/}{fg=#a8b0bc bg=#1f232b}Appearance{/}{fg=#2a2f38 bg=#1f232b}                │{/}{bg=#1a1d23}  {/}{fg=#2a2f38 bg=#1f232b}│  {/}{fg=#6b7280 bg=#1f232b}Sync{/}{fg=#2a2f38 bg=#1f232b}               {/}{fg=#6b7280 bg=#1f232b}end-to-end encrypted sync · coming soon{/}{fg=#2a2f38 bg=#1f232b}    │{/}{bg=#1a1d23}  {/}
-{fg=#2a2f38 bg=#1f232b}   {/}{fg=#a8b0bc bg=#1f232b}Lists{/}{fg=#2a2f38 bg=#1f232b}                     │{/}{bg=#1a1d23}  {/}{fg=#2a2f38 bg=#1f232b}│  {/}{fg=#c8ccd4 bg=#1f232b}This device{/}{fg=#2a2f38 bg=#1f232b}        {/}{fg=#a8b0bc bg=#1f232b}● plain todo.txt{/}{fg=#2a2f38 bg=#1f232b}                           │{/}{bg=#1a1d23}  {/}
-{fg=#2a2f38 bg=#1f232b}   {/}{fg=#a8b0bc bg=#1f232b}Capture{/}{fg=#2a2f38 bg=#1f232b}                   │{/}{bg=#1a1d23}  {/}{fg=#2a2f38 bg=#1f232b}╰────────────────────────────────────────────────────────────────╯{/}{bg=#1a1d23}  {/}
-{fg=#2a2f38 bg=#1f232b}   {/}{fg=#a8b0bc bg=#1f232b}Data & trash{/}{fg=#2a2f38 bg=#1f232b}              │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}   {/}{fg=#a8b0bc bg=#1f232b}Keys{/}{fg=#2a2f38 bg=#1f232b}                      │{/}{bg=#1a1d23}  {/}{fg=#2a2f38 bg=#1f232b}╭────────────────────────────────────────────────────────────────╮{/}{bg=#1a1d23}  {/}
-{fg=#2a2f38 bg=#1f232b}   {/}{fg=#a8b0bc bg=#1f232b}About{/}{fg=#2a2f38 bg=#1f232b}                     │{/}{bg=#1a1d23}  {/}{fg=#2a2f38 bg=#1f232b}│ {/}{fg=#6b7280 bg=#1f232b mod=bold}CONNECTED CALENDARS{/}{fg=#2a2f38 bg=#1f232b}                                            │{/}{bg=#1a1d23}  {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}  {/}{fg=#2a2f38 bg=#1f232b}│  {/}{fg=#6b7280 bg=#1f232b}Google Calendar{/}{fg=#2a2f38 bg=#1f232b}    {/}{fg=#6b7280 bg=#1f232b}coming soon{/}{fg=#2a2f38 bg=#1f232b}                                │{/}{bg=#1a1d23}  {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}  {/}{fg=#2a2f38 bg=#1f232b}│  {/}{fg=#6b7280 bg=#1f232b}Apple Calendar{/}{fg=#2a2f38 bg=#1f232b}     {/}{fg=#6b7280 bg=#1f232b}coming soon{/}{fg=#2a2f38 bg=#1f232b}                                │{/}{bg=#1a1d23}  {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}  {/}{fg=#2a2f38 bg=#1f232b}│  {/}{fg=#6b7280 bg=#1f232b}Local .ics feed{/}{fg=#2a2f38 bg=#1f232b}    {/}{fg=#6b7280 bg=#1f232b}coming soon{/}{fg=#2a2f38 bg=#1f232b}                                │{/}{bg=#1a1d23}  {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}  {/}{fg=#2a2f38 bg=#1f232b}╰────────────────────────────────────────────────────────────────╯{/}{bg=#1a1d23}  {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}                                                                      {/}
-{fg=#2a2f38 bg=#1f232b}                             │{/}{bg=#1a1d23}  {/}{fg=#6b7280 bg=#1a1d23}↑↓ sections · → or Enter open · Esc close{/}{bg=#1a1d23}                           {/}
-{bg=#1a1d23} {/}{fg=#1a1d23 bg=#8aa9c9 mod=bold}  ● settings  {/}{fg=#6b7280 bg=#1a1d23}   Esc back{/}{bg=#1a1d23}                                                                          {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}  {/}{fg=#24273a bg=#f5a97f mod=bold} Y {/}{fg=#363a4f bg=#1e2030} {/}{fg=#cad3f5 bg=#1e2030 mod=bold}you{/}{fg=#363a4f bg=#1e2030}                    │{/}{bg=#24273a}  {/}{fg=#cad3f5 bg=#24273a mod=bold}Sync & calendars{/}{bg=#24273a}                                                    {/}
+{fg=#363a4f bg=#1e2030}      {/}{fg=#a6da95 bg=#1e2030}● file{/}{fg=#363a4f bg=#1e2030}                 │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}  {/}{fg=#363a4f bg=#1e2030}╭────────────────────────────────────────────────────────────────╮{/}{bg=#24273a}  {/}
+{fg=#363a4f bg=#1e2030} {/}{fg=#c6a0f6 bg=#433c5c}▎{/}{fg=#363a4f bg=#433c5c} {/}{fg=#cad3f5 bg=#433c5c mod=bold}Sync & calendars{/}{fg=#363a4f bg=#433c5c}         {/}{fg=#363a4f bg=#1e2030} │{/}{bg=#24273a}  {/}{fg=#363a4f bg=#1e2030}│ {/}{fg=#6e738d bg=#1e2030 mod=bold}SYNC{/}{fg=#363a4f bg=#1e2030}                                                           │{/}{bg=#24273a}  {/}
+{fg=#363a4f bg=#1e2030}   {/}{fg=#a5adcb bg=#1e2030}Appearance{/}{fg=#363a4f bg=#1e2030}                │{/}{bg=#24273a}  {/}{fg=#363a4f bg=#1e2030}│  {/}{fg=#6e738d bg=#1e2030}Sync{/}{fg=#363a4f bg=#1e2030}               {/}{fg=#6e738d bg=#1e2030}end-to-end encrypted sync · coming soon{/}{fg=#363a4f bg=#1e2030}    │{/}{bg=#24273a}  {/}
+{fg=#363a4f bg=#1e2030}   {/}{fg=#a5adcb bg=#1e2030}Lists{/}{fg=#363a4f bg=#1e2030}                     │{/}{bg=#24273a}  {/}{fg=#363a4f bg=#1e2030}│  {/}{fg=#cad3f5 bg=#1e2030}This device{/}{fg=#363a4f bg=#1e2030}        {/}{fg=#a5adcb bg=#1e2030}● plain todo.txt{/}{fg=#363a4f bg=#1e2030}                           │{/}{bg=#24273a}  {/}
+{fg=#363a4f bg=#1e2030}   {/}{fg=#a5adcb bg=#1e2030}Capture{/}{fg=#363a4f bg=#1e2030}                   │{/}{bg=#24273a}  {/}{fg=#363a4f bg=#1e2030}╰────────────────────────────────────────────────────────────────╯{/}{bg=#24273a}  {/}
+{fg=#363a4f bg=#1e2030}   {/}{fg=#a5adcb bg=#1e2030}Data & trash{/}{fg=#363a4f bg=#1e2030}              │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}   {/}{fg=#a5adcb bg=#1e2030}Keys{/}{fg=#363a4f bg=#1e2030}                      │{/}{bg=#24273a}  {/}{fg=#363a4f bg=#1e2030}╭────────────────────────────────────────────────────────────────╮{/}{bg=#24273a}  {/}
+{fg=#363a4f bg=#1e2030}   {/}{fg=#a5adcb bg=#1e2030}About{/}{fg=#363a4f bg=#1e2030}                     │{/}{bg=#24273a}  {/}{fg=#363a4f bg=#1e2030}│ {/}{fg=#6e738d bg=#1e2030 mod=bold}CONNECTED CALENDARS{/}{fg=#363a4f bg=#1e2030}                                            │{/}{bg=#24273a}  {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}  {/}{fg=#363a4f bg=#1e2030}│  {/}{fg=#6e738d bg=#1e2030}Google Calendar{/}{fg=#363a4f bg=#1e2030}    {/}{fg=#6e738d bg=#1e2030}coming soon{/}{fg=#363a4f bg=#1e2030}                                │{/}{bg=#24273a}  {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}  {/}{fg=#363a4f bg=#1e2030}│  {/}{fg=#6e738d bg=#1e2030}Apple Calendar{/}{fg=#363a4f bg=#1e2030}     {/}{fg=#6e738d bg=#1e2030}coming soon{/}{fg=#363a4f bg=#1e2030}                                │{/}{bg=#24273a}  {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}  {/}{fg=#363a4f bg=#1e2030}│  {/}{fg=#6e738d bg=#1e2030}Local .ics feed{/}{fg=#363a4f bg=#1e2030}    {/}{fg=#6e738d bg=#1e2030}coming soon{/}{fg=#363a4f bg=#1e2030}                                │{/}{bg=#24273a}  {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}  {/}{fg=#363a4f bg=#1e2030}╰────────────────────────────────────────────────────────────────╯{/}{bg=#24273a}  {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}                                                                      {/}
+{fg=#363a4f bg=#1e2030}                             │{/}{bg=#24273a}  {/}{fg=#6e738d bg=#24273a}↑↓ sections · → or Enter open · Esc close{/}{bg=#24273a}                           {/}
+{bg=#24273a} {/}{fg=#a5adcb bg=#363a4f} ● settings {/}{bg=#24273a}                                                                            {/}{fg=#a5adcb bg=#24273a mod=bold}Esc{/}{fg=#6e738d bg=#24273a} back   {/}

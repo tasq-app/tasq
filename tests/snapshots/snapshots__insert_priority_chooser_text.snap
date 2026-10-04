@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  /tmp/tasq-snapshot.txt                │                               
-  ▣ tasq                   │  15 tasks  ·  sort: priority           │  ⚑ Finish Q2 board deck       
-                           │  + filter                              │                               
-   ⌂ Home                  │                                        │  due       today              
-   ▤ Inbox              3  │  PRIORITY A  2  ───────────────────────│  space     ● work             
-   ◉ Today              1  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
-   ◷ Upcoming           6  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
-   ≡ All tasks         15  │  PRIORITY B  3  ───────────────────────│                               
-   ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
-   ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
-   ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-   ⌫ Trash              0  │  PRIORITY C  2  ───────────────────────│                               
-          ╭──────────────────────────────────────────────────────────────────────────────╮          
-  SPACES  │                                                                              │          
-   ● work │  > Buy milk  +groceries ▏                                              ↑     │          
+                       │                                          │                                 
+  ■ tasq               │  All tasks  wednesday 6 may              │  Finish Q2 board deck           
+                       │  15 tasks                                │                                 
+   ⌂ Home              │   + filter            sort · priority ▾  │  due      today                 
+   ▤ Inbox          3  │                                          │  space    ● work                
+   ◉ Today          1  │  PRIORITY A ─────────────────────────────│  priority ⚑ high                
+   ◷ Upcoming       6  │▎ ☐ ⚑ Finish Q2 board deck  ◷ due today   │  tags     @laptop               
+   ▦ Calendar          │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
+   ✎ Notes             │  PRIORITY B ─────────────────────────────│                                 
+   ⌕ Search         /  │  ☐ ⚑ Review pull requests for auth refact│                                 
+                       │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
+  SPACES               │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
+   ● work ╭──────────────────────────────────────────────────────────────────────────────╮          
    ● healt│                                                                              │          
-   ● finan│                                  + groceries                                 │          
+   ● finan│  > Buy milk  +groceries ▏                                              ↑     │          
    ● home │                                                                              │          
-   ● learn╰──────────────────────────────────────────────────────────────────────────────╯          
-   ● personal ╭ PRIORITY ────────────╮d "Designing Data-Intensive Ap│                               
-   ● travel   │  (A)                 │d thank-you note to mentor @ho│                               
-              │  (B)                 │n Saturday hike with K.  ● per│                               
-  FILTERS     │  (C)                 │lace bathroom faucet washer  ●│                               
-   ⚑ High prio│  clear               │                              │                               
-   ★ Starred  │                      │                              │                               
-   ◷ Overdue  │  jk move · Enter set │                              │                               
-              ╰──────────────────────╯                              │                               
- ╭───────────────────────╮ │                                        │                               
- │  Y  you ● file        │ │                                        │                               
- ╰───────────────────────╯ │                                        │                               
-                           │                                        │                               
-   ● insert     type naturally: tomorrow at 6pm, every fri and sat, +project @context · Tab chips ·
+   ● learn│                                  + groceries                                 │          
+   ● perso│                                                                              │          
+   ● trave╰──────────────────────────────────────────────────────────────────────────────╯          
+              ╭ PRIORITY ────────────╮nnual physical  ● health  @p│                                 
+  FILTERS     │  (A)                 │gning Data-Intensive Applica│                                 
+   ⚑ High prio│  (B)                 │-you note to mentor @home   │                                 
+   ★ Starred  │  (C)                 │day hike with K.  ● personal│                                 
+   ◷ Overdue  │  clear               │throom faucet washer  ● home│                                 
+              │                      │                            │                                 
+              │  jk move · Enter set │                            │                                 
+ ╭────────────╰──────────────────────╯                            │                                 
+ │  Y  you           │ │                                          │                                 
+ │     ● todo.txt    │ │                                          │                                 
+ ╰───────────────────╯ │                                          │                                 
+                       │                                          │                                 
+  ● insert  type naturally: tomorrow at 6pm, every fri and sat, +project @context   Tab chips   Ctrl

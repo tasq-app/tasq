@@ -212,9 +212,19 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         mode_label = "SIDEBAR".into();
     }
 
-    // Left: the mode as a rounded pill; then the hint, quiet.
+    // Left: the mode as a calm, rounded pill (coloured only while you type
+    // or select), then where you are, quietly.
     let bg = Style::default().bg(theme.bg);
-    let pill_bg = editor_mode.map_or(theme.mode_bg, |m| note_editor::mode_color(theme, m));
+    let loud =
+        editor_mode.is_some() || matches!(app.mode, Mode::Insert | Mode::Visual | Mode::Search);
+    let (pill_bg, pill_fg) = if loud {
+        (
+            editor_mode.map_or(theme.mode_bg, |m| note_editor::mode_color(theme, m)),
+            theme.mode_fg,
+        )
+    } else {
+        (theme.cursor, theme.status_fg)
+    };
     let chord_suffix = app
         .chord
         .active()
@@ -227,15 +237,15 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     } else {
         (" ", " ")
     };
-    let pill_style = Style::default()
-        .bg(pill_bg)
-        .fg(theme.mode_fg)
-        .add_modifier(Modifier::BOLD);
+    let mut pill_style = Style::default().bg(pill_bg).fg(pill_fg);
+    if loud {
+        pill_style = pill_style.add_modifier(Modifier::BOLD);
+    }
     let cap_style = if nerd { bg.fg(pill_bg) } else { pill_style };
     let mut left: Vec<Span> = vec![
         Span::styled(" ", bg),
         Span::styled(cap_l, cap_style),
-        Span::styled(format!(" {label} "), pill_style),
+        Span::styled(label, pill_style),
         Span::styled(cap_r, cap_style),
     ];
     if !app.selection.is_empty() {
@@ -243,12 +253,15 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             format!("  {} selected", app.selection.len()),
             bg.fg(theme.accent),
         ));
-    }
-    if !hint.is_empty() {
-        left.push(Span::styled(format!("   {hint}"), bg.fg(theme.dim)));
+    } else if app.mode == Mode::Normal && !app.home && app.calendar.is_none() {
+        left.push(Span::styled(
+            format!("  {}", where_you_are(app)),
+            bg.fg(theme.dim),
+        ));
     }
 
-    // Right: a new version if there is one, and the way into the menu.
+    // Right: the hints, each key a shade brighter than its word, then the
+    // way into the menu.
     let mut right: Vec<Span> = Vec::new();
     if let Some(tag) = app.update_available() {
         right.push(Span::styled(
@@ -256,14 +269,28 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             bg.fg(theme.accent).add_modifier(Modifier::BOLD),
         ));
     }
-    if app.mode == Mode::Normal {
-        right.push(Span::styled(
-            "␣",
-            bg.fg(theme.fg).add_modifier(Modifier::BOLD),
-        ));
-        right.push(Span::styled(" menu ", bg.fg(theme.dim)));
+    let key = bg.fg(theme.status_fg).add_modifier(Modifier::BOLD);
+    let word = bg.fg(theme.dim);
+    for part in hint.split(" · ").filter(|p| !p.is_empty()) {
+        let (k, w) = part.split_once(' ').unwrap_or((part, ""));
+        right.push(Span::styled(k.to_string(), key));
+        right.push(Span::styled(format!(" {w}   "), word));
     }
-    let right_w: u16 = right.iter().map(|s| s.content.chars().count() as u16).sum();
+    if app.mode == Mode::Normal {
+        right.push(Span::styled("␣", key));
+        let more = if hint.is_empty() {
+            " menu "
+        } else {
+            " more… "
+        };
+        right.push(Span::styled(more, word));
+    }
+    let left_w: u16 = left.iter().map(|s| s.content.chars().count() as u16).sum();
+    let right_w: u16 = right
+        .iter()
+        .map(|s| s.content.chars().count() as u16)
+        .sum::<u16>()
+        .min(area.width.saturating_sub(left_w + 1));
     let [left_area, right_area] =
         Layout::horizontal([Constraint::Min(1), Constraint::Length(right_w)]).areas(area);
     frame.render_widget(Paragraph::new(Line::from(left)).style(bg), left_area);
@@ -271,6 +298,26 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         Paragraph::new(Line::from(right)).style(bg).right_aligned(),
         right_area,
     );
+}
+
+/// Where the list is, in a few words: `Today · 4 tasks`, `Uni › AII · 3
+/// tasks`.
+fn where_you_are(app: &App) -> String {
+    use crate::app::Scope;
+    let n = app.visible_indices().len();
+    let place = if let Some(p) = &app.filter.project {
+        crate::core::spaces::display(p)
+    } else if let Some(p) = app.filter.preset {
+        p.label().to_string()
+    } else {
+        match app.prefs.scope {
+            Scope::Today => "Today",
+            Scope::Upcoming => "Upcoming",
+            Scope::All => "All tasks",
+        }
+        .to_string()
+    };
+    format!("{place} · {n} {}", if n == 1 { "task" } else { "tasks" })
 }
 
 /// The hint line for a focused note editor in `mode`, ending in the
@@ -359,7 +406,7 @@ mod tests {
                 .collect::<String>()
         };
         let text = line(&app);
-        assert!(text.contains("␣ menu"), "{text}");
+        assert!(text.contains("␣ more…"), "{text}");
         assert!(
             text.contains("x done") || text.contains("n new task"),
             "{text}"

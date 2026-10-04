@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  ● work                                │                               
-  ▣ tasq                   │  4 tasks  ·  sort: priority            │  ⚑ Finish Q2 board deck       
-                           │   ● work ×   + filter                  │                               
-   ⌂ Home                  │  ╭───────────────────────────────────╮ │  due       today              
-   ▤ Inbox              3  │  │ ╭───────────────────────────────╮ │─│  space     ● work             
-   ◉ Today              1  │  │ │ ⌕ e▏                          │ │d│  priority  ⚑ high             
-   ◷ Upcoming           6  │  │ ╰───────────────────────────────╯ │─│  tags      @laptop            
-   ≡ All tasks         15  │  │  SPACES                           │r│                               
-   ▦ Calendar              │  │  ● health                      3  │ │  CHECKLIST                    
-   ✎ Notes                 │  │  ● finance                     2  │─│  + add item                   
-   ⌕ Search             /  │  │  ● home                        1  │e│                               
-   ⌫ Trash              0  │  │  ● learning                    1  │ │                               
-                           │  │  ● personal                    1  │ │                               
-  SPACES                   │  │  ● travel                      1  │ │                               
-   ● work               4  │  │  TAGS                             │ │                               
-   ● health             3  │  │  @ errands                     4  │ │                               
-   ● finance            2  │  │  @ home                        4  │ │                               
-   ● home               1  │  │  @ phone                       3  │ │                               
-   ● learning           1  │  │  WHEN                             │ │                               
-   ● personal           1  │  │  ◷ due today                   1  │ │                               
-   ● travel             1  │  │  ◷ due within a week           3  │ │                               
-                           │  │  ◷ due within a month          6  │ │                               
-  FILTERS                  │  │  ◷ overdue                     7  │ │                               
-   ⚑ High priority      2  │  │  PRIORITY                         │ │                               
-   ★ Starred            0  │  │  ★ starred                     0  │ │                               
-   ◷ Overdue            7  │  │  SAVE                             │ │                               
-                           │  │  + Save "work" as a view…         │ │                               
- ╭───────────────────────╮ │  │  × Clear all filters              │ │                               
- │  Y  you ● file        │ │  ╰───────────────────────────────────╯ │                               
- ╰───────────────────────╯ │                                        │                               
-                           │                                        │                               
-   ● filter     type to search · ↑↓ move · Enter add/remove · ⌫ drop last · Esc close
+                       │                                          │                                 
+  ■ tasq               │  ● work                                  │  Finish Q2 board deck           
+                       │  4 tasks                                 │                                 
+   ⌂ Home              │  ╭─────────────────────────────────────╮ │  due      today                 
+   ▤ Inbox          3  │  │ ╭─────────────────────────────────╮ │ │  space    ● work                
+   ◉ Today          1  │  │ │ ⌕ e▏                            │ │─│  priority ⚑ high                
+   ◷ Upcoming       6  │▎ │ ╰─────────────────────────────────╯ │ │  tags     @laptop               
+   ▦ Calendar          │  │  SPACES                             │─│                                 
+   ✎ Notes             │  │  ● health                        3  │t│                                 
+   ⌕ Search         /  │  │  ● finance                       2  │ │                                 
+                       │  │  ● home                          1  │─│                                 
+  SPACES               │  │  ● learning                      1  │b│                                 
+   ● work           4  │  │  ● personal                      1  │ │                                 
+   ● health         3  │  │  ● travel                        1  │ │                                 
+   ● finance        2  │  │  TAGS                               │ │                                 
+   ● home           1  │  │  @ errands                       4  │ │                                 
+   ● learning       1  │  │  @ home                          4  │ │                                 
+   ● personal       1  │  │  @ phone                         3  │ │                                 
+   ● travel         1  │  │  WHEN                               │ │                                 
+                       │  │  ◷ due today                     1  │ │                                 
+  FILTERS              │  │  ◷ due within a week             3  │ │                                 
+   ⚑ High priority  2  │  │  ◷ due within a month            6  │ │                                 
+   ★ Starred        0  │  │  ◷ overdue                       7  │ │                                 
+   ◷ Overdue        7  │  │  PRIORITY                           │ │                                 
+                       │  │  ★ starred                       0  │ │                                 
+                       │  │  SAVE                               │ │                                 
+ ╭───────────────────╮ │  │  + Save "work" as a view…           │ │                                 
+ │  Y  you           │ │  │  × Clear all filters                │ │                                 
+ │     ● todo.txt    │ │  ╰─────────────────────────────────────╯ │                                 
+ ╰───────────────────╯ │                                          │                                 
+                       │                                          │                                 
+  ● filter                  type to search   ↑↓ move   Enter add/remove   ⌫ drop last   Esc close
