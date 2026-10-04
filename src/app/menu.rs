@@ -52,6 +52,7 @@ pub fn entries(p: MenuPage) -> Vec<MenuEntry> {
             page('g', "go to…", MenuPage::Go),
             act('f', "filter…", Action::OpenFilters),
             act('o', "notes", Action::OpenNotes),
+            page('t', "timer…", MenuPage::Timer),
             act('/', "search", Action::BeginSearch),
             act(':', "commands", Action::OpenCommandPalette),
             act('u', "undo", Action::Undo),
@@ -59,6 +60,11 @@ pub fn entries(p: MenuPage) -> Vec<MenuEntry> {
             act(']', "details", Action::ToggleRightPane),
             act(',', "settings", Action::OpenSettings),
             act('?', "help", Action::OpenHelp),
+        ],
+        MenuPage::Timer => vec![
+            act('P', "start / pause", Action::Pomodoro),
+            act('b', "take a break", Action::PomodoroBreak),
+            act('s', "stop", Action::PomodoroStop),
         ],
         MenuPage::Go => vec![
             act('h', "home", Action::GoHome),
@@ -130,7 +136,7 @@ mod tests {
         app.open_menu();
         assert_eq!(app.menu_key('f'), Some(Action::OpenFilters));
         // Every key is unique on its page.
-        for p in [MenuPage::Root, MenuPage::Go] {
+        for p in [MenuPage::Root, MenuPage::Go, MenuPage::Timer] {
             let keys: Vec<char> = entries(p).iter().map(|e| e.key).collect();
             let mut dedup = keys.clone();
             dedup.sort_unstable();

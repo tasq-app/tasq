@@ -67,6 +67,8 @@ pub enum MenuPage {
     Root,
     /// `g`: go to a place.
     Go,
+    /// `t`: the focus timer.
+    Timer,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

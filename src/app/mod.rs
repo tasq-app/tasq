@@ -31,6 +31,7 @@ mod notes_screen;
 pub mod palette;
 mod picker;
 mod pinned_note;
+mod pomodoro;
 mod prefs;
 mod routines;
 mod saved;
@@ -70,6 +71,7 @@ pub use note_editor::{
 pub use notes_popup::{NotePromptKind, NotesPopupState};
 pub use notes_screen::{NoteEntry, NotesScreen};
 pub use palette::{CommandPaletteState, NotesEntryAction, PaletteDispatch};
+pub use pomodoro::{BREAK, FOCUS, Phase, Pomodoro};
 pub use prefs::{Layout, Prefs};
 pub use routines::{DayMark, Routine};
 pub use selection::Selection;
@@ -151,6 +153,8 @@ pub struct App {
     pub trash_screen: Option<TrashScreen>,
     /// Where the cursor is on the settings screen.
     pub settings: SettingsState,
+    /// The focus timer, while it runs.
+    pub pomodoro: Option<Pomodoro>,
     /// The "+ filter" popover's search and cursor.
     pub filter_pop: FilterPop,
     pub inspector_cursor: usize,
@@ -325,6 +329,7 @@ impl App {
             notes_screen: None,
             trash_screen: None,
             settings: SettingsState::default(),
+            pomodoro: None,
             filter_pop: FilterPop::default(),
             inspector_cursor: 0,
             notes_cache: NotesCache::default(),

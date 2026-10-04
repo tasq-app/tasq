@@ -25,6 +25,7 @@ pub mod mode_colors;
 pub mod note_editor;
 pub mod notes_popup;
 pub mod notes_screen;
+pub mod pomodoro;
 pub mod settings;
 pub mod share;
 pub mod sidebar;
@@ -246,7 +247,9 @@ pub fn draw(frame: &mut Frame, app: &App) {
         _ => {}
     }
     // Toasts float above everything.
-    toast::render(frame, area, app, 1);
+    // The focus timer pins itself on top; notices stack under it.
+    let pinned = pomodoro::render(frame, area, app, 1);
+    toast::render(frame, area, app, 1 + pinned);
     // OSC 8 hyperlinks are applied post-draw by the caller (see
     // `hyperlinks::collect` + `emit_overlay`). Doing it inside the buffer
     // breaks ratatui's diff width calculation — keep cell symbols pristine.
