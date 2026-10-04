@@ -102,6 +102,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             space_color: &space_color,
             checklist: None,
             in_today: false,
+            pills: app.prefs.nerd_icons,
         };
         if i == app.cursor {
             cursor_line = Some(lines.len());

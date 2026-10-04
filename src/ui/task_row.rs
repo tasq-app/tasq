@@ -25,6 +25,8 @@ pub struct RowOpts<'a> {
     pub checklist: Option<(usize, usize)>,
     /// Drawn in Today, where "today" on a chip goes without saying.
     pub in_today: bool,
+    /// Chips with round ends (needs a Nerd Font).
+    pub pills: bool,
 }
 
 impl Default for RowOpts<'_> {
@@ -42,6 +44,7 @@ impl Default for RowOpts<'_> {
             space_color: &|_| Color::Reset,
             checklist: None,
             in_today: false,
+            pills: false,
         }
     }
 }
@@ -305,15 +308,24 @@ fn push_chip<'a>(
     spans: &mut Vec<Span<'a>>,
     text: String,
     color: Color,
-    _done: bool,
+    pills: bool,
     theme: &Theme,
 ) {
     spans.push(Span::raw(" "));
     let mut style = Style::default().fg(color);
-    if let Some(bg) = tint(color, theme.bg, 0.2) {
+    let shade = tint(color, theme.bg, 0.2);
+    if let Some(bg) = shade {
         style = style.bg(bg);
     }
-    spans.push(Span::styled(format!(" {text} "), style));
+    // With a Nerd Font, round ends: a pill, not a box.
+    match shade.filter(|_| pills) {
+        Some(bg) => {
+            spans.push(Span::styled("\u{e0b6}", Style::default().fg(bg)));
+            spans.push(Span::styled(text, style));
+            spans.push(Span::styled("\u{e0b4}", Style::default().fg(bg)));
+        }
+        None => spans.push(Span::styled(format!(" {text} "), style)),
+    }
 }
 
 /// A date as a chip reads it: `today`, `tomorrow`, `yesterday`, else
@@ -360,7 +372,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
             spans,
             format!("◷ {}", chip_date(p, opts.today)),
             theme.overdue,
-            done,
+            opts.pills,
             theme,
         );
     }
@@ -375,7 +387,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
             Some(p) if p <= opts.today => theme.today,
             _ => theme.accent,
         };
-        push_chip(spans, when.join(" · "), color, done, theme);
+        push_chip(spans, when.join(" · "), color, opts.pills, theme);
     }
     if let Some(d) = task.due.as_deref().filter(|_| shown("due")) {
         let date = chip_date(d, opts.today);
@@ -385,7 +397,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
             DueStatus::Soon => (format!("◷ by {date}"), theme.due),
             DueStatus::Later | DueStatus::None => (format!("◷ by {date}"), theme.dim),
         };
-        push_chip(spans, text, color, done, theme);
+        push_chip(spans, text, color, opts.pills, theme);
     }
     if let Some(t) = task.threshold.as_deref().filter(|_| shown("t")) {
         let from = crate::threshold::parse_threshold(t)
@@ -396,7 +408,13 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
                 || t.to_string(),
                 |d| chip_date(&d.format("%Y-%m-%d").to_string(), opts.today),
             );
-        push_chip(spans, format!("shows from {from}"), theme.dim, done, theme);
+        push_chip(
+            spans,
+            format!("shows from {from}"),
+            theme.dim,
+            opts.pills,
+            theme,
+        );
     }
     if let Some(r) = task.rec.as_deref().filter(|_| shown("rec")) {
         // "every mon, wed, fri" reads "mon wed fri" on a chip.
@@ -414,7 +432,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
         if let Some(n) = task.times.as_deref() {
             text.push_str(&format!(" · {n} left"));
         }
-        push_chip(spans, text, theme.pri_other, done, theme);
+        push_chip(spans, text, theme.pri_other, opts.pills, theme);
     }
     for p in &task.projects {
         let color = (opts.space_color)(p);
@@ -422,7 +440,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
             spans,
             format!("● {}", crate::core::spaces::display(p)),
             color,
-            done,
+            opts.pills,
             theme,
         );
     }
@@ -634,6 +652,7 @@ mod tests {
             space_color: &|_| Color::Reset,
             checklist: None,
             in_today: false,
+            pills: false,
         };
         // Build must not panic; we don't assert on the rendered spans.
         let _ = build_line(&task, opts, &MUTED);
@@ -658,6 +677,7 @@ mod tests {
             space_color: &|_| Color::Reset,
             checklist: None,
             in_today: false,
+            pills: false,
         };
         let line = build_line(&task, opts, &MUTED);
         let highlight_bg = MUTED.matched;
@@ -689,6 +709,7 @@ mod tests {
             space_color: &|_| Color::Reset,
             checklist: None,
             in_today: false,
+            pills: false,
         };
         let line = build_line(&task, opts, &MUTED);
         line.spans
@@ -760,6 +781,7 @@ mod tests {
             space_color: &|_| Color::Reset,
             checklist: None,
             in_today: false,
+            pills: false,
         };
         let line = build_line(&task, opts, &MUTED);
         let url_span = line
@@ -794,6 +816,7 @@ mod tests {
             space_color: &|_| Color::Reset,
             checklist: None,
             in_today: false,
+            pills: false,
         };
         let line = build_line(&task, opts, &MUTED);
         let url_span = line

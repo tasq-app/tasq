@@ -180,7 +180,8 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                 }
             };
             app.hits.add(spot, crate::app::Hit::HomeItem(tile, k));
-            if picked.and_then(|s| s.item) == Some(k) {
+            // The week marks its picked day itself.
+            if tile != 2 && picked.and_then(|s| s.item) == Some(k) {
                 for y in spot.top()..spot.bottom() {
                     for x in spot.left().saturating_sub(1)..(spot.right() + 1).min(r.right() - 1) {
                         if let Some(c) = buf.cell_mut((x, y))
@@ -302,10 +303,14 @@ fn week(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     let cell = (r.width / 7).clamp(2, 5);
     let labels = ["m", "t", "w", "t", "f", "s", "s"];
     let label = |d: chrono::NaiveDate| labels[d.weekday().num_days_from_monday() as usize];
+    let picked = app.home_sel.filter(|s| s.tile == 2).and_then(|s| s.item);
     for (k, d) in days.iter().enumerate() {
         let x = r.x + k as u16 * cell;
         let is_today = d.date == today;
-        let label_style = if is_today {
+        let here = picked == Some(k);
+        let label_style = if here {
+            pbg.fg(theme.accent).add_modifier(Modifier::BOLD)
+        } else if is_today {
             pbg.fg(theme.fg).add_modifier(Modifier::BOLD)
         } else {
             pbg.fg(theme.dim)
@@ -321,16 +326,24 @@ fn week(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
         } else {
             tint(theme.accent, theme.panel, level).unwrap_or(theme.accent)
         };
-        let block = "█".repeat(usize::from(cell - 1));
-        put(buf, x, r.y + 3, &block, cell - 1, pbg.fg(color));
-        if is_today {
+        // A day: a rounded pill with a Nerd Font, a soft block without.
+        let w = cell - 1;
+        let block = if app.prefs.nerd_icons && w >= 3 {
+            format!("\u{e0b6}{}\u{e0b4}", "█".repeat(usize::from(w - 2)))
+        } else {
+            "▆".repeat(usize::from(w))
+        };
+        put(buf, x, r.y + 3, &block, w, pbg.fg(color));
+        // Today and the picked day get a thin line under them.
+        if here || is_today {
+            let mark = if here { theme.accent } else { theme.dim };
             put(
                 buf,
                 x,
                 r.y + 4,
-                &"▔".repeat(usize::from(cell - 1)),
-                cell - 1,
-                pbg.fg(theme.fg),
+                &"▔".repeat(usize::from(w)),
+                w,
+                pbg.fg(mark),
             );
         }
     }

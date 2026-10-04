@@ -84,6 +84,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                 space_color: &space_color,
                 checklist: app.task_notes(task).progress(),
                 in_today: app.prefs.scope == crate::app::Scope::Today,
+                pills: app.prefs.nerd_icons,
             };
             if i == app.cursor {
                 cursor_line = Some(lines.len());
@@ -145,13 +146,24 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         && dy < body_area.height
     {
         let y = body_area.y + dy;
+        // With the keyboard on the details or the sidebar, the list's
+        // cursor greys out, so it's plain where you are.
+        let away = app.inspector_focus || app.sidebar_focus;
+        let shade = if away {
+            crate::ui::task_row::tint(theme.cursor, theme.bg, 0.45).unwrap_or(theme.cursor)
+        } else {
+            theme.cursor
+        };
         let buf = frame.buffer_mut();
         for x in body_area.left()..body_area.right() {
             if let Some(c) = buf.cell_mut((x, y))
-                && c.bg == theme.bg
+                && (c.bg == theme.bg || c.bg == theme.cursor)
             {
-                c.set_bg(theme.cursor);
+                c.set_bg(shade);
             }
+        }
+        if away && let Some(c) = buf.cell_mut((body_area.x, y)) {
+            c.set_fg(theme.dim);
         }
     }
 }

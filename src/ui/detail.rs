@@ -118,6 +118,20 @@ impl Pen<'_> {
         }
     }
 
+    /// Write `s` from column `dx`, wrapping onto the rows below at the
+    /// same column; leaves the pen on the last row written.
+    fn wrapped(&mut self, dx: u16, s: &str, style: Style) {
+        let width = usize::from(self.r.width.saturating_sub(dx)).max(4);
+        let lines = wrap(s, width);
+        let n = lines.len();
+        for (i, line) in lines.iter().enumerate() {
+            self.text(dx, line, style);
+            if i + 1 < n {
+                self.y += 1;
+            }
+        }
+    }
+
     /// The `▎` marker left of the focused row.
     fn bar(&mut self, theme: &Theme) {
         if !self.room() || self.r.x < 2 {
@@ -158,7 +172,7 @@ fn title(p: &mut Pen, t: &Task, theme: &Theme) {
 /// One `label  value` row.
 fn fact(p: &mut Pen, key: &str, value: &str, color: Color, theme: &Theme) {
     p.text(0, key, p.bg.fg(theme.dim));
-    p.text(KEY_W, value, p.bg.fg(color));
+    p.wrapped(KEY_W, value, p.bg.fg(color));
     p.y += 1;
 }
 
@@ -203,7 +217,7 @@ fn facts(p: &mut Pen, t: &Task, app: &App, theme: &Theme) {
         let color = app.space_color(s);
         p.text(0, "space", p.bg.fg(theme.dim));
         p.text(KEY_W, "●", p.bg.fg(color));
-        p.text(KEY_W + 2, &crate::core::spaces::display(s), p.bg.fg(color));
+        p.wrapped(KEY_W + 2, &crate::core::spaces::display(s), p.bg.fg(color));
         p.y += 1;
     }
     if let Some(pri) = t.priority {
@@ -412,10 +426,21 @@ fn checklist(p: &mut Pen, notes: &TaskNotes, focus: Option<&InspectorRow>, theme
             ("☐", theme.dim)
         };
         p.text(0, glyph, bg.fg(color));
-        p.text(2, &item.text, bg.fg(theme.fg));
+        let top = p.y;
+        let width = usize::from(p.r.width.saturating_sub(2)).max(4);
+        for (k, line) in wrap(&item.text, width).iter().enumerate() {
+            if k > 0 {
+                p.y += 1;
+                // A long item's cursor shade runs down its wrapped rows.
+                if focus == Some(&InspectorRow::Item(i)) {
+                    p.cursor(true, theme);
+                }
+            }
+            p.text(2, line, bg.fg(theme.fg));
+        }
         let row = Rect {
-            y: p.y,
-            height: 1,
+            y: top,
+            height: p.y - top + 1,
             ..p.r
         };
         p.marks.push((row, crate::app::Hit::CheckItem(i)));

@@ -899,9 +899,11 @@ task; `o` only opens an existing linked note.
 notes_dir = ~/notes
 ```
 
-Icons are plain Unicode by default, so they work with any font. With a
+Icons are plain Unicode by default, so they work with any font; in
+Ghostty and WezTerm, which draw Nerd Font symbols out of the box, tasq
+uses them by itself (round chips and pills). With a
 [Nerd Font](https://www.nerdfonts.com/) (e.g. JetBrainsMono Nerd Font) set
-in your terminal, switch to its icons:
+in another terminal, switch to its icons:
 
 ```toml
 icons = nerd
@@ -911,6 +913,13 @@ tasq opens on Home; to open on the list instead:
 
 ```toml
 start = "list"
+```
+
+Ticking the last box of a task's checklist marks the task done; to keep
+them apart:
+
+```toml
+checklist_completes = false
 ```
 
 The short hints at the bottom, about what's selected, can be turned off:
