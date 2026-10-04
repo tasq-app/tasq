@@ -169,23 +169,28 @@ pub const ENTRIES: &[PaletteEntry] = &[
         dispatch: PaletteDispatch::Global(Action::BeginSearch),
     },
     PaletteEntry {
+        label: "filter…",
+        keys: "f",
+        dispatch: PaletteDispatch::Global(Action::OpenFilters),
+    },
+    PaletteEntry {
         label: "filter by project",
-        keys: "fp",
+        keys: "",
         dispatch: PaletteDispatch::Global(Action::PickProject),
     },
     PaletteEntry {
         label: "filter by context",
-        keys: "fc",
+        keys: "",
         dispatch: PaletteDispatch::Global(Action::PickContext),
     },
     PaletteEntry {
         label: "pick saved filter",
-        keys: "ff",
+        keys: "",
         dispatch: PaletteDispatch::Global(Action::PickSavedFilter),
     },
     PaletteEntry {
-        label: "save search as filter",
-        keys: "fs",
+        label: "save filters as a view",
+        keys: "",
         dispatch: PaletteDispatch::Global(Action::SaveCurrentFilter),
     },
     PaletteEntry {
@@ -751,6 +756,7 @@ mod tests {
             Action::CalendarWeek,
             Action::CalendarMonth,
             Action::ArchiveCompleted,
+            Action::OpenFilters,
             Action::PickProject,
             Action::PickContext,
             Action::CycleSort,

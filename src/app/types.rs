@@ -34,6 +34,7 @@ pub enum Mode {
     PickProject,         // j/k cycles through projects to filter by
     PickContext,         // j/k cycles through contexts to filter by
     PickSavedFilter,     // j/k cycles through saved searches to apply
+    Filters,             // the "+ filter" popover
     PromptChecklist,     // text input → a new item on the task's checklist
     PromptSaveFilter,    // text input → name the current search and save it
     CommandPalette,
@@ -66,8 +67,6 @@ pub enum MenuPage {
     Root,
     /// `g`: go to a place.
     Go,
-    /// `f`: filter the list.
-    Filter,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -227,6 +226,15 @@ impl Preset {
             Preset::Overdue => "◷",
         }
     }
+
+    /// The word after `is:` in a saved view's query.
+    pub fn key(self) -> &'static str {
+        match self {
+            Preset::HighPriority => "high",
+            Preset::Starred => "starred",
+            Preset::Overdue => "overdue",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -263,6 +271,56 @@ impl Filter {
         self.context = None;
         self.search.clear();
         self.preset = None;
+    }
+
+    /// The filter as a saved view's query: `+space @tag is:starred text`.
+    pub fn to_query(&self) -> String {
+        let mut parts: Vec<String> = Vec::new();
+        if let Some(p) = &self.project {
+            parts.push(format!("+{p}"));
+        }
+        if let Some(c) = &self.context {
+            parts.push(format!("@{c}"));
+        }
+        if let Some(p) = self.preset {
+            parts.push(format!("is:{}", p.key()));
+        }
+        if !self.search.trim().is_empty() {
+            parts.push(self.search.trim().to_string());
+        }
+        parts.join(" ")
+    }
+
+    /// Read a saved view's query back: `+x` is a space, `@x` a tag,
+    /// `is:high|starred|overdue` a built-in filter, the rest a search.
+    pub fn from_query(q: &str) -> Self {
+        let mut f = Self::default();
+        let mut rest: Vec<&str> = Vec::new();
+        for word in q.split_whitespace() {
+            if let Some(p) = word.strip_prefix('+').filter(|p| !p.is_empty())
+                && f.project.is_none()
+            {
+                f.project = Some(p.to_string());
+            } else if let Some(c) = word.strip_prefix('@').filter(|c| !c.is_empty())
+                && f.context.is_none()
+            {
+                f.context = Some(c.to_string());
+            } else if let Some(p) = word
+                .strip_prefix("is:")
+                .and_then(|k| Preset::ALL.into_iter().find(|p| p.key() == k))
+            {
+                f.preset = Some(p);
+            } else {
+                rest.push(word);
+            }
+        }
+        f.search = rest.join(" ");
+        f
+    }
+
+    /// Same filter, compared by what it shows.
+    pub fn same_as(&self, other: &Filter) -> bool {
+        self.to_query() == other.to_query()
     }
 }
 

@@ -254,6 +254,16 @@ fn list_with_project_filter() {
 }
 
 #[test]
+fn filter_popover() {
+    let mut app = make_app();
+    app.set_project_filter(Some("work".to_string()));
+    app.open_filters();
+    app.filter_pop_type('e');
+    app.toasts = Default::default();
+    snapshot_app("filter_popover", &app);
+}
+
+#[test]
 fn list_upcoming() {
     let mut app = make_app();
     // The coming week by day, then Later — dimmed apart from the cursor row.

@@ -37,6 +37,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         // A note editor's own sub-mode overrides this just below.
         Mode::Notes => "NOTES".into(),
         Mode::Menu => "MENU".into(),
+        Mode::Filters => "FILTER".into(),
     };
     // The focused note editor's own sub-mode wins over `app.mode`: a pinned
     // note keeps `app.mode == Mode::Normal` while it has focus, which used
@@ -116,6 +117,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             Mode::Welcome => "c create ./todo.txt · s open sample · q quit",
             // With an editor open, the focused-editor branch above wins.
             Mode::Menu => "press a key · Esc close",
+            Mode::Filters => "type to search · ↑↓ move · Enter add/remove · ⌫ drop last · Esc close",
             Mode::Notes => {
                 "j/k navigate · e/i edit · p preview · z zoom · n new · r rename · d delete · u unlink · ? help · Esc close"
             }
@@ -167,10 +169,12 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         mode_label = "DETAILS".into();
     }
     if app.sidebar_focus && app.mode == Mode::Normal {
-        hint = if app.prefs.hints {
-            "↑↓ move · Enter open · Tab back".into()
-        } else {
+        hint = if !app.prefs.hints {
             "".into()
+        } else if matches!(app.sidebar_current(), Some(crate::app::NavItem::Space(_))) {
+            "Enter open · c colour · H hide · r rename · d delete · Tab back".into()
+        } else {
+            "↑↓ move · Enter open · Tab back".into()
         };
         mode_label = "SIDEBAR".into();
     }

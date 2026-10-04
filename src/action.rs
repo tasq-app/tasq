@@ -44,6 +44,8 @@ pub enum Action {
     CalendarMonth,
     ArchiveCompleted,
     ArmF,
+    /// The "+ filter" popover.
+    OpenFilters,
     PickProject,
     PickContext,
     /// `ff` — open the saved-search cycle picker.
@@ -126,6 +128,7 @@ impl Action {
             "calendar_month" | "month" => Some(Self::CalendarMonth),
             "archive_completed" => Some(Self::ArchiveCompleted),
             "arm_f" => Some(Self::ArmF),
+            "open_filters" | "filters" | "filter" => Some(Self::OpenFilters),
             "pick_project" => Some(Self::PickProject),
             "pick_context" => Some(Self::PickContext),
             "pick_saved_filter" => Some(Self::PickSavedFilter),
