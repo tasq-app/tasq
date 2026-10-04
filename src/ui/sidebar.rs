@@ -226,10 +226,7 @@ fn profile_card(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     put(buf, x, y + 2, &format!("╰{line}╯"), w, border);
     put(buf, x, y + 1, "│", 1, border);
     put(buf, x + w - 1, y + 1, "│", 1, border);
-    let name = std::env::var("USER")
-        .ok()
-        .filter(|n| !n.is_empty())
-        .unwrap_or_else(|| "you".to_string());
+    let name = &app.user_name;
     let initial: String = name
         .chars()
         .next()
@@ -244,7 +241,7 @@ fn profile_card(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
         buf,
         x + 6,
         y + 1,
-        &fit(&name, usize::from(w.saturating_sub(16))),
+        &fit(name, usize::from(w.saturating_sub(16))),
         w.saturating_sub(16),
         bg.fg(theme.fg).add_modifier(Modifier::BOLD),
     );

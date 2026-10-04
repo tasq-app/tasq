@@ -145,6 +145,8 @@ pub struct App {
     /// `tasq <version>` in the status bar. A field so the UI snapshot tests
     /// can pin it and don't change with every release.
     pub version_label: String,
+    /// Your name on the profile card: `$USER`, else "you".
+    pub user_name: String,
     pub should_quit: bool,
     visible_cache: Vec<usize>,
     /// Parallel to `visible_cache`: `visible_groups[i]` is the group key for
@@ -296,6 +298,10 @@ impl App {
             chord: Chord::default(),
             file_path,
             config_path: None,
+            user_name: std::env::var("USER")
+                .ok()
+                .filter(|n| !n.is_empty())
+                .unwrap_or_else(|| "you".to_string()),
             version_label: concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION"))
                 .to_string(),
             should_quit: false,

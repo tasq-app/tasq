@@ -56,6 +56,7 @@ fn make_app() -> App {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    app.user_name = "you".to_string();
     // Pinned so the snapshots don't change with every release.
     app.version_label = "tasq 0.0.0".to_string();
     app.config_path = Some(PathBuf::from(FIXTURE_CONFIG_PATH));
@@ -278,6 +279,7 @@ fn calendar_day() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    app.user_name = "you".to_string();
     app.version_label = "tasq 0.0.0".to_string();
     app.prefs.density = Density::Compact;
     app.frozen_now = Some(12 * 60 + 40);
@@ -300,6 +302,7 @@ fn calendar_week() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    app.user_name = "you".to_string();
     app.version_label = "tasq 0.0.0".to_string();
     app.prefs.density = Density::Compact;
     app.frozen_now = Some(24 * 60);
@@ -323,6 +326,7 @@ fn calendar_month() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    app.user_name = "you".to_string();
     app.version_label = "tasq 0.0.0".to_string();
     app.prefs.density = Density::Compact;
     app.frozen_now = Some(24 * 60);
@@ -363,6 +367,7 @@ fn list_sidebar_empty_hints() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    app.user_name = "you".to_string();
     // Pinned so the snapshots don't change with every release.
     app.version_label = "tasq 0.0.0".to_string();
     app.config_path = Some(PathBuf::from(FIXTURE_CONFIG_PATH));
@@ -526,6 +531,7 @@ fn empty_state() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    app.user_name = "you".to_string();
     // Pinned so the snapshots don't change with every release.
     app.version_label = "tasq 0.0.0".to_string();
     app.prefs.density = Density::Compact;
@@ -543,6 +549,7 @@ fn welcome_overlay() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    app.user_name = "you".to_string();
     // Pinned so the snapshots don't change with every release.
     app.version_label = "tasq 0.0.0".to_string();
     app.prefs.density = Density::Compact;
@@ -560,6 +567,7 @@ fn welcome_overlay_hides_empty_state_card() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    app.user_name = "you".to_string();
     // Pinned so the snapshots don't change with every release.
     app.version_label = "tasq 0.0.0".to_string();
     app.prefs.density = Density::Compact;
@@ -611,6 +619,7 @@ fn list_scrolls_to_keep_cursor_visible_when_below_fold() {
         "2026-05-06".to_string(),
         Config::default(),
     );
+    app.user_name = "you".to_string();
     // Pinned so the snapshots don't change with every release.
     app.version_label = "tasq 0.0.0".to_string();
     app.prefs.density = Density::Compact;
