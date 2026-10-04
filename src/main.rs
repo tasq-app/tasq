@@ -596,6 +596,18 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::SearchAll => handle_search_all(app, key),
         Mode::Normal if app.sidebar_focus => handle_sidebar(app, key, keybinds),
         Mode::Normal if app.inspector_focus => handle_inspector(app, key, keybinds),
+        // Ctrl keys (Ctrl-K search, Ctrl-P palette, …) mean the same on every
+        // screen, so `k` moving the cursor can't swallow Ctrl-K.
+        Mode::Normal
+            if key.modifiers.contains(KeyModifiers::CONTROL)
+                && (app.home
+                    || app.trash_screen.is_some()
+                    || app.notes_screen.as_ref().is_some_and(|s| {
+                        s.editor.is_none() && !s.searching && !s.confirm_delete
+                    })) =>
+        {
+            global_key(app, key, keybinds);
+        }
         Mode::Normal if app.home => handle_home(app, key, keybinds),
         Mode::Normal if app.notes_screen.is_some() => handle_notes_screen(app, key, keybinds),
         Mode::Normal if app.trash_screen.is_some() => handle_trash(app, key, keybinds),
@@ -2088,7 +2100,7 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
             KeyCode::Char('d') => Some(Action::HalfPageDown),
             KeyCode::Char('u') => Some(Action::HalfPageUp),
             KeyCode::Char('p') => Some(Action::OpenCommandPalette),
-            KeyCode::Char('k' | 'f') => Some(Action::SearchAll),
+            KeyCode::Char('k' | 'K' | 'f' | 'F') => Some(Action::SearchAll),
             KeyCode::Char('x') => Some(Action::PomodoroStop),
             _ => None,
         };
@@ -2732,6 +2744,22 @@ mod tests {
             handle_key(&mut app, key('x'), &KeyBindings::default());
             assert_eq!(app.tasks().len(), 3, "nothing deleted");
             assert!(app.tasks().iter().all(|t| !t.done), "nothing ticked");
+        }
+    }
+
+    #[test]
+    fn ctrl_k_opens_search_with_or_without_shift_from_anywhere() {
+        let shifted = KeyEvent::new(
+            KeyCode::Char('K'),
+            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+        );
+        for k in [ctrl('k'), ctrl('f'), shifted] {
+            for open in [App::open_home, App::open_notes_screen, |_: &mut App| {}] {
+                let mut app = build_app();
+                open(&mut app);
+                handle_key(&mut app, k, &KeyBindings::default());
+                assert_eq!(app.mode, Mode::SearchAll, "{k:?}");
+            }
         }
     }
 
