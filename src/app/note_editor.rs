@@ -584,12 +584,7 @@ impl App {
             .active_editor
             .iter_mut()
             .chain(self.pinned_notes.iter_mut())
-            .chain(
-                self.notes_screen
-                    .as_mut()
-                    .and_then(|s| s.editor.as_mut())
-                    .into_iter(),
-            )
+            .chain(self.notes_screen.as_mut().and_then(|s| s.editor.as_mut()))
     }
 
     /// After `path` was edited in `$EDITOR`, re-read it into every open
