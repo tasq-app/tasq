@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  15 tasks DETAIL                           
-   Today             1 1                                                                            
-   Upcoming          6 2   (2)  PRIORITY A  ────────────────────── priority  (A)                    
- ▸ All              15 3    1 ▸ ⚑ Finish Q2 board deck  ◷ due toda created   2026-05-01             
-   Day               1 4    2   ⚑ Call dentist to reschedule clean due       2026-05-06  today      
-   Week              3 5   (3)  PRIORITY B  ────────────────────── space     work                   
-   Month            ╭ tasq · command ──────────────────────────────────────────╮ptop                
-                    │ > arch█  4 matches                                       │                    
- SPACES             │──────────────────────────────────────────────────────────│                    
-   ● work           │ ▶ archive completed tasks                              A │                    
-   ● health         │   toggle archive view                                  a │1 Finish Q2 board   
-   ● finance        │   fuzzy search                                         / │aptop               
-   ● home           │   save search as filter                               fs │6                   
+                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
+  ▣ tasq                   │  15 tasks  ·  sort: priority                                           
+                           │  + filter                               priority  (A)                  
+   ◉ Today              1  │                                         created   2026-05-01           
+   ◷ Upcoming           6  │  PRIORITY A  2  ─────────────────────── due       2026-05-06  today    
+   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod space     work                 
+   ▦ Calendar       ╭ tasq · command ──────────────────────────────────────────╮laptop              
+   ⌕ Search         │ > arch█  4 matches                                       │                    
+                    │──────────────────────────────────────────────────────────│                    
+  SPACES            │ ▶ archive completed tasks                              A │                    
+   ● work           │   toggle archive view                                  a │-01 Finish Q2 board 
+   ● health         │   fuzzy search                                         / │@laptop             
+   ● finance        │   save search as filter                               fs │-06                 
+   ● home           │                                                          │                    
    ● learning       │                                                          │                    
    ● personal       │                                                          │                    
    ● travel         │                                                          │                    
                     │                                                          │                    
- TAGS               │                                                          │                    
-   @errands         │                                                          │                    
-   @home            │                                                          │                    
-   @laptop          │                                                          │                    
-   @phone           │                                                          │                    
+  FILTERS           │                                                          │                    
+   ⚑ High priority  │                                                          │                    
+   ★ Starred        │                                                          │                    
+   ◷ Overdue        │                                                          │                    
                     │                                                          │                    
                     │                                                          │                    
                     │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
                     ╰──────────────────────────────────────────────────────────╯                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
- COMMAND   type to filter · Enter run · Esc cancel                15 open · 2026-05-06 · tasq 0.0.0
+                           │                                                                        
+ ╭───────────────────────╮ │                                                                        
+ │  Y  you ● file        │ │                                                                        
+ ╰───────────────────────╯ │                                                                        
+                           │                                                                        
+   ● command     type to filter · Enter run · Esc cancel

@@ -53,6 +53,20 @@ pub enum Mode {
     /// closed with Esc. Selecting a file to actually open is wired in a
     /// later task.
     Notes,
+    /// The shortcut menu (`space`): what you can do from here, with a key
+    /// each; some open a submenu (see `App::menu_page`).
+    Menu,
+}
+
+/// Which page of the shortcut menu is showing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MenuPage {
+    #[default]
+    Root,
+    /// `g`: go to a place.
+    Go,
+    /// `f`: filter the list.
+    Filter,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -184,17 +198,52 @@ impl FromStr for Density {
     }
 }
 
+/// The built-in filters in the sidebar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Preset {
+    /// Priority A.
+    HighPriority,
+    Starred,
+    /// Open tasks past their deadline.
+    Overdue,
+}
+
+impl Preset {
+    pub const ALL: [Preset; 3] = [Preset::HighPriority, Preset::Starred, Preset::Overdue];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Preset::HighPriority => "High priority",
+            Preset::Starred => "Starred",
+            Preset::Overdue => "Overdue",
+        }
+    }
+
+    pub fn icon(self) -> &'static str {
+        match self {
+            Preset::HighPriority => "⚑",
+            Preset::Starred => "★",
+            Preset::Overdue => "◷",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Filter {
     pub project: Option<String>,
     pub context: Option<String>,
     pub search: String,
+    /// A built-in filter from the sidebar.
+    pub preset: Option<Preset>,
 }
 
 impl Filter {
-    /// True when at least one of project / context / search is non-empty.
+    /// True when at least one of project / context / search / preset is set.
     pub fn has_any(&self) -> bool {
-        self.project.is_some() || self.context.is_some() || !self.search.is_empty()
+        self.project.is_some()
+            || self.context.is_some()
+            || !self.search.is_empty()
+            || self.preset.is_some()
     }
 
     /// The active `+project` / `@context` tags as an add-prompt prefix, with
@@ -212,6 +261,7 @@ impl Filter {
         self.project = None;
         self.context = None;
         self.search.clear();
+        self.preset = None;
     }
 }
 
@@ -243,6 +293,7 @@ mod tests {
             project: Some("work".to_string()),
             context: Some("home".to_string()),
             search: String::new(),
+            ..Default::default()
         };
         // Trailing space: the seed is a prefix the body gets typed after.
         assert_eq!(filter.tag_seed(), "+work @home ");

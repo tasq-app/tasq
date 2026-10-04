@@ -17,6 +17,47 @@ pub enum GroupKey {
     /// Upcoming view: a day of the coming week (`YYYY-MM-DD`), or `None`
     /// for Later.
     Day(Option<String>),
+    /// Today, by part of the day: late, morning, afternoon, evening, any
+    /// time (see [`TodaySlot`]).
+    Slot(TodaySlot),
+}
+
+/// Where a task sits in Today.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TodaySlot {
+    /// Planned or due before today, still open.
+    Late,
+    Morning,
+    Afternoon,
+    Evening,
+    /// No time of day.
+    AnyTime,
+}
+
+impl TodaySlot {
+    pub fn label(self) -> &'static str {
+        match self {
+            TodaySlot::Late => "OVERDUE",
+            TodaySlot::Morning => "MORNING",
+            TodaySlot::Afternoon => "AFTERNOON",
+            TodaySlot::Evening => "EVENING",
+            TodaySlot::AnyTime => "ANY TIME",
+        }
+    }
+
+    fn of(t: &Task, today: &str) -> (Self, u32) {
+        let late = !t.done && t.date().is_some_and(|d| d < today);
+        let at = crate::todo::find_kv(&t.clean_raw, "at")
+            .and_then(|v| crate::core::calendar::parse_time(&v));
+        let slot = match (late, at) {
+            (true, _) => TodaySlot::Late,
+            (false, Some(m)) if m < 12 * 60 => TodaySlot::Morning,
+            (false, Some(m)) if m < 18 * 60 => TodaySlot::Afternoon,
+            (false, Some(_)) => TodaySlot::Evening,
+            (false, None) => TodaySlot::AnyTime,
+        };
+        (slot, at.unwrap_or(u32::MAX))
+    }
 }
 
 impl App {
@@ -52,13 +93,19 @@ impl App {
         let scope = self.prefs.scope;
         let known = self.store.known_spaces();
         let open = self.filter.project.as_deref();
+        // Today also keeps what you ticked off today, for the progress.
+        let is_today = scope == super::types::Scope::Today;
         let mut idxs: Vec<usize> = (0..tasks.len())
             .filter(|&i| filter::in_scope(&tasks[i], scope, today))
             .filter(|&i| !spaces::hidden_from_view(&tasks[i].projects, known, open))
             .filter(|&i| {
+                let t = &tasks[i];
+                !(is_today && t.done && t.done_date.as_deref() != Some(today))
+            })
+            .filter(|&i| {
                 filter::list_predicate(
                     &tasks[i],
-                    self.prefs.show_done,
+                    self.prefs.show_done || is_today,
                     self.prefs.show_future,
                     today,
                     &self.filter,
@@ -66,6 +113,21 @@ impl App {
                 )
             })
             .collect();
+
+        // Today reads as the day: late first, then morning to evening by
+        // time, then what has no time.
+        if is_today {
+            filter::sort_by_prefs(&mut idxs, tasks, self.prefs.sort);
+            idxs.sort_by_key(|&i| TodaySlot::of(&tasks[i], today));
+            let groups: Vec<GroupKey> = idxs
+                .iter()
+                .map(|&i| GroupKey::Slot(TodaySlot::of(&tasks[i], today).0))
+                .collect();
+            float_starred_within_groups(&mut idxs, &groups, tasks);
+            self.visible_groups = groups;
+            self.visible_cache = idxs;
+            return;
+        }
 
         // Upcoming reads as a calendar: by day, then as usual within it.
         if scope == super::types::Scope::Upcoming {

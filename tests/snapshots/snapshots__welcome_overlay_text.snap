@@ -2,19 +2,19 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- VIEWS                     ▶▮◀ /tmp/tasq-snapshot.txt  •  0 tasks  DETAIL                           
-   Today             0 1                                                                            
-   Upcoming          0 2                                           (no task)                        
- ▸ All               0 3                                                                            
-   Day               0 4                                                                            
-   Week              0 5                                                                            
-   Month             0 6                                                                            
-                                                                                                    
- SPACES               ╭ tasq · welcome ──────────────────────────────────────╮                      
-   tag with +space    │                    ██          ██                    │                      
-                      │                    ████  ██  ████                    │                      
- TAGS                 │                    ██████████████                    │                      
-   tag with @context  │                    ████  ██  ████                    │                      
+                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
+  ▣ tasq                   │  0 tasks  ·  sort: priority                                            
+                           │  + filter                               (no task)                      
+   ◉ Today              0  │                                                                        
+   ◷ Upcoming           0  │                                                                        
+   ≡ All tasks          0  │                                                                        
+   ▦ Calendar              │                                                                        
+   ⌕ Search             /  │                                                                        
+                      ╭ tasq · welcome ──────────────────────────────────────╮                      
+  FILTERS             │                    ██          ██                    │                      
+   ⚑ High priority    │                    ████  ██  ████                    │                      
+   ★ Starred          │                    ██████████████                    │                      
+   ◷ Overdue          │                    ████  ██  ████                    │                      
                       │                    ██          ██                    │                      
                       │                                                      │                      
                       │  no todo.txt in this folder yet                      │                      
@@ -26,11 +26,11 @@ expression: buffer_to_text(&buf)
                       │                                                      │                      
                       │                                                      │                      
                       ╰──────────────────────────────────────────────────────╯                      
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
- WELCOME   c create ./todo.txt · s open sample · q quit            0 open · 2026-05-06 · tasq 0.0.0
+                           │                                                                        
+                           │                                                                        
+                           │                                                                        
+ ╭───────────────────────╮ │                                                                        
+ │  Y  you ● file        │ │                                                                        
+ ╰───────────────────────╯ │                                                                        
+                           │                                                                        
+   ● welcome     c create ./todo.txt · s open sample · q quit

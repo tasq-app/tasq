@@ -7,43 +7,15 @@ use ratatui::widgets::Paragraph;
 use crate::app::{App, GroupKey, ListDueBucket, Mode, View};
 use crate::core::filter;
 use crate::theme::Theme;
-use crate::ui::{header, keep_cursor_visible, task_row};
+use crate::ui::{keep_cursor_visible, task_row};
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let theme = app.theme();
     super::fill_bg(frame, area, Style::default().bg(theme.bg));
 
-    let [header_area, _spacer, body_area] = Layout::vertical([
-        Constraint::Length(1),
-        Constraint::Length(1),
-        Constraint::Min(1),
-    ])
-    .areas(area);
-
-    let filter_label = header::filter_label(&app.filter);
-    // The database needs no path in the header; a todo.txt shows which file.
-    let title = if app.store.is_db() {
-        match app.prefs.scope {
-            crate::app::Scope::Today => "today".to_string(),
-            crate::app::Scope::Upcoming => "upcoming".to_string(),
-            crate::app::Scope::All => "all tasks".to_string(),
-        }
-    } else {
-        display_path(&app.file_path)
-    };
-    header::render(
-        frame,
-        header_area,
-        theme,
-        header::HeaderProps {
-            title: Some(&title),
-            // title: None,
-            // file: &display_path(&app.file_path),
-            count: app.visible_indices().len(),
-            sort: app.sort_label(),
-            filter: filter_label.as_deref(),
-        },
-    );
+    let [title_area, body_area] =
+        Layout::vertical([Constraint::Length(4), Constraint::Min(1)]).areas(area);
+    title_block(frame, title_area, app, theme);
 
     if app.tasks().is_empty() {
         // The welcome overlay covers the same ground on first run; drawing the
@@ -183,6 +155,7 @@ fn group_count_key(gk: &GroupKey) -> String {
         GroupKey::ListPriority(None) => "p:_".to_string(),
         GroupKey::ListDue(b) => format!("d:{}", b.label()),
         GroupKey::Day(d) => format!("day:{}", d.as_deref().unwrap_or("later")),
+        GroupKey::Slot(s) => format!("slot:{}", s.label()),
         // Not produced for List view; encode defensively.
         GroupKey::ArchiveDate(d) => format!("a:{d}"),
         GroupKey::None => String::new(),
@@ -191,6 +164,8 @@ fn group_count_key(gk: &GroupKey) -> String {
 
 fn group_header<'a>(theme: &Theme, gk: &GroupKey, count: usize, today: &str) -> Line<'a> {
     let (label, color) = match gk {
+        GroupKey::Slot(crate::app::TodaySlot::Late) => ("OVERDUE".to_string(), theme.overdue),
+        GroupKey::Slot(s) => (s.label().to_string(), theme.dim),
         GroupKey::Day(Some(d)) => (day_label(d, today), theme.accent),
         GroupKey::Day(None) => ("LATER".to_string(), theme.dim),
         GroupKey::ListPriority(Some(c)) => (format!("PRIORITY {c}"), theme.priority_color(*c)),
@@ -201,23 +176,155 @@ fn group_header<'a>(theme: &Theme, gk: &GroupKey, count: usize, today: &str) -> 
         GroupKey::None => (String::new(), theme.fg),
     };
 
-    let char_count = count.to_string().len() + label.len();
-    let divider_length = 80 - char_count;
-
+    // A quiet heading: the label, how many, and a hairline to the edge.
+    let used = label.chars().count() + count.to_string().len() + 6;
     Line::from(vec![
-        Span::raw(" "),
-        Span::styled(format!("({})", count), Style::default().fg(theme.dim)),
         Span::raw("  "),
         Span::styled(
             label,
             Style::default().fg(color).add_modifier(Modifier::BOLD),
         ),
-        Span::raw("  "),
+        Span::styled(format!("  {count}  "), Style::default().fg(theme.dim)),
         Span::styled(
-            "─".repeat(divider_length),
+            "─".repeat(160usize.saturating_sub(used)),
             Style::default().fg(theme.border),
         ),
     ])
+}
+
+/// What the list is showing: its name in bold with the date, a progress bar
+/// (Today) or how many tasks there are, and the active filters as chips.
+fn title_block(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
+    use crate::app::{Preset, Scope};
+    let today = app.today_naive();
+    let bold = Style::default().fg(theme.fg).add_modifier(Modifier::BOLD);
+    let dim = Style::default().fg(theme.dim);
+
+    // Row 1: the name.
+    let mut name: Vec<Span> = vec![Span::raw("  ")];
+    if let Some(p) = app.filter.preset {
+        let color = match p {
+            Preset::HighPriority => theme.pri_a,
+            Preset::Starred => theme.matched,
+            Preset::Overdue => theme.overdue,
+        };
+        name.push(Span::styled(
+            format!("{} ", p.icon()),
+            Style::default().fg(color),
+        ));
+        name.push(Span::styled(p.label().to_string(), bold));
+    } else if let Some(p) = &app.filter.project {
+        name.push(Span::styled("● ", Style::default().fg(app.space_color(p))));
+        name.push(Span::styled(crate::core::spaces::display(p), bold));
+    } else if !app.store.is_db() {
+        name.push(Span::styled(display_path(&app.file_path), bold));
+    } else {
+        let label = match app.prefs.scope {
+            Scope::Today => "Today",
+            Scope::Upcoming => "Upcoming",
+            Scope::All => "All tasks",
+        };
+        name.push(Span::styled(label.to_string(), bold));
+    }
+    if app.prefs.scope == Scope::Today || app.filter.project.is_none() {
+        // The date, only when it fits whole.
+        let date = format!(
+            "   {}",
+            today.format("%A %-d %B").to_string().to_lowercase()
+        );
+        let used: usize = name.iter().map(|s| s.content.chars().count()).sum();
+        if used + date.chars().count() <= usize::from(area.width) {
+            name.push(Span::styled(date, dim));
+        }
+    }
+
+    // Row 2: progress for Today, else a count and the sort.
+    let visible = app.visible_indices();
+    let mut info: Vec<Span> = vec![Span::raw("  ")];
+    if app.prefs.scope == Scope::Today && app.filter.preset.is_none() {
+        let done = visible.iter().filter(|&&i| app.tasks()[i].done).count();
+        let total = visible.len();
+        const BAR: usize = 16;
+        let filled = (done * BAR).checked_div(total).unwrap_or(0);
+        info.push(Span::styled(
+            "━".repeat(filled),
+            Style::default().fg(theme.pri_c),
+        ));
+        info.push(Span::styled(
+            "━".repeat(BAR - filled),
+            Style::default().fg(theme.border),
+        ));
+        let planned: u32 = visible
+            .iter()
+            .filter_map(|&i| {
+                let t = &app.tasks()[i];
+                crate::todo::find_kv(&t.clean_raw, "at")?;
+                t.duration
+                    .as_deref()
+                    .and_then(crate::duration::parse_minutes)
+            })
+            .sum();
+        let mut text = format!("  {done} of {total} done");
+        if planned > 0 {
+            text.push_str(&format!(
+                " · {} planned",
+                crate::duration::describe(planned)
+            ));
+        }
+        info.push(Span::styled(text, dim));
+    } else {
+        let n = visible.len();
+        info.push(Span::styled(
+            format!(
+                "{n} {}  ·  sort: {}",
+                if n == 1 { "task" } else { "tasks" },
+                app.sort_label()
+            ),
+            dim,
+        ));
+    }
+
+    // Row 3: the active filters as chips you can clear, then the way to add one.
+    let mut chips: Vec<Span> = vec![Span::raw("  ")];
+    let chip = |text: String, color: Color| -> Span<'static> {
+        let mut style = Style::default().fg(color);
+        if let Some(bg) = crate::ui::task_row::tint(color, theme.bg, 0.2) {
+            style = style.bg(bg);
+        }
+        Span::styled(format!(" {text} × "), style)
+    };
+    if let Some(p) = &app.filter.project {
+        chips.push(chip(
+            format!("● {}", crate::core::spaces::display(p)),
+            app.space_color(p),
+        ));
+        chips.push(Span::raw(" "));
+    }
+    if let Some(c) = &app.filter.context {
+        chips.push(chip(format!("@{c}"), theme.context));
+        chips.push(Span::raw(" "));
+    }
+    if !app.filter.search.is_empty() {
+        chips.push(chip(format!("⌕ {}", app.filter.search), theme.accent));
+        chips.push(Span::raw(" "));
+    }
+    if let Some(p) = app.filter.preset {
+        chips.push(chip(
+            format!("{} {}", p.icon(), p.label().to_lowercase()),
+            theme.accent,
+        ));
+        chips.push(Span::raw(" "));
+    }
+    chips.push(Span::styled("+ filter", dim));
+
+    let lines = vec![Line::from(name), Line::from(info), Line::from(chips)];
+    frame.render_widget(
+        Paragraph::new(lines).style(Style::default().bg(theme.bg)),
+        Rect {
+            height: area.height.min(3),
+            ..area
+        },
+    );
 }
 
 /// An Upcoming day header: `TOMORROW`, else `FRI 9 OCT`.

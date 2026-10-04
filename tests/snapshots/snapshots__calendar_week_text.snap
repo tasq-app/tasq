@@ -33,4 +33,4 @@ expression: buffer_to_text(&buf)
                  │            │            │            │            │            │                 
 21  ╌╌╌╌╌╌╌╌╌╌╌╌╌│╌╌╌╌╌╌╌╌╌╌╌╌│╌╌╌╌╌╌╌╌╌╌╌╌│╌╌╌╌╌╌╌╌╌╌╌╌│╌╌╌╌╌╌╌╌╌╌╌╌│╌╌╌╌╌╌╌╌╌╌╌╌│╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
                  │            │            │            │            │            │                 
- WEEK   ←→ day · ↑↓ task · < > week · v blocks/agenda · Enter edit18 open · 2026-05-06 · tasq 0.0.0
+   ● week     ←→ day · ↑↓ task · < > week · v blocks/agenda · Enter edit · n new · Esc list  ␣ menu

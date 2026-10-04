@@ -35,6 +35,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         Mode::Welcome => "WELCOME".into(),
         // A note editor's own sub-mode overrides this just below.
         Mode::Notes => "NOTES".into(),
+        Mode::Menu => "MENU".into(),
     };
     // The focused note editor's own sub-mode wins over `app.mode`: a pinned
     // note keeps `app.mode == Mode::Normal` while it has focus, which used
@@ -112,6 +113,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             Mode::Share => "scan the QR · any key dismisses",
             Mode::Welcome => "c create ./todo.txt · s open sample · q quit",
             // With an editor open, the focused-editor branch above wins.
+            Mode::Menu => "press a key · Esc close",
             Mode::Notes => {
                 "j/k navigate · e/i edit · p preview · z zoom · n new · r rename · d delete · u unlink · ? help · Esc close"
             }
@@ -128,91 +130,88 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         hint = format!("{hint} · Z close pinned").into();
     }
 
-    let mut right_parts = Vec::new();
-    if matches!(app.view, View::Archive) {
-        right_parts.push(format!("{} archived", app.archive().len()));
-    } else {
-        right_parts.push(format!("{} open", app.visible_indices().len()));
+    // In the list, the hint is short and about what's selected — or
+    // nothing, with `hints = false`. The menu (`␣`) has the rest.
+    let list_normal = app.mode == Mode::Normal
+        && app.calendar.is_none()
+        && editor_mode.is_none()
+        && !app.pinned_focus
+        && !app.sidebar_focus;
+    if list_normal {
+        hint = if !app.prefs.hints {
+            "".into()
+        } else if app.cur_abs().is_some() {
+            "x done · e edit · r reschedule · Tab sidebar".into()
+        } else {
+            "n new task · Tab sidebar".into()
+        };
     }
-    if !app.selection.is_empty() {
-        right_parts.push(format!("{} selected", app.selection.len()));
+    if app.sidebar_focus && app.mode == Mode::Normal {
+        hint = if app.prefs.hints {
+            "↑↓ move · Enter open · Tab back".into()
+        } else {
+            "".into()
+        };
+        mode_label = "SIDEBAR".into();
     }
-    right_parts.push(app.today().to_string());
-    right_parts.push(app.version_label.clone());
-    // Track where the update suffix would slot in so we can paint it in the
-    // accent color (the rest of the right text is dim).
-    let update_suffix = app
-        .update_available()
-        .map(|tag| format!(" · ↑ {tag} (tasq update)"));
-    let right_text = right_parts.join(" · ");
 
-    // Append a chord indicator (e.g. " g…") so two-key sequences like gg/dd/fp
-    // give visible feedback on the first press. Only shown while armed.
+    // Left: the mode as a rounded pill; then the hint, quiet.
+    let bg = Style::default().bg(theme.bg);
+    let pill_bg = editor_mode.map_or(theme.mode_bg, |m| note_editor::mode_color(theme, m));
     let chord_suffix = app
         .chord
         .active()
         .map(|c| format!(" {c}…"))
         .unwrap_or_default();
-    // Layout: mode chip on left, hint in middle, right text right-aligned.
-    let chip_text = format!(" {mode_label}{chord_suffix} ");
-    let chip_w = chip_text.chars().count() as u16;
-    let update_w = update_suffix
-        .as_deref()
-        .map(|s| s.chars().count() as u16)
-        .unwrap_or(0);
-    let right_w = right_text.chars().count() as u16 + update_w + 1;
-    let middle_w = area.width.saturating_sub(chip_w).saturating_sub(right_w);
-
-    let [chip_area, mid_area, right_area] = Layout::horizontal([
-        Constraint::Length(chip_w),
-        Constraint::Length(middle_w),
-        Constraint::Length(right_w),
-    ])
-    .areas(area);
-
-    let chip = Paragraph::new(Span::styled(
-        chip_text,
-        Style::default()
-            .bg(editor_mode.map_or(theme.mode_bg, |m| note_editor::mode_color(theme, m)))
-            .fg(theme.mode_fg)
-            .add_modifier(Modifier::BOLD),
-    ))
-    .style(Style::default().bg(theme.statusbar));
-    frame.render_widget(chip, chip_area);
-
-    let mid_line = Line::from(vec![
-        Span::raw("  "),
-        Span::styled(hint, Style::default().fg(theme.status_fg)),
-    ])
-    .style(Style::default().bg(theme.statusbar));
-    frame.render_widget(
-        Paragraph::new(mid_line).style(Style::default().bg(theme.statusbar)),
-        mid_area,
-    );
-
-    let right_line = if let Some(suffix) = update_suffix {
-        Line::from(vec![
-            Span::styled(right_text, Style::default().fg(theme.dim)),
-            Span::styled(
-                suffix,
-                Style::default()
-                    .fg(theme.accent)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::styled(" ", Style::default().fg(theme.dim)),
-        ])
-        .style(Style::default().bg(theme.statusbar))
+    let label = format!("● {}{chord_suffix}", mode_label.to_lowercase());
+    let nerd = app.prefs.nerd_icons;
+    let (cap_l, cap_r) = if nerd {
+        ("\u{e0b6}", "\u{e0b4}")
     } else {
-        Line::from(Span::styled(
-            format!("{right_text} "),
-            Style::default().fg(theme.dim),
-        ))
-        .style(Style::default().bg(theme.statusbar))
+        (" ", " ")
     };
+    let pill_style = Style::default()
+        .bg(pill_bg)
+        .fg(theme.mode_fg)
+        .add_modifier(Modifier::BOLD);
+    let cap_style = if nerd { bg.fg(pill_bg) } else { pill_style };
+    let mut left: Vec<Span> = vec![
+        Span::styled(" ", bg),
+        Span::styled(cap_l, cap_style),
+        Span::styled(format!(" {label} "), pill_style),
+        Span::styled(cap_r, cap_style),
+    ];
+    if !app.selection.is_empty() {
+        left.push(Span::styled(
+            format!("  {} selected", app.selection.len()),
+            bg.fg(theme.accent),
+        ));
+    }
+    if !hint.is_empty() {
+        left.push(Span::styled(format!("   {hint}"), bg.fg(theme.dim)));
+    }
+
+    // Right: a new version if there is one, and the way into the menu.
+    let mut right: Vec<Span> = Vec::new();
+    if let Some(tag) = app.update_available() {
+        right.push(Span::styled(
+            format!("↑ {tag} · tasq update   "),
+            bg.fg(theme.accent).add_modifier(Modifier::BOLD),
+        ));
+    }
+    if app.mode == Mode::Normal {
+        right.push(Span::styled(
+            "␣",
+            bg.fg(theme.fg).add_modifier(Modifier::BOLD),
+        ));
+        right.push(Span::styled(" menu ", bg.fg(theme.dim)));
+    }
+    let right_w: u16 = right.iter().map(|s| s.content.chars().count() as u16).sum();
+    let [left_area, right_area] =
+        Layout::horizontal([Constraint::Min(1), Constraint::Length(right_w)]).areas(area);
+    frame.render_widget(Paragraph::new(Line::from(left)).style(bg), left_area);
     frame.render_widget(
-        Paragraph::new(right_line)
-            .style(Style::default().bg(theme.statusbar))
-            .right_aligned(),
+        Paragraph::new(Line::from(right)).style(bg).right_aligned(),
         right_area,
     );
 }
@@ -291,24 +290,30 @@ mod tests {
     /// advertises the `o` notes action rather than only trusting a code
     /// review of the literal.
     #[test]
-    fn normal_mode_hint_advertises_notes_action() {
-        let app = build_app();
-        // Wide enough that the middle hint segment isn't clipped by the
-        // chip/right-text layout math before the assertion below gets to see
-        // "o notes" — the real status bar truncates on narrow terminals too,
-        // that's expected and not what this test is checking.
-        let backend = TestBackend::new(200, 1);
-        let mut terminal = Terminal::new(backend).unwrap();
-        terminal.draw(|f| super::render(f, f.area(), &app)).unwrap();
-        let buf = terminal.backend().buffer();
-        let mut text = String::new();
-        for x in 0..buf.area.width {
-            text.push_str(buf[(x, 0)].symbol());
-        }
+    fn normal_mode_hint_follows_the_selection_and_points_at_the_menu() {
+        let mut app = build_app();
+        let line = |app: &App| {
+            let backend = TestBackend::new(200, 1);
+            let mut terminal = Terminal::new(backend).unwrap();
+            terminal.draw(|f| super::render(f, f.area(), app)).unwrap();
+            let buf = terminal.backend().buffer();
+            (0..buf.area.width)
+                .map(|x| buf[(x, 0)].symbol().to_string())
+                .collect::<String>()
+        };
+        let text = line(&app);
+        assert!(text.contains("␣ menu"), "{text}");
         assert!(
-            text.contains("o notes"),
-            "Normal-mode hint bar should advertise the notes action ('o notes'): {text}"
+            text.contains("x done") || text.contains("n new task"),
+            "{text}"
         );
+        app.prefs.hints = false;
+        let text = line(&app);
+        assert!(
+            !text.contains("x done") && !text.contains("n new task"),
+            "{text}"
+        );
+        assert!(text.contains("␣ menu"), "{text}");
     }
 
     fn chip_cell(app: &App) -> (String, ratatui::style::Color) {
@@ -317,10 +322,10 @@ mod tests {
         terminal.draw(|f| super::render(f, f.area(), app)).unwrap();
         let buf = terminal.backend().buffer();
         let mut text = String::new();
-        for x in 0..12 {
+        for x in 0..14 {
             text.push_str(buf[(x, 0)].symbol());
         }
-        (text, buf[(1, 0)].bg)
+        (text.to_uppercase(), buf[(3, 0)].bg)
     }
 
     /// A pinned note with focus leaves `app.mode` at `Mode::Normal`; the chip

@@ -302,6 +302,11 @@ fn run(
             app.toasts.sweep(Instant::now());
             dirty = true;
         }
+        // The sidebar slides: a frame per tick, and one more as it lands.
+        // Redraw every frame of the slide, and once more as it lands.
+        if app.sidebar_animating() || app.sidebar_anim.take().is_some() {
+            dirty = true;
+        }
         if app.chord.should_clear() {
             app.chord.clear();
             dirty = true;
@@ -337,7 +342,9 @@ fn poll_config_reload(app: &mut App, rx: &Option<mpsc::Receiver<()>>) -> bool {
     match Config::load_strict(path) {
         Ok(new_cfg) => {
             app.reload_config(new_cfg);
-            app.flash("config reloaded");
+            if !app.config_change_is_ours() {
+                app.flash("config reloaded");
+            }
             true
         }
         Err(e) => {
@@ -417,7 +424,10 @@ fn next_timeout(app: &App) -> Duration {
             .min(EVENT_POLL),
         None => EVENT_POLL,
     };
-    // A toast sliding in or out wants a frame every ~16 ms.
+    // A toast or the sidebar sliding wants a frame every ~16 ms.
+    if app.sidebar_animating() {
+        return Duration::from_millis(16);
+    }
     match app.toasts.next_wake(Instant::now()) {
         Some(t) => wait.min(t),
         None => wait,
@@ -507,8 +517,54 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::Share => handle_share(app, key),
         Mode::Notes => handle_notes(app, key),
         Mode::Welcome => handle_welcome(app, key),
+        Mode::Menu => handle_menu(app, key),
+        Mode::Normal if app.sidebar_focus => handle_sidebar(app, key, keybinds),
         Mode::Normal if app.calendar.is_some() => handle_calendar(app, key, keybinds),
         Mode::Normal | Mode::Visual => handle_normal(app, key, keybinds),
+    }
+}
+
+/// Keys in the shortcut menu: an entry's key does it, Esc (or space again)
+/// closes, Backspace goes back a page.
+fn handle_menu(app: &mut App, key: KeyEvent) {
+    match key.code {
+        KeyCode::Esc | KeyCode::Char(' ') => app.close_menu(),
+        KeyCode::Backspace => app.menu_page = tasq::app::MenuPage::Root,
+        KeyCode::Char(c) => {
+            if let Some(action) = app.menu_key(c) {
+                apply_action(app, action);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Keys while the sidebar has the keyboard: move, open, or go back to the
+/// list. Anything else is the list's key, as if the sidebar weren't focused.
+fn handle_sidebar(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    match key.code {
+        KeyCode::Char('j') | KeyCode::Down => app.sidebar_move(true),
+        KeyCode::Char('k') | KeyCode::Up => app.sidebar_move(false),
+        KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => {
+            if let Some(item) = app.sidebar_current() {
+                app.sidebar_open(&item);
+                app.sidebar_focus = false;
+                if item == tasq::app::NavItem::Search {
+                    apply_action(app, Action::BeginSearch);
+                }
+            }
+        }
+        KeyCode::Tab | KeyCode::Esc | KeyCode::Char('h') | KeyCode::Left => {
+            app.sidebar_focus = false;
+        }
+        _ => {
+            app.sidebar_focus = false;
+            if app.calendar.is_some() {
+                handle_calendar(app, key, keybinds);
+            } else {
+                handle_normal(app, key, keybinds);
+            }
+        }
     }
 }
 
@@ -1991,10 +2047,7 @@ fn apply_action(app: &mut App, action: Action) {
             app.mode = Mode::PromptContext;
             app.draft_clear();
         }
-        Action::ToggleLeftPane => {
-            app.prefs.toggle_left();
-            app.save_prefs();
-        }
+        Action::ToggleLeftPane => app.sidebar_toggle(),
         Action::ToggleRightPane => {
             app.prefs.toggle_right();
             app.save_prefs();
@@ -2077,6 +2130,15 @@ fn apply_action(app: &mut App, action: Action) {
 }
 
 fn handle_normal(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    // Tab hands the keyboard to the sidebar; space opens the menu.
+    if app.mode == Mode::Normal && key.code == KeyCode::Tab && key.modifiers.is_empty() {
+        app.sidebar_toggle_focus();
+        return;
+    }
+    if app.mode == Mode::Normal && key.code == KeyCode::Char(' ') && key.modifiers.is_empty() {
+        app.open_menu();
+        return;
+    }
     if let Some(action) = resolve_normal_key(app, key, keybinds) {
         apply_action(app, action);
     }

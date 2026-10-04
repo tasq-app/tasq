@@ -18,11 +18,13 @@ pub mod hyperlinks;
 pub mod list;
 pub mod logo;
 pub mod markdown;
+pub mod menu;
 pub mod mode_colors;
 pub mod note_editor;
 pub mod notes_popup;
 pub mod settings;
 pub mod share;
+pub mod sidebar;
 pub mod status;
 pub mod task_row;
 pub mod theme_picker;
@@ -33,7 +35,6 @@ pub mod welcome;
 // Pane and overlay sizing. Promoted out of inline literals so the three
 // `MIN_BODY_W` references below stay in sync, and so tweaking a sidebar
 // width is a one-line change.
-const LEFT_PANE_W: u16 = 26;
 const RIGHT_PANE_W: u16 = 34;
 const MIN_BODY_W: u16 = 40;
 
@@ -65,7 +66,9 @@ pub fn draw(frame: &mut Frame, app: &App) {
 
     // Determine pane widths. Sidebars apply to every view; navigation +
     // detail pane track the cursor regardless of which view is active.
-    let show_left = app.prefs.layout.left;
+    // The sidebar slides open and closed (see `App::sidebar_width`).
+    let left_w = app.sidebar_width();
+    let show_left = left_w > 0;
     // A pinned note (T11, extended to multiple tabs by T12) forces the right
     // column visible even when the user's `show_right` preference is off —
     // pinning doesn't touch that preference at all, it just visually
@@ -74,7 +77,6 @@ pub fn draw(frame: &mut Frame, app: &App) {
     // recomputed fresh every frame from `pinned_notes.is_empty()`.
     let pinned = !app.pinned_notes.is_empty();
     let show_right = app.prefs.layout.right || pinned;
-    let left_w = if show_left { LEFT_PANE_W } else { 0 };
     let right_w = right_pane_width(show_right, pinned, body_area.width, left_w);
 
     let constraints = match (show_left, show_right) {
@@ -97,7 +99,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
     };
 
     if let Some(la) = left_area {
-        filters::render(frame, la, app);
+        sidebar::render(frame, la, app);
     }
     // The calendar takes the centre and the detail column.
     if app.calendar.is_some() {
@@ -193,6 +195,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
             frame.render_widget(Clear, r);
             share::render(frame, r, app);
         }
+        Mode::Menu => menu::render(frame, body_area, app),
         Mode::Notes => {
             // Styled like the ADD TASK dialog (same width formula, sized a
             // bit taller to fit a scrollable list).
