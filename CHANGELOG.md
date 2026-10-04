@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.0-alpha.5](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.4...v0.1.0-alpha.5) (2026-10-04)
+
+
+### Features
+
+* **capture:** choose between spaces when "in …" matches several ([#28](https://github.com/tasq-app/tasq/issues/28)) ([808c29e](https://github.com/tasq-app/tasq/commit/808c29e4f4039fd1bb21b5b1aec32ac0c88a4064))
+* **ui:** a focus timer pinned at the top ([#39](https://github.com/tasq-app/tasq/issues/39)) ([0507093](https://github.com/tasq-app/tasq/commit/0507093876cdd6ec0ca5fcc3f6f081ee4803bffa))
+* **ui:** filter chips and the + filter popover ([#35](https://github.com/tasq-app/tasq/issues/35)) ([45d699f](https://github.com/tasq-app/tasq/commit/45d699febf8d7178325f263c800f9114b416fa12))
+* **ui:** Home, the Inbox and routine streaks ([#36](https://github.com/tasq-app/tasq/issues/36)) ([b8e3728](https://github.com/tasq-app/tasq/commit/b8e37287e8c69dce4cb729d7a30d51f3b5ce3d46))
+* **ui:** match the redesign mock-up ([#40](https://github.com/tasq-app/tasq/issues/40)) ([71ceaba](https://github.com/tasq-app/tasq/commit/71ceaba228225ddb510b69de0dc6d2420067d6e4))
+* **ui:** second round — Home you can drive, the mouse, YOUR DAY, notes editing, Search ([#41](https://github.com/tasq-app/tasq/issues/41)) ([eddf8ad](https://github.com/tasq-app/tasq/commit/eddf8ada8095ad5e193c5fa3edd4843d851f1523))
+* **ui:** settings and profile, and the trash ([#38](https://github.com/tasq-app/tasq/issues/38)) ([eeda8a3](https://github.com/tasq-app/tasq/commit/eeda8a39b045a0759e52106404baa68af9241a08))
+* **ui:** the inspector — task details, checklist and linked notes ([#34](https://github.com/tasq-app/tasq/issues/34)) ([2b6f8c1](https://github.com/tasq-app/tasq/commit/2b6f8c1dfb821b1f026e29df817a941516bf20ad))
+* **ui:** the Notes screen ([#37](https://github.com/tasq-app/tasq/issues/37)) ([ce87045](https://github.com/tasq-app/tasq/commit/ce870452206fc2641a8a1595b77cb372b91a066c))
+* **ui:** the tasq shell — sidebar, title block, status line and menu ([#33](https://github.com/tasq-app/tasq/issues/33)) ([47a5ee1](https://github.com/tasq-app/tasq/commit/47a5ee1b83bc9946f21098390eb6b5a2f119da58))
+* **ui:** third round — safer screens, Home bar capture, checklist completes, pills ([#42](https://github.com/tasq-app/tasq/issues/42)) ([ac1bda3](https://github.com/tasq-app/tasq/commit/ac1bda38474e47719b5a19cfb6037e998d16b3fd))
+* **ui:** toasts that slide in from the right ([#32](https://github.com/tasq-app/tasq/issues/32)) ([97dd574](https://github.com/tasq-app/tasq/commit/97dd574a4289af6357554abeda300708903d71b8))
+
+
+### Bug Fixes
+
+* **spaces:** undoing a rename takes the space's name back ([#29](https://github.com/tasq-app/tasq/issues/29)) ([9ce0452](https://github.com/tasq-app/tasq/commit/9ce0452f2af942abe80d2dbfcb25ef2497ddd620))
+
 ## [0.1.0-alpha.4](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.3...v0.1.0-alpha.4) (2026-10-03)
 
 
