@@ -16,7 +16,7 @@ brew install tasq-app/tap/tasq
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
 [![Rust](https://img.shields.io/badge/rust-2024-orange.svg?logo=rust)](https://www.rust-lang.org)
 
-![tasq demo](docs/demo.gif)
+![tasq: a tour](docs/videos/00-tour.gif)
 
 ## Where tasq comes from
 
@@ -217,6 +217,64 @@ old `tuxedo-w-notes` binary can be deleted.
 - **Saved views.** Save a combination of filters as a named view from the popover; it shows up in the sidebar. Stored as plain `filter.<name>` lines in the config — hand-editable like everything else.
 - **Five themes, three densities.** Cycle with `T` and `D`. Choices persist across runs and hot-reload when you edit `config.toml` externally.
 - **No daemon, no database, no cloud.** One file in, one file out.
+
+## See it
+
+Each of these is a few seconds long and shows one thing.
+
+**Capture** · write it the way you'd say it: dates, times, durations, repeats and spaces are read as you type
+
+![Capture](docs/videos/01-capture.gif)
+
+**Today** · your day in order, with what's late on top and your day's blocks on the right
+
+![Today](docs/videos/02-today.gif)
+
+**Home** · today, the week, routines, spaces, notes and the inbox at a glance
+
+![Home](docs/videos/03-home.gif)
+
+**Filters** · `f` adds spaces, tags, dates in plain words or priority as chips; `X` clears them
+
+![Filters](docs/videos/04-filters.gif)
+
+**Search** · `Ctrl-K` looks through tasks, notes and spaces at once
+
+![Search](docs/videos/05-search.gif)
+
+**Checklists** · steps inside a task, ticked and added from the details
+
+![Checklists](docs/videos/06-checklist.gif)
+
+**Notes** · search every note, then edit it right there, the vim way
+
+![Notes](docs/videos/07-notes.gif)
+
+**Calendar** · the day in blocks, the week, the month
+
+![Calendar](docs/videos/08-calendar.gif)
+
+**Focus** · `P` starts a timer on the task in hand; `Ctrl-X` stops it
+
+![Focus](docs/videos/09-focus.gif)
+
+**The menu** · `Space` shows what you can do; `:` finds any command
+
+![The menu](docs/videos/10-menu.gif)
+
+**Settings** · `,` for themes, density, panels and the rest
+
+![Settings](docs/videos/11-settings.gif)
+
+**Undo** · `dd` deletes, `u` brings it back; the trash keeps the rest for a while
+
+![Undo](docs/videos/12-undo.gif)
+
+<details>
+    <summary>How to record them</summary>
+    <p>Every video is a <a href="https://github.com/charmbracelet/vhs">vhs</a> tape in <code>docs/videos</code>, recorded on the demo list that <code>docs/videos/setup.sh</code> seeds under <code>/tmp/tasq-showcase</code> (dates are relative to the day you record). It needs JetBrains Mono and the Nerd Font symbols installed. Record them all with:</p>
+    <pre>mise run videos</pre>
+</details>
 
 ## Screens
 

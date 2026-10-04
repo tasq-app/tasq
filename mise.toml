@@ -43,6 +43,13 @@ run = [
     "vhs docs/demo-notes.tape",
 ]
 
+[tasks.videos]
+description = "Record the showcase GIFs in docs/videos via vhs (requires vhs on PATH, JetBrains Mono and a Nerd Font symbols font)."
+run = [
+    "cargo build --release",
+    "for t in docs/videos/*.tape; do vhs \"$t\"; done",
+]
+
 [tasks.demo]
 description = "Record the README hero GIF via vhs (requires vhs on PATH)."
 run = [
