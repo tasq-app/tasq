@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
- ▶▮◀ settings  •  19 tasks  •  sort:priority                                                        
-                                                                                                    
- FILES                                                                                              
-   todo file                   /tmp/tasq-snapshot.txt                                               
-   config file                 /tmp/tasq-snapshot.toml                                              
-                                                                                                    
- DISPLAY                                                                                            
-   theme                       Muted Slate ▾  (T to cycle)                                          
-   density                     compact ▾  (D to cycle)                                              
-   line numbers                on  (L to toggle)                                                    
-   status bar                  on                                                                   
-   filter sidebar              on  ([ to toggle)                                                    
-   detail sidebar              on  (] to toggle)                                                    
-   show done in list           off  (H to toggle)                                                   
-   show future in list         off  (F to toggle)                                                   
-                                                                                                    
- BEHAVIOR                                                                                           
-   default sort                priority (S to cycle)                                                
-                                                                                                    
- KEYBINDINGS                                                                                        
-                               press ? for the full list                                            
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
-                                                                                                    
+                             │                                                                      
+   Y  you                    │  Sync & calendars                                                    
+      ● file                 │                                                                      
+                             │  ╭────────────────────────────────────────────────────────────────╮  
+ ▎ Sync & calendars          │  │ SYNC                                                           │  
+   Appearance                │  │  Sync               end-to-end encrypted sync · coming soon    │  
+   Lists                     │  │  This device        ● plain todo.txt                           │  
+   Capture                   │  ╰────────────────────────────────────────────────────────────────╯  
+   Data & trash              │                                                                      
+   Keys                      │  ╭────────────────────────────────────────────────────────────────╮  
+   About                     │  │ CONNECTED CALENDARS                                            │  
+                             │  │  Google Calendar    coming soon                                │  
+                             │  │  Apple Calendar     coming soon                                │  
+                             │  │  Local .ics feed    coming soon                                │  
+                             │  ╰────────────────────────────────────────────────────────────────╯  
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │                                                                      
+                             │  ↑↓ sections · → or Enter open · Esc close                           
    ● settings     Esc back

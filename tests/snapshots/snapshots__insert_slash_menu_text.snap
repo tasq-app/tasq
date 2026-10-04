@@ -13,21 +13,21 @@ expression: buffer_to_text(&buf)
    ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
    ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
    ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-                           │  PRIORITY C  2  ───────────────────────│                               
-  SPACES  ╭──────────────────────────────────────────────────────────────────────────────╮          
-   ● work │                                                                              │          
-   ● healt│  > Schedule team offsite  +work   @phone  /▏                           ↑     │          
-   ● finan│                                                                              │          
-   ● home │                              + work     @ phone                              │          
-   ● learn│                                                                              │          
-   ● perso╰──────────────────────────────────────────────────────────────────────────────╯          
-   ● travel   ╭──────────────────────────────────────────────────────────╮                          
-              │ ATTACH METADATA                                          │                          
-  FILTERS     │  Planned     when you'll do it                     /plan │                          
-   ⚑ High prio│  Due date    the deadline                           /due │                          
-   ★ Starred  │  Recurrence  repeat after completing                /rec │                          
-   ◷ Overdue  │  Threshold   hide until this date                     /t │                          
-              │  Priority    A · B · C                             /prio │                          
+   ⌫ Trash              0  │  PRIORITY C  2  ───────────────────────│                               
+          ╭──────────────────────────────────────────────────────────────────────────────╮          
+  SPACES  │                                                                              │          
+   ● work │  > Schedule team offsite  +work   @phone  /▏                           ↑     │          
+   ● healt│                                                                              │          
+   ● finan│                              + work     @ phone                              │          
+   ● home │                                                                              │          
+   ● learn╰──────────────────────────────────────────────────────────────────────────────╯          
+   ● personal ╭──────────────────────────────────────────────────────────╮                          
+   ● travel   │ ATTACH METADATA                                          │                          
+              │  Planned     when you'll do it                     /plan │                          
+  FILTERS     │  Due date    the deadline                           /due │                          
+   ⚑ High prio│  Recurrence  repeat after completing                /rec │                          
+   ★ Starred  │  Threshold   hide until this date                     /t │                          
+   ◷ Overdue  │  Priority    A · B · C                             /prio │                          
               │  + Project   attach to a project                   /proj │                          
  ╭────────────│  @ Context   tool, place or person                  /ctx │                          
  │  Y  you ● f│                                                          │                          

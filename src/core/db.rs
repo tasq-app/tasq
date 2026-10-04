@@ -21,7 +21,7 @@ use super::spaces::{self, Space};
 use crate::todo::{self, Task};
 
 /// The schema version this build reads and writes.
-const SCHEMA_VERSION: i64 = 4;
+const SCHEMA_VERSION: i64 = 5;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS meta (
@@ -152,6 +152,44 @@ impl Db {
 
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    /// Put deleted task lines in the trash, dated `on`.
+    pub fn trash_put(&mut self, raws: &[String], on: &str) -> std::io::Result<()> {
+        for raw in raws {
+            self.conn
+                .execute(
+                    "INSERT INTO trash (id, raw, deleted_on) VALUES (?1, ?2, ?3)",
+                    params![new_ulid(), raw, on],
+                )
+                .map_err(io_err)?;
+        }
+        Ok(())
+    }
+
+    /// Everything in the trash, newest first: `(id, raw, deleted_on)`.
+    pub fn trash_list(&self) -> std::io::Result<Vec<(String, String, String)>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, raw, deleted_on FROM trash ORDER BY deleted_on DESC, id DESC")
+            .map_err(io_err)?;
+        let rows = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+            .map_err(io_err)?;
+        rows.collect::<Result<_, _>>().map_err(io_err)
+    }
+
+    /// Drop trash rows: one by id, or every one deleted before `before`.
+    pub fn trash_remove(&mut self, id: Option<&str>, before: Option<&str>) -> std::io::Result<()> {
+        match (id, before) {
+            (Some(id), _) => self.conn.execute("DELETE FROM trash WHERE id = ?1", [id]),
+            (None, Some(d)) => self
+                .conn
+                .execute("DELETE FROM trash WHERE deleted_on < ?1", [d]),
+            (None, None) => self.conn.execute("DELETE FROM trash", []),
+        }
+        .map(|_| ())
+        .map_err(io_err)
     }
 
     fn read_data_version(&self) -> rusqlite::Result<i64> {
@@ -450,6 +488,16 @@ fn migrate(conn: &Connection, from: i64) -> rusqlite::Result<()> {
         if from < 4 {
             // A colour per space (a palette slot or `#rrggbb`).
             conn.execute_batch("ALTER TABLE spaces ADD COLUMN color TEXT;")?;
+        }
+        if from < 5 {
+            // Deleted tasks, kept for a while so they can come back.
+            conn.execute_batch(
+                "CREATE TABLE IF NOT EXISTS trash (
+                     id          TEXT PRIMARY KEY,
+                     raw         TEXT NOT NULL,
+                     deleted_on  TEXT NOT NULL
+                 );",
+            )?;
         }
         conn.execute(
             "INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', ?1)",
@@ -765,7 +813,7 @@ mod tests {
                 Some("2026-10-05".into()),
                 Some(60),
                 Some("15,1440".into()),
-                "4".into()
+                "5".into()
             )
         );
         let paths: Vec<String> = db
@@ -894,6 +942,26 @@ mod tests {
         let live = s.db.as_ref().unwrap().load(List::Live).unwrap();
         assert_eq!(live[0].id, id);
         assert_eq!(live[0].raw, s.tasks()[0].raw);
+    }
+
+    #[test]
+    fn the_trash_lives_in_the_database() {
+        let dir = std::env::temp_dir().join(format!("tasq-trash-test-{}", new_ulid()));
+        let path = dir.join("tasq.db");
+        let mut s = Store::open_db(path.clone(), "2026-10-03".into()).unwrap();
+        s.add_finalized("one");
+        s.add_finalized("two");
+        s.delete(0);
+        let t = s.trash();
+        assert_eq!(t.len(), 1);
+        assert!(t[0].raw.ends_with("one"));
+        assert_eq!(t[0].deleted_on, "2026-10-03");
+        // Kept across opens, and gone after thirty days.
+        let mut later = Store::open_db(path.clone(), "2026-11-03".into()).unwrap();
+        assert_eq!(later.trash().len(), 1);
+        later.trash_purge_old();
+        assert!(later.trash().is_empty());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

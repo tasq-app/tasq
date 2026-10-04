@@ -35,8 +35,10 @@ mod prefs;
 mod routines;
 mod saved;
 mod selection;
+mod settings;
 mod sidebar;
 mod toast;
+mod trash;
 mod types;
 mod visibility;
 
@@ -71,8 +73,10 @@ pub use palette::{CommandPaletteState, NotesEntryAction, PaletteDispatch};
 pub use prefs::{Layout, Prefs};
 pub use routines::{DayMark, Routine};
 pub use selection::Selection;
+pub use settings::{SECTIONS as SETTINGS_SECTIONS, SetKey, SetRow, SettingsState};
 pub use sidebar::{NavItem, NavRow, SIDEBAR_SLIDE, SIDEBAR_W};
 pub use toast::{Toast, ToastKind, Toasts};
+pub use trash::TrashScreen;
 pub use types::{
     AUTOCOMPLETE_CAP, AddOutcome, Density, FLASH_TTL, Filter, LEADER_WINDOW, MenuPage, Mode,
     Preset, SavedFilter, Scope, Sort, UNDO_LIMIT, View,
@@ -143,6 +147,10 @@ pub struct App {
     pub home: bool,
     /// The Notes screen, when it's up.
     pub notes_screen: Option<NotesScreen>,
+    /// The Trash screen, when it's up.
+    pub trash_screen: Option<TrashScreen>,
+    /// Where the cursor is on the settings screen.
+    pub settings: SettingsState,
     /// The "+ filter" popover's search and cursor.
     pub filter_pop: FilterPop,
     pub inspector_cursor: usize,
@@ -315,6 +323,8 @@ impl App {
             inspector_focus: false,
             home: false,
             notes_screen: None,
+            trash_screen: None,
+            settings: SettingsState::default(),
             filter_pop: FilterPop::default(),
             inspector_cursor: 0,
             notes_cache: NotesCache::default(),
@@ -661,6 +671,7 @@ impl App {
         self.calendar = None;
         self.home = false;
         self.notes_screen = None;
+        self.trash_screen = None;
         self.prefs.scope = scope;
         self.set_view(View::List);
         self.cursor = 0;

@@ -33,6 +33,7 @@ pub struct NoteEntry {
 impl App {
     pub fn open_notes_screen(&mut self) {
         self.home = false;
+        self.trash_screen = None;
         self.calendar = None;
         self.inspector_focus = false;
         self.mode = Mode::Normal;

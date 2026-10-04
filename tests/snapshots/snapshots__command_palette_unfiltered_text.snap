@@ -13,21 +13,21 @@ expression: buffer_to_text(&buf)
    ▦ Calendar       │──────────────────────────────────────────────────────────│                    
    ✎ Notes          │ ▶ new task                                             n │m                   
    ⌕ Search         │   edit current task (normal mode)                      e │                    
-                    │   edit current task (insert mode)                      i │                    
-  SPACES            │   toggle complete                                      x │                    
-   ● work           │   delete task                                         dd │                    
-   ● health         │   cycle priority                                       p │                    
-   ● finance        │   star / unstar task (top of its priority)             * │                    
-   ● home           │   move task down                                       J │                    
-   ● learning       │   move task up                                         K │                    
-   ● personal       │   add project to current task                          + │                    
-   ● travel         │   add or remove context on current task                c │                    
-                    │   copy line to clipboard                              yy │                    
-  FILTERS           │   copy body to clipboard                              yb │                    
-   ⚑ High priority  │   open task notes                                      o │                    
-   ★ Starred        │   undo                                                 u │                    
-   ◷ Overdue        │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
-                    ╰──────────────────────────────────────────────────────────╯                    
+   ⌫ Trash          │   edit current task (insert mode)                      i │                    
+                    │   toggle complete                                      x │                    
+  SPACES            │   delete task                                         dd │                    
+   ● work           │   cycle priority                                       p │                    
+   ● health         │   star / unstar task (top of its priority)             * │                    
+   ● finance        │   move task down                                       J │                    
+   ● home           │   move task up                                         K │                    
+   ● learning       │   add project to current task                          + │                    
+   ● personal       │   add or remove context on current task                c │                    
+   ● travel         │   copy line to clipboard                              yy │                    
+                    │   copy body to clipboard                              yb │                    
+  FILTERS           │   open task notes                                      o │                    
+   ⚑ High priority  │   undo                                                 u │                    
+   ★ Starred        │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
+   ◷ Overdue        ╰──────────────────────────────────────────────────────────╯                    
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               
  │  Y  you ● file        │ │                                        │                               

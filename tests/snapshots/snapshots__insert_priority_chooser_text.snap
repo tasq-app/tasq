@@ -13,21 +13,21 @@ expression: buffer_to_text(&buf)
    ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
    ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
    ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-                           │  PRIORITY C  2  ───────────────────────│                               
-  SPACES  ╭──────────────────────────────────────────────────────────────────────────────╮          
-   ● work │                                                                              │          
-   ● healt│  > Buy milk  +groceries ▏                                              ↑     │          
-   ● finan│                                                                              │          
-   ● home │                                  + groceries                                 │          
-   ● learn│                                                                              │          
-   ● perso╰──────────────────────────────────────────────────────────────────────────────╯          
-   ● travel   ╭ PRIORITY ────────────╮d "Designing Data-Intensive Ap│                               
-              │  (A)                 │d thank-you note to mentor @ho│                               
-  FILTERS     │  (B)                 │n Saturday hike with K.  ● per│                               
-   ⚑ High prio│  (C)                 │lace bathroom faucet washer  ●│                               
-   ★ Starred  │  clear               │                              │                               
-   ◷ Overdue  │                      │                              │                               
-              │  jk move · Enter set │                              │                               
+   ⌫ Trash              0  │  PRIORITY C  2  ───────────────────────│                               
+          ╭──────────────────────────────────────────────────────────────────────────────╮          
+  SPACES  │                                                                              │          
+   ● work │  > Buy milk  +groceries ▏                                              ↑     │          
+   ● healt│                                                                              │          
+   ● finan│                                  + groceries                                 │          
+   ● home │                                                                              │          
+   ● learn╰──────────────────────────────────────────────────────────────────────────────╯          
+   ● personal ╭ PRIORITY ────────────╮d "Designing Data-Intensive Ap│                               
+   ● travel   │  (A)                 │d thank-you note to mentor @ho│                               
+              │  (B)                 │n Saturday hike with K.  ● per│                               
+  FILTERS     │  (C)                 │lace bathroom faucet washer  ●│                               
+   ⚑ High prio│  clear               │                              │                               
+   ★ Starred  │                      │                              │                               
+   ◷ Overdue  │  jk move · Enter set │                              │                               
               ╰──────────────────────╯                              │                               
  ╭───────────────────────╮ │                                        │                               
  │  Y  you ● file        │ │                                        │                               

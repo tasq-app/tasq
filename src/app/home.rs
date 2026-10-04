@@ -64,6 +64,7 @@ impl App {
     pub fn open_home(&mut self) {
         self.calendar = None;
         self.notes_screen = None;
+        self.trash_screen = None;
         self.home = true;
         self.mode = Mode::Normal;
         self.inspector_focus = false;

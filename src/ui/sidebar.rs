@@ -70,6 +70,7 @@ fn icon(item: &NavItem, app: &App, theme: &Theme) -> (String, Color) {
         NavItem::Preset(Preset::Inbox) | NavItem::Inbox => ("▤".into(), theme.dim),
         NavItem::Home => ("⌂".into(), theme.dim),
         NavItem::Notes => ("✎".into(), theme.dim),
+        NavItem::Trash => ("⌫".into(), theme.dim),
         NavItem::Saved(_) => ("☰".into(), theme.dim),
     }
 }

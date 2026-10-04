@@ -13,6 +13,7 @@ expression: buffer_to_text(&buf)
    ▦ Calendar              │                                        │                               
    ✎ Notes                 │                                        │                               
    ⌕ Search             /  │                                        │                               
+   ⌫ Trash              0  │                                        │                               
                            │                                        │                               
   SPACES                   │                                        │                               
    ● work               4  │                                        │                               
@@ -27,7 +28,6 @@ expression: buffer_to_text(&buf)
    ⚑ High priority      2  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               
  │  Y  you ● file        │ │                                        │                               

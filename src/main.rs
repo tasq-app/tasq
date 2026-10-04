@@ -107,6 +107,7 @@ fn main() -> Result<()> {
     // Copying the old note files in (first run only) is a write from the
     // notes' own connection; it isn't news to the task list.
     app_state.settle_external_changes();
+    app_state.purge_old_trash();
     if app_state.prefs.start_home {
         app_state.open_home();
     }
@@ -530,6 +531,7 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::Normal if app.inspector_focus => handle_inspector(app, key, keybinds),
         Mode::Normal if app.home => handle_home(app, key, keybinds),
         Mode::Normal if app.notes_screen.is_some() => handle_notes_screen(app, key, keybinds),
+        Mode::Normal if app.trash_screen.is_some() => handle_trash(app, key, keybinds),
         Mode::Normal if app.calendar.is_some() => handle_calendar(app, key, keybinds),
         Mode::Normal | Mode::Visual => handle_normal(app, key, keybinds),
     }
@@ -631,6 +633,19 @@ fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Char('e') => app.notes_screen_edit(),
         KeyCode::Char('p') => app.notes_screen_pin(),
         KeyCode::Enter => app.notes_screen_open_task(),
+        _ => handle_normal(app, key, keybinds),
+    }
+}
+
+/// Keys on the Trash screen.
+fn handle_trash(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    match key.code {
+        KeyCode::Esc => app.close_trash(),
+        KeyCode::Char('j') | KeyCode::Down => app.trash_move(true),
+        KeyCode::Char('k') | KeyCode::Up => app.trash_move(false),
+        KeyCode::Char('r') | KeyCode::Enter => app.trash_restore_current(),
+        KeyCode::Char('D') => app.trash_forget_current(),
+        KeyCode::Char('E') => app.trash_empty_confirmed(),
         _ => handle_normal(app, key, keybinds),
     }
 }
@@ -1671,7 +1686,18 @@ fn handle_settings(app: &mut App, key: KeyEvent) {
     }
 
     match key.code {
+        KeyCode::Esc | KeyCode::Char('h') | KeyCode::Left if app.settings.in_rows => {
+            app.settings_leave_rows();
+        }
         KeyCode::Esc | KeyCode::Char(',') => app.mode = Mode::Normal,
+        KeyCode::Char('j') | KeyCode::Down => app.settings_move(true),
+        KeyCode::Char('k') | KeyCode::Up => app.settings_move(false),
+        KeyCode::Char('l') | KeyCode::Right | KeyCode::Tab => app.settings_enter_rows(),
+        KeyCode::Enter | KeyCode::Char(' ') => {
+            if let Some(action) = app.settings_activate() {
+                apply_action(app, action);
+            }
+        }
         KeyCode::Char('T') => apply_action(app, Action::CycleTheme),
         KeyCode::Char('D') => apply_action(app, Action::CycleDensity),
         KeyCode::Char('L') => apply_action(app, Action::ToggleLineNum),
@@ -2110,7 +2136,7 @@ fn apply_action(app: &mut App, action: Action) {
             app.help_return = Mode::Normal;
             app.mode = Mode::Help;
         }
-        Action::OpenSettings => app.mode = Mode::Settings,
+        Action::OpenSettings => app.open_settings(),
         Action::OpenCommandPalette => {
             // Snapshot the current mode (Normal or Visual) so cancel/run
             // can restore it — otherwise opening the palette from Visual
@@ -2164,6 +2190,7 @@ fn apply_action(app: &mut App, action: Action) {
         Action::GoHome => app.open_home(),
         Action::GoInbox => app.open_inbox(),
         Action::GoNotes => app.open_notes_screen(),
+        Action::GoTrash => app.open_trash(),
         Action::PickProject => app.enter_pick_project(),
         Action::PickContext => app.enter_pick_context(),
         Action::PickSavedFilter => app.enter_pick_saved(),
@@ -2277,6 +2304,7 @@ fn handle_normal(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         if app.calendar.is_none()
             && !app.home
             && app.notes_screen.is_none()
+            && app.trash_screen.is_none()
             && app.cur_task().is_some()
         {
             app.inspector_focus_on();

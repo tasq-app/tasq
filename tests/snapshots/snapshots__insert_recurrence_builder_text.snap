@@ -13,21 +13,21 @@ expression: buffer_to_text(&buf)
    ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
    ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
    ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-                           │  PRIORITY C  2  ───────────────────────│                               
-  SPACES  ╭──────────────────────────────────────────────────────────────────────────────╮          
-   ● work │                                                                              │          
-   ● healt│  > Water the plants  +home ▏                                           ↑     │          
-   ● finan│                                                                              │          
-   ● home │     ▦       ◷       ⧗       ↻       ⇥       !      + home      @       ⚑     │          
-   ● learn│                                                                              │          
-   ● perso╰──────────────────────────────────────────────────────────────────────────────╯          
-   ● travel   ╭ ↻ REPEAT ────────────────────────────────────────────────╮                          
-              │                                                          │                          
-  FILTERS     │  every  1    day  business  week  month  year            │                          
-   ⚑ High prio│                                                          │                          
-   ★ Starred  │  mode   strict   after-complete        next: Wed May 13  │                          
-   ◷ Overdue  │                                                          │                          
-              │  → writes rec:+1w                                        │                          
+   ⌫ Trash              0  │  PRIORITY C  2  ───────────────────────│                               
+          ╭──────────────────────────────────────────────────────────────────────────────╮          
+  SPACES  │                                                                              │          
+   ● work │  > Water the plants  +home ▏                                           ↑     │          
+   ● healt│                                                                              │          
+   ● finan│     ▦       ◷       ⧗       ↻       ⇥       !      + home      @       ⚑     │          
+   ● home │                                                                              │          
+   ● learn╰──────────────────────────────────────────────────────────────────────────────╯          
+   ● personal ╭ ↻ REPEAT ────────────────────────────────────────────────╮                          
+   ● travel   │                                                          │                          
+              │  every  1    day  business  week  month  year            │                          
+  FILTERS     │                                                          │                          
+   ⚑ High prio│  mode   strict   after-complete        next: Wed May 13  │                          
+   ★ Starred  │                                                          │                          
+   ◷ Overdue  │  → writes rec:+1w                                        │                          
               │                                                          │                          
  ╭────────────│  jk field · hl/+- change · Enter save · Esc cancel       │                          
  │  Y  you ● f╰──────────────────────────────────────────────────────────╯                          

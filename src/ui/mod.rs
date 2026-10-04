@@ -33,6 +33,7 @@ pub mod task_row;
 pub mod theme_picker;
 pub mod title;
 pub mod toast;
+pub mod trash;
 pub mod welcome;
 
 // Pane and overlay sizing. Promoted out of inline literals so the three
@@ -111,6 +112,9 @@ pub fn draw(frame: &mut Frame, app: &App) {
     } else if app.notes_screen.is_some() {
         let r = right_area.map_or(center_area, |ra| center_area.union(ra));
         notes_screen::render(frame, r, app);
+    } else if app.trash_screen.is_some() {
+        let r = right_area.map_or(center_area, |ra| center_area.union(ra));
+        trash::render(frame, r, app);
     } else if app.calendar.is_some() {
         let r = right_area.map_or(center_area, |ra| center_area.union(ra));
         calendar::render(frame, r, app);
@@ -124,6 +128,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
         && app.calendar.is_none()
         && !app.home
         && app.notes_screen.is_none()
+        && app.trash_screen.is_none()
     {
         if app.pinned_notes.is_empty() {
             detail::render(frame, ra, app);
