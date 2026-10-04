@@ -133,6 +133,13 @@ pub fn passes_preset(t: &Task, p: crate::app::Preset) -> bool {
             let today = chrono::Local::now().format("%Y-%m-%d").to_string();
             !t.done && t.due.as_deref().is_some_and(|d| d < today.as_str())
         }
+        Preset::Inbox => {
+            !t.done
+                && t.projects.is_empty()
+                && t.planned.is_none()
+                && t.due.is_none()
+                && t.rec.is_none()
+        }
     }
 }
 

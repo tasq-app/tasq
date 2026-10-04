@@ -5,18 +5,18 @@ expression: buffer_to_text(&buf)
                            │  /tmp/tasq-snapshot.txt                │                               
   ▣ tasq                   │  3 tasks  ·  sort: priority            │  ⚑ Buy milk                   
                            │  + filter                              │                               
-   ◉ Today              0  │                                        │  priority  ⚑ high             
-   ◷ Upcoming           0  │  PRIORITY A  1  ───────────────────────│                               
-   ≡ All tasks          3  │  1 ▎☐ ⚑ Buy milk                       │  CHECKLIST                    
-   ▦ Calendar              │  PRIORITY B  1  ───────────────────────│  + add item                   
-   ⌕ Search             /  │  2  ☐ ⚑ Call mom                       │                               
-                           │  NO PRIORITY  1  ──────────────────────│                               
-  FILTERS                  │  3  ☐ Write up notes                   │                               
+   ⌂ Home                  │                                        │  priority  ⚑ high             
+   ▤ Inbox              3  │  PRIORITY A  1  ───────────────────────│                               
+   ◉ Today              0  │  1 ▎☐ ⚑ Buy milk                       │  CHECKLIST                    
+   ◷ Upcoming           0  │  PRIORITY B  1  ───────────────────────│  + add item                   
+   ≡ All tasks          3  │  2  ☐ ⚑ Call mom                       │                               
+   ▦ Calendar              │  NO PRIORITY  1  ──────────────────────│                               
+   ⌕ Search             /  │  3  ☐ Write up notes                   │                               
+                           │                                        │                               
+  FILTERS                  │                                        │                               
    ⚑ High priority      1  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            0  │                                        │                               
-                           │                                        │                               
-                           │                                        │                               
                            │                                        │                               
                            │                                        │                               
                            │                                        │                               

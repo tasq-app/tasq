@@ -45,7 +45,7 @@ impl TodaySlot {
         }
     }
 
-    fn of(t: &Task, today: &str) -> (Self, u32) {
+    pub(crate) fn of(t: &Task, today: &str) -> (Self, u32) {
         let late = !t.done && t.date().is_some_and(|d| d < today);
         let at = crate::todo::find_kv(&t.clean_raw, "at")
             .and_then(|v| crate::core::calendar::parse_time(&v));

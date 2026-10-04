@@ -169,6 +169,16 @@ pub const ENTRIES: &[PaletteEntry] = &[
         dispatch: PaletteDispatch::Global(Action::BeginSearch),
     },
     PaletteEntry {
+        label: "go to home",
+        keys: "0",
+        dispatch: PaletteDispatch::Global(Action::GoHome),
+    },
+    PaletteEntry {
+        label: "go to inbox",
+        keys: "",
+        dispatch: PaletteDispatch::Global(Action::GoInbox),
+    },
+    PaletteEntry {
         label: "filter…",
         keys: "f",
         dispatch: PaletteDispatch::Global(Action::OpenFilters),
@@ -757,6 +767,8 @@ mod tests {
             Action::CalendarMonth,
             Action::ArchiveCompleted,
             Action::OpenFilters,
+            Action::GoHome,
+            Action::GoInbox,
             Action::PickProject,
             Action::PickContext,
             Action::CycleSort,

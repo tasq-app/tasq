@@ -5,15 +5,17 @@ expression: buffer_to_text(&buf)
                            │  /tmp/tasq-snapshot.txt                │                               
   ▣ tasq                   │  15 tasks  ·  sort: priority           │  ⚑ Finish Q2 board deck       
                            │  + filter                              │                               
-   ◉ Today              1  │                                        │  due       today              
-   ◷ Upcoming           6  │  PRIORITY A  2  ───────────────────────│  space     ● work             
-   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
-   ▦ Calendar       ╭ tasq · command ──────────────────────────────────────────╮ @laptop            
-   ⌕ Search         │ > arch█  3 matches                                       │                    
-                    │──────────────────────────────────────────────────────────│                    
-  SPACES            │ ▶ archive completed tasks                              A │m                   
-   ● work           │   toggle archive view                                  a │                    
-   ● health         │   fuzzy search                                         / │                    
+   ⌂ Home                  │                                        │  due       today              
+   ▤ Inbox              3  │  PRIORITY A  2  ───────────────────────│  space     ● work             
+   ◉ Today              1  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
+   ◷ Upcoming       ╭ tasq · command ──────────────────────────────────────────╮ @laptop            
+   ≡ All tasks      │ > arch█  3 matches                                       │                    
+   ▦ Calendar       │──────────────────────────────────────────────────────────│                    
+   ⌕ Search         │ ▶ archive completed tasks                              A │m                   
+                    │   toggle archive view                                  a │                    
+  SPACES            │   fuzzy search                                         / │                    
+   ● work           │                                                          │                    
+   ● health         │                                                          │                    
    ● finance        │                                                          │                    
    ● home           │                                                          │                    
    ● learning       │                                                          │                    
@@ -24,8 +26,6 @@ expression: buffer_to_text(&buf)
    ⚑ High priority  │                                                          │                    
    ★ Starred        │                                                          │                    
    ◷ Overdue        │                                                          │                    
-                    │                                                          │                    
-                    │                                                          │                    
                     │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
                     ╰──────────────────────────────────────────────────────────╯                    
                            │                                        │                               

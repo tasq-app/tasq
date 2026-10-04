@@ -145,11 +145,21 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     if list_normal {
         hint = if !app.prefs.hints {
             "".into()
+        } else if app.cur_abs().is_some() && app.filter.preset == Some(crate::app::Preset::Inbox) {
+            "+ space · r date · x done · e edit".into()
         } else if app.cur_abs().is_some() {
             "x done · e edit · r reschedule · Tab details".into()
         } else {
             "n new task · Tab sidebar".into()
         };
+    }
+    if app.home && app.mode == Mode::Normal && !app.sidebar_focus {
+        hint = if app.prefs.hints {
+            "n new task · i inbox · Enter today · Tab sidebar".into()
+        } else {
+            "".into()
+        };
+        mode_label = "HOME".into();
     }
     if app.inspector_focus && app.mode == Mode::Normal {
         hint = if !app.prefs.hints {

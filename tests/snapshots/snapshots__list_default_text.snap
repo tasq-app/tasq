@@ -5,27 +5,27 @@ expression: buffer_to_text(&buf)
                            │  /tmp/tasq-snapshot.txt                │                               
   ▣ tasq                   │  15 tasks  ·  sort: priority           │  ⚑ Finish Q2 board deck       
                            │  + filter                              │                               
-   ◉ Today              1  │                                        │  due       today              
-   ◷ Upcoming           6  │  PRIORITY A  2  ───────────────────────│  space     ● work             
-   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
-   ▦ Calendar              │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
-   ⌕ Search             /  │  PRIORITY B  3  ───────────────────────│                               
-                           │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
-  SPACES                   │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
-   ● work               4  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-   ● health             3  │  PRIORITY C  2  ───────────────────────│                               
-   ● finance            2  │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
-   ● home               1  │  7  ☐ ⚑ Order new running shoes  ● heal│                               
-   ● learning           1  │  NO PRIORITY  8  ──────────────────────│                               
-   ● personal           1  │  8  ☐ Migrate analytics to new pipeline│                               
-   ● travel             1  │  9  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│                               
-                           │ 10  ☐ Pick up dry cleaning @errands    │                               
-  FILTERS                  │ 11  ☐ Schedule annual physical  ● healt│                               
-   ⚑ High priority      2  │ 12  ☐ Read "Designing Data-Intensive Ap│                               
-   ★ Starred            0  │ 13  ☐ Send thank-you note to mentor @ho│                               
-   ◷ Overdue            7  │ 14  ☐ Plan Saturday hike with K.  ● per│                               
-                           │ 15  ☐ Replace bathroom faucet washer  ●│                               
-                           │                                        │                               
+   ⌂ Home                  │                                        │  due       today              
+   ▤ Inbox              3  │  PRIORITY A  2  ───────────────────────│  space     ● work             
+   ◉ Today              1  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
+   ◷ Upcoming           6  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
+   ≡ All tasks         15  │  PRIORITY B  3  ───────────────────────│                               
+   ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
+   ⌕ Search             /  │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
+                           │  5  ☐ ⚑ Draft hiring rubric for senior │                               
+  SPACES                   │  PRIORITY C  2  ───────────────────────│                               
+   ● work               4  │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
+   ● health             3  │  7  ☐ ⚑ Order new running shoes  ● heal│                               
+   ● finance            2  │  NO PRIORITY  8  ──────────────────────│                               
+   ● home               1  │  8  ☐ Migrate analytics to new pipeline│                               
+   ● learning           1  │  9  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│                               
+   ● personal           1  │ 10  ☐ Pick up dry cleaning @errands    │                               
+   ● travel             1  │ 11  ☐ Schedule annual physical  ● healt│                               
+                           │ 12  ☐ Read "Designing Data-Intensive Ap│                               
+  FILTERS                  │ 13  ☐ Send thank-you note to mentor @ho│                               
+   ⚑ High priority      2  │ 14  ☐ Plan Saturday hike with K.  ● per│                               
+   ★ Starred            0  │ 15  ☐ Replace bathroom faucet washer  ●│                               
+   ◷ Overdue            7  │                                        │                               
                            │                                        │                               
                            │                                        │                               
                            │                                        │                               

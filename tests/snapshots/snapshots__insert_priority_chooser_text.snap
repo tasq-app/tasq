@@ -5,27 +5,27 @@ expression: buffer_to_text(&buf)
                            │  /tmp/tasq-snapshot.txt                │                               
   ▣ tasq                   │  15 tasks  ·  sort: priority           │  ⚑ Finish Q2 board deck       
                            │  + filter                              │                               
-   ◉ Today              1  │                                        │  due       today              
-   ◷ Upcoming           6  │  PRIORITY A  2  ───────────────────────│  space     ● work             
-   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
-   ▦ Calendar              │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
-   ⌕ Search             /  │  PRIORITY B  3  ───────────────────────│                               
-                           │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
-  SPACES                   │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
-   ● work               4  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-   ● health             3  │  PRIORITY C  2  ───────────────────────│                               
-   ● finan╭──────────────────────────────────────────────────────────────────────────────╮          
+   ⌂ Home                  │                                        │  due       today              
+   ▤ Inbox              3  │  PRIORITY A  2  ───────────────────────│  space     ● work             
+   ◉ Today              1  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
+   ◷ Upcoming           6  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
+   ≡ All tasks         15  │  PRIORITY B  3  ───────────────────────│                               
+   ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
+   ⌕ Search             /  │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
+                           │  5  ☐ ⚑ Draft hiring rubric for senior │                               
+  SPACES                   │  PRIORITY C  2  ───────────────────────│                               
+   ● work ╭──────────────────────────────────────────────────────────────────────────────╮          
+   ● healt│                                                                              │          
+   ● finan│  > Buy milk  +groceries ▏                                              ↑     │          
    ● home │                                                                              │          
-   ● learn│  > Buy milk  +groceries ▏                                              ↑     │          
+   ● learn│                                  + groceries                                 │          
    ● perso│                                                                              │          
-   ● trave│                                  + groceries                                 │          
-          │                                                                              │          
-  FILTERS ╰──────────────────────────────────────────────────────────────────────────────╯          
-   ⚑ High prio╭ PRIORITY ────────────╮d "Designing Data-Intensive Ap│                               
-   ★ Starred  │  (A)                 │d thank-you note to mentor @ho│                               
-   ◷ Overdue  │  (B)                 │n Saturday hike with K.  ● per│                               
-              │  (C)                 │lace bathroom faucet washer  ●│                               
-              │  clear               │                              │                               
+   ● trave╰──────────────────────────────────────────────────────────────────────────────╯          
+              ╭ PRIORITY ────────────╮d "Designing Data-Intensive Ap│                               
+  FILTERS     │  (A)                 │d thank-you note to mentor @ho│                               
+   ⚑ High prio│  (B)                 │n Saturday hike with K.  ● per│                               
+   ★ Starred  │  (C)                 │lace bathroom faucet washer  ●│                               
+   ◷ Overdue  │  clear               │                              │                               
               │                      │                              │                               
               │  jk move · Enter set │                              │                               
               ╰──────────────────────╯                              │                               

@@ -64,9 +64,13 @@ impl App {
                 self.after_mutation(abs);
             }
             CompleteOutcome::CompletedSpawned { abs, next } => {
-                let title = self
-                    .task_title(abs)
-                    .map(|t| format!("{t} · next one added"));
+                // A routine says how far it's got; any other repeat, that
+                // the next one is in.
+                let tail = match self.streak_of(next) {
+                    Some(n) if n >= 2 => format!("{n} in a row"),
+                    _ => "next one added".to_string(),
+                };
+                let title = self.task_title(abs).map(|t| format!("{t} · {tail}"));
                 self.toast(ToastKind::Done, "Done", title, "completed +next");
                 self.after_mutation(next);
             }

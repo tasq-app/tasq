@@ -37,6 +37,17 @@ local database, notes, live natural-language capture and more, listed below.
   planned or due today, and anything late), **Upcoming** (`2`, the next
   days, then later) and **All** (`3`). Hide a space to keep it out of the
   views.
+- **Home**: tasq opens on your day at a glance — today's tasks and
+  progress, the week ahead as a heatmap, what's next, your routines with
+  their streaks, your spaces, the notes you touched last and the inbox
+  (`0` comes back to it; `start = "list"` in the config opens the list
+  instead).
+- **Inbox**: what you capture without a space or a date (from the phone,
+  the CLI, or a quick `n`) waits in the Inbox until you sort it in: `+`
+  gives it a space, `r` a date.
+- **Routines and streaks**: a repeating task counts how many times in a
+  row you've done it, and the done notice says so the moment you tick it
+  (`Gym · 13 in a row`).
 - **Readable rows**: a task shows its title, then chips: when (`today ·
   16:00 · 2h`), the deadline (`◷ by fri 9 oct`, red when due or late), the
   repeat (`↻ every mon, wed, fri`), its space in the space's colour and its
@@ -580,6 +591,7 @@ The modal keys below apply in Normal mode:
 | Key | Action |
 | --- | --- |
 | `/` | search (a `due:` term filters by date range; see [todo.txt format](#todotxt-format)) |
+| `0` | Home (`Enter` or `Esc` there goes to Today, `i` to the Inbox) |
 | `1` / `2` / `3` | Today / Upcoming / All |
 | `4` / `5` / `6` | Calendar: day / week / month (see [Calendar](#calendar)) |
 | `f` | filter popover: type to search spaces (sub-spaces included), tags, deadlines and priority; `↑` / `↓` move, `Enter` adds the filter (or removes it, if it's on), `⌫` with nothing typed drops the last chip, `Esc` closes. With filters on, it can save them as a view or clear them all |
@@ -865,6 +877,18 @@ in your terminal, switch to its icons:
 
 ```toml
 icons = nerd
+```
+
+tasq opens on Home; to open on the list instead:
+
+```toml
+start = "list"
+```
+
+The short hints at the bottom, about what's selected, can be turned off:
+
+```toml
+hints = false
 ```
 
 ### Recurrence builder

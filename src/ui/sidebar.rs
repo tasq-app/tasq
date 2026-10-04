@@ -67,6 +67,8 @@ fn icon(item: &NavItem, app: &App, theme: &Theme) -> (String, Color) {
         NavItem::Preset(Preset::HighPriority) => ("⚑".into(), theme.pri_a),
         NavItem::Preset(Preset::Starred) => ("★".into(), theme.matched),
         NavItem::Preset(Preset::Overdue) => ("◷".into(), theme.overdue),
+        NavItem::Preset(Preset::Inbox) | NavItem::Inbox => ("▤".into(), theme.dim),
+        NavItem::Home => ("⌂".into(), theme.dim),
         NavItem::Saved(_) => ("☰".into(), theme.dim),
     }
 }

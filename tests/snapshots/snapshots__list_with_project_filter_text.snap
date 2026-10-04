@@ -5,14 +5,16 @@ expression: buffer_to_text(&buf)
                            │  ● work                                │                               
   ▣ tasq                   │  4 tasks  ·  sort: priority            │  ⚑ Finish Q2 board deck       
                            │   ● work ×  + filter                   │                               
-   ◉ Today              1  │                                        │  due       today              
-   ◷ Upcoming           6  │  PRIORITY A  1  ───────────────────────│  space     ● work             
-   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
-   ▦ Calendar              │  PRIORITY B  2  ───────────────────────│  tags      @laptop            
-   ⌕ Search             /  │  2  ☐ ⚑ Review pull requests for auth r│                               
-                           │  3  ☐ ⚑ Draft hiring rubric for senior │  CHECKLIST                    
-  SPACES                   │  NO PRIORITY  1  ──────────────────────│  + add item                   
-   ● work               4  │  4  ☐ Migrate analytics to new pipeline│                               
+   ⌂ Home                  │                                        │  due       today              
+   ▤ Inbox              3  │  PRIORITY A  1  ───────────────────────│  space     ● work             
+   ◉ Today              1  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
+   ◷ Upcoming           6  │  PRIORITY B  2  ───────────────────────│  tags      @laptop            
+   ≡ All tasks         15  │  2  ☐ ⚑ Review pull requests for auth r│                               
+   ▦ Calendar              │  3  ☐ ⚑ Draft hiring rubric for senior │  CHECKLIST                    
+   ⌕ Search             /  │  NO PRIORITY  1  ──────────────────────│  + add item                   
+                           │  4  ☐ Migrate analytics to new pipeline│                               
+  SPACES                   │                                        │                               
+   ● work               4  │                                        │                               
    ● health             3  │                                        │                               
    ● finance            2  │                                        │                               
    ● home               1  │                                        │                               
@@ -24,8 +26,6 @@ expression: buffer_to_text(&buf)
    ⚑ High priority      2  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
-                           │                                        │                               
                            │                                        │                               
                            │                                        │                               
                            │                                        │                               

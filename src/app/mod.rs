@@ -21,6 +21,7 @@ mod draft;
 mod draft_overlay;
 mod filter_pop;
 mod flash;
+mod home;
 mod live_add;
 mod menu;
 mod mutations;
@@ -30,6 +31,7 @@ pub mod palette;
 mod picker;
 mod pinned_note;
 mod prefs;
+mod routines;
 mod saved;
 mod selection;
 mod sidebar;
@@ -55,6 +57,7 @@ pub use draft_overlay::{
 };
 pub use filter_pop::{DUE_TERMS, FilterPop, PopPick, PopRow};
 pub use flash::Flash;
+pub use home::{HeatDay, RecentNote};
 pub use live_add::{CHIP_ORDER, Chip, describe_rec};
 pub use menu::{MenuDo, MenuEntry, entries as menu_entries};
 pub use note_editor::{
@@ -64,6 +67,7 @@ pub use note_editor::{
 pub use notes_popup::{NotePromptKind, NotesPopupState};
 pub use palette::{CommandPaletteState, NotesEntryAction, PaletteDispatch};
 pub use prefs::{Layout, Prefs};
+pub use routines::{DayMark, Routine};
 pub use selection::Selection;
 pub use sidebar::{NavItem, NavRow, SIDEBAR_SLIDE, SIDEBAR_W};
 pub use toast::{Toast, ToastKind, Toasts};
@@ -133,6 +137,8 @@ pub struct App {
     pub sidebar_focus: bool,
     /// The inspector (right panel) has the keyboard.
     pub inspector_focus: bool,
+    /// The Home screen is up.
+    pub home: bool,
     /// The "+ filter" popover's search and cursor.
     pub filter_pop: FilterPop,
     pub inspector_cursor: usize,
@@ -303,6 +309,7 @@ impl App {
             toasts: Toasts::default(),
             sidebar_focus: false,
             inspector_focus: false,
+            home: false,
             filter_pop: FilterPop::default(),
             inspector_cursor: 0,
             notes_cache: NotesCache::default(),
@@ -647,6 +654,7 @@ impl App {
     /// back to the list from the archive.
     pub fn set_scope(&mut self, scope: Scope) {
         self.calendar = None;
+        self.home = false;
         self.prefs.scope = scope;
         self.set_view(View::List);
         self.cursor = 0;

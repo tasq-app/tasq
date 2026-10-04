@@ -5,18 +5,18 @@ expression: buffer_to_text(&buf)
                            │  /tmp/tasq-snapshot.txt                │                               
   ▣ tasq                   │  0 tasks  ·  sort: priority            │  no task selected             
                            │  + filter                              │                               
+   ⌂ Home                  │                                        │                               
+   ▤ Inbox              0  │                                        │                               
    ◉ Today              0  │                                        │                               
    ◷ Upcoming           0  │                                        │                               
    ≡ All tasks          0  │                                        │                               
-   ▦ Calendar              │                                        │                               
-   ⌕ Search             /  │                                        │                               
-                      ╭ tasq · welcome ──────────────────────────────────────╮                      
-  FILTERS             │                    ██          ██                    │                      
+   ▦ Calendar         ╭ tasq · welcome ──────────────────────────────────────╮                      
+   ⌕ Search           │                    ██          ██                    │                      
+                      │                    ████  ██  ████                    │                      
+  FILTERS             │                    ██████████████                    │                      
    ⚑ High priority    │                    ████  ██  ████                    │                      
-   ★ Starred          │                    ██████████████                    │                      
-   ◷ Overdue          │                    ████  ██  ████                    │                      
-                      │                    ██          ██                    │                      
-                      │                                                      │                      
+   ★ Starred          │                    ██          ██                    │                      
+   ◷ Overdue          │                                                      │                      
                       │  no todo.txt in this folder yet                      │                      
                       │                                                      │                      
                       │   c           create ./todo.txt here                 │                      
