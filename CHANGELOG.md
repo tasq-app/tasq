@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0-alpha.7](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.6...v0.1.0-alpha.7) (2026-10-04)
+
+
+### Features
+
+* **inspector:** the details column scrolls to follow the checklist cursor ([#46](https://github.com/tasq-app/tasq/issues/46)) ([52e2ac2](https://github.com/tasq-app/tasq/commit/52e2ac2515525e77f97760e31c144e10697e82bc))
+
 ## [0.1.0-alpha.6](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.5...v0.1.0-alpha.6) (2026-10-04)
 
 
