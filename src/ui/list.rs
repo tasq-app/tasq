@@ -64,10 +64,15 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             // for it, so the layout is identical to the pre-grouping version.
             if !matches!(gk, GroupKey::None) && last_group != Some(gk) {
                 if !lines.is_empty() {
-                    push_blanks(&mut lines, blank);
+                    // One line more than between rows, so groups stand apart.
+                    push_blanks(&mut lines, blank + usize::from(blank > 0));
                 }
                 lines.push(group_header(theme, gk, counts.lookup(gk), app.today()));
                 last_group = Some(gk);
+            } else if !matches!(gk, GroupKey::None) && i > 0 {
+                // Rows in a group get the density's air too, so the chips
+                // on one row don't run into the next row's.
+                push_blanks(&mut lines, blank);
             }
 
             let task = &app.tasks()[abs];
