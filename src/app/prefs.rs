@@ -83,7 +83,7 @@ impl Prefs {
             theme_idx,
             density: cfg.density.unwrap_or(Density::Comfortable),
             sort: cfg.sort.unwrap_or(Sort::Priority),
-            scope: cfg.view.unwrap_or_default(),
+            scope: cfg.view.unwrap_or(Scope::Today),
             layout: Layout {
                 left: cfg.show_left.unwrap_or(true),
                 right: cfg.show_right.unwrap_or(true),

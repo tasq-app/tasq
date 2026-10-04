@@ -59,6 +59,11 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         .flatten();
     checklist(&mut p, &notes, focus.as_ref(), theme);
     note_cards(&mut p, t, &notes, focus.as_ref(), theme);
+    let used = p.y;
+    // In Today, your day at a glance at the foot of the column.
+    if app.prefs.scope == crate::app::Scope::Today && app.calendar.is_none() {
+        your_day(p.buf, inner, used, app, theme, ibg);
+    }
     for (r, h) in p.marks {
         app.hits.add(r, h);
     }
@@ -240,6 +245,139 @@ fn facts(p: &mut Pen, t: &Task, app: &App, theme: &Theme) {
             .as_deref()
             .map_or_else(String::new, |d| chip_date(d, today));
         fact(p, "done", &format!("☑ {on}"), theme.ok, theme);
+    }
+}
+
+/// YOUR DAY: today's timed blocks in their space's colour, the free
+/// stretches between them, and how full the next three days are. Drawn
+/// at the foot of `r`, below `used` (the details above it).
+fn your_day(buf: &mut Buffer, r: Rect, used: u16, app: &App, theme: &Theme, bg: Color) {
+    use crate::core::calendar;
+    let today = app.today_naive();
+    let tasks = app.tasks();
+    let occs = calendar::occurrences(tasks, today, today, today);
+    let mut timed: Vec<&calendar::Occurrence> = occs
+        .iter()
+        .filter(|o| o.start.is_some() && !o.late)
+        .collect();
+    timed.sort_by_key(|o| o.start);
+    // The rows: a block per timed thing, a "free until" line for a gap of
+    // an hour or more.
+    enum Row {
+        Block(u32, String, Color, bool),
+        Free(u32, u32),
+    }
+    let mut rows: Vec<Row> = Vec::new();
+    let mut prev_end: Option<u32> = None;
+    for o in &timed {
+        let start = o.start.unwrap_or(0);
+        if let Some(end) = prev_end
+            && start >= end + 60
+        {
+            rows.push(Row::Free(end, start));
+        }
+        let t = &tasks[o.abs];
+        let color = t
+            .projects
+            .first()
+            .map_or(theme.accent, |p| app.space_color(p));
+        rows.push(Row::Block(
+            start,
+            crate::todo::body_only(&t.raw),
+            color,
+            t.done,
+        ));
+        prev_end = Some(prev_end.map_or(o.end().unwrap_or(start), |e| {
+            e.max(o.end().unwrap_or(start))
+        }));
+    }
+    let need = 2 + rows.len().max(1) as u16 + 3;
+    if r.bottom() < need || r.bottom() - need <= used + 1 {
+        return;
+    }
+    let mut y = r.bottom() - need;
+    let base = Style::default().bg(bg);
+    let hm = |m: u32| format!("{:02}:{:02}", m / 60, m % 60);
+    let put = |buf: &mut Buffer, x: u16, y: u16, s: &str, max: u16, st: Style| {
+        if max > 0 {
+            buf.set_stringn(x, y, s, usize::from(max), st);
+        }
+    };
+    put(buf, r.x, y, "YOUR DAY", r.width, base.fg(theme.dim));
+    y += 1;
+    if rows.is_empty() {
+        put(
+            buf,
+            r.x,
+            y,
+            "nothing with a time today",
+            r.width,
+            base.fg(theme.dim),
+        );
+        y += 1;
+    }
+    let block_x = r.x + 6;
+    let block_w = r.width.saturating_sub(7);
+    for row in &rows {
+        match row {
+            Row::Block(start, title, color, done) => {
+                put(buf, r.x, y, &hm(*start), 5, base.fg(theme.dim));
+                let tint = crate::ui::task_row::tint(*color, theme.bg, 0.2).unwrap_or(bg);
+                let st = Style::default().bg(tint).fg(*color);
+                put(
+                    buf,
+                    block_x,
+                    y,
+                    &" ".repeat(usize::from(block_w)),
+                    block_w,
+                    st,
+                );
+                put(buf, block_x, y, "▌", 1, st);
+                let label = if *done {
+                    format!("{title} ✓")
+                } else {
+                    title.clone()
+                };
+                put(buf, block_x + 2, y, &label, block_w.saturating_sub(3), st);
+            }
+            Row::Free(from, until) => {
+                put(buf, r.x, y, &hm(*from), 5, base.fg(theme.dim));
+                put(
+                    buf,
+                    block_x,
+                    y,
+                    &format!("· free until {}", hm(*until)),
+                    block_w,
+                    base.fg(theme.dim),
+                );
+            }
+        }
+        y += 1;
+    }
+    y += 1;
+    put(buf, r.x, y, "NEXT 3 DAYS", r.width, base.fg(theme.dim));
+    y += 1;
+    let mut x = r.x;
+    for k in 1..=3u64 {
+        let Some(d) = today.checked_add_days(chrono::Days::new(k)) else {
+            continue;
+        };
+        let n = calendar::occurrences(tasks, d, d, today)
+            .iter()
+            .filter(|o| !tasks[o.abs].done)
+            .count();
+        let day = d.format("%a").to_string().to_lowercase();
+        let text = if k == 1 {
+            format!("{day} · {n} {}", if n == 1 { "task" } else { "tasks" })
+        } else {
+            format!("{day} · {n}")
+        };
+        let w = text.chars().count() as u16;
+        if x + w > r.right() {
+            break;
+        }
+        put(buf, x, y, &text, w, base.fg(theme.status_fg));
+        x += w + 2;
     }
 }
 
