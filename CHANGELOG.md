@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0-alpha.6](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.5...v0.1.0-alpha.6) (2026-10-04)
+
+
+### Bug Fixes
+
+* **list:** air between rows in a group, so chips don't touch ([#43](https://github.com/tasq-app/tasq/issues/43)) ([dd9bb74](https://github.com/tasq-app/tasq/commit/dd9bb7411f1d2eb8d8642bce1c33ae5d675f72ef))
+
 ## [0.1.0-alpha.5](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.4...v0.1.0-alpha.5) (2026-10-04)
 
 
