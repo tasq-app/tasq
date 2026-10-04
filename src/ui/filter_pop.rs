@@ -59,15 +59,16 @@ pub fn render(frame: &mut Frame, list: Rect, app: &App) {
     let mut cx = q.x + 2;
     cx += put(buf, cx, q.y + 1, "⌕ ", q.right() - cx, bg.fg(theme.dim));
     if typed.is_empty() {
+        // The caret first, the hint after it, so it doesn't cover the `s`.
+        put(buf, cx, q.y + 1, "▏", 1, bg.fg(theme.accent));
         put(
             buf,
-            cx,
+            cx + 1,
             q.y + 1,
             "search spaces, tags, dates…",
-            q.right().saturating_sub(cx + 1),
+            q.right().saturating_sub(cx + 2),
             bg.fg(theme.dim),
         );
-        put(buf, cx, q.y + 1, "▏", 1, bg.fg(theme.accent));
     } else {
         cx += put(
             buf,
