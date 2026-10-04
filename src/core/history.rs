@@ -2,23 +2,28 @@ use std::collections::VecDeque;
 
 use super::Store;
 use super::outcome::{Reconcile, UndoOutcome};
+use super::spaces::Space;
 use crate::app::UNDO_LIMIT;
 use crate::todo::Task;
 
+/// One undo step: the live list, and the spaces the database kept then
+/// (so undoing a rename also takes the space's name back).
+type Snapshot = (Vec<Task>, Vec<Space>);
+
 #[derive(Debug, Default, Clone)]
 pub struct History {
-    stack: VecDeque<Vec<Task>>,
+    stack: VecDeque<Snapshot>,
 }
 
 impl History {
-    pub fn push(&mut self, snapshot: Vec<Task>) {
+    pub fn push(&mut self, tasks: Vec<Task>, spaces: Vec<Space>) {
         if self.stack.len() >= UNDO_LIMIT {
             self.stack.pop_front();
         }
-        self.stack.push_back(snapshot);
+        self.stack.push_back((tasks, spaces));
     }
 
-    pub fn pop(&mut self) -> Option<Vec<Task>> {
+    pub fn pop(&mut self) -> Option<Snapshot> {
         self.stack.pop_back()
     }
 
@@ -37,7 +42,7 @@ impl History {
 
 impl Store {
     pub(crate) fn push_history(&mut self) {
-        self.history.push(self.tasks.clone());
+        self.history.push(self.tasks.clone(), self.spaces.clone());
     }
 
     pub fn undo(&mut self) -> UndoOutcome {
@@ -46,13 +51,21 @@ impl Store {
             other => return UndoOutcome::Aborted(other),
         }
         match self.history.pop() {
-            Some(prev) => {
+            Some((prev, spaces)) => {
+                // The spaces first, so the save below finds them as they were.
+                if spaces != self.spaces
+                    && let Some(db) = self.db.as_mut()
+                    && let Err(e) = db.replace_spaces(&spaces)
+                {
+                    self.history.push(prev, spaces);
+                    return UndoOutcome::Error(super::StoreError::Write(e));
+                }
                 let current = std::mem::replace(&mut self.tasks, prev);
                 match self.persist() {
                     Ok(()) => UndoOutcome::Undone,
                     Err(e) => {
                         let prev = std::mem::replace(&mut self.tasks, current);
-                        self.history.push(prev);
+                        self.history.push(prev, spaces);
                         UndoOutcome::Error(e)
                     }
                 }
