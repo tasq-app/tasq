@@ -13,21 +13,21 @@ expression: buffer_to_text(&buf)
    ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
    ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
    ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-                           │  PRIORITY C  2  ───────────────────────│                               
-  SPACES                   │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
-   ● work               4  │  7  ☐ ⚑ Order new running shoes  ● heal│                               
-   ● health             3  │  NO PRIORITY  8  ──────────────────────│                               
-   ● finance            2  │  8  ☐ Migrate analytics to new pipeline│                               
-   ● home               1  │  9  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│                               
-   ● learning           1  │ 10  ☐ Pick up dry cleaning @errands    │                               
-   ● personal           1  │ 11  ☐ Schedule annual physical  ● healt│                               
-   ● travel             1  │ 12  ☐ Read "Designing Data-Intensive Ap│                               
-                           │ 13  ☐ Send thank-you note to mentor @ho│                               
-  FILTERS                  │ 14  ☐ Plan Saturday hike with K.  ● per│                               
-   ⚑ High priority      2  │ 15  ☐ Replace bathroom faucet washer  ●│                               
+   ⌫ Trash              0  │  PRIORITY C  2  ───────────────────────│                               
+                           │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
+  SPACES                   │  7  ☐ ⚑ Order new running shoes  ● heal│                               
+   ● work               4  │  NO PRIORITY  8  ──────────────────────│                               
+   ● health             3  │  8  ☐ Migrate analytics to new pipeline│                               
+   ● finance            2  │  9  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│                               
+   ● home               1  │ 10  ☐ Pick up dry cleaning @errands    │                               
+   ● learning           1  │ 11  ☐ Schedule annual physical  ● healt│                               
+   ● personal           1  │ 12  ☐ Read "Designing Data-Intensive Ap│                               
+   ● travel             1  │ 13  ☐ Send thank-you note to mentor @ho│                               
+                           │ 14  ☐ Plan Saturday hike with K.  ● per│                               
+  FILTERS                  │ 15  ☐ Replace bathroom faucet washer  ●│                               
+   ⚑ High priority      2  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               
  │  Y  you ● file        │ │                                        │                               

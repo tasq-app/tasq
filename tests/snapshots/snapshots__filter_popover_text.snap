@@ -13,21 +13,21 @@ expression: buffer_to_text(&buf)
    ▦ Calendar              │  │  ● health                      3  │ │  CHECKLIST                    
    ✎ Notes                 │  │  ● finance                     2  │─│  + add item                   
    ⌕ Search             /  │  │  ● home                        1  │e│                               
-                           │  │  ● learning                    1  │ │                               
-  SPACES                   │  │  ● personal                    1  │ │                               
-   ● work               4  │  │  ● travel                      1  │ │                               
-   ● health             3  │  │  TAGS                             │ │                               
-   ● finance            2  │  │  @ errands                     4  │ │                               
-   ● home               1  │  │  @ home                        4  │ │                               
-   ● learning           1  │  │  @ phone                       3  │ │                               
-   ● personal           1  │  │  WHEN                             │ │                               
-   ● travel             1  │  │  ◷ due today                   1  │ │                               
-                           │  │  ◷ due within a week           3  │ │                               
-  FILTERS                  │  │  ◷ due within a month          6  │ │                               
-   ⚑ High priority      2  │  │  ◷ overdue                     7  │ │                               
-   ★ Starred            0  │  │  PRIORITY                         │ │                               
-   ◷ Overdue            7  │  │  ★ starred                     0  │ │                               
-                           │  │  SAVE                             │ │                               
+   ⌫ Trash              0  │  │  ● learning                    1  │ │                               
+                           │  │  ● personal                    1  │ │                               
+  SPACES                   │  │  ● travel                      1  │ │                               
+   ● work               4  │  │  TAGS                             │ │                               
+   ● health             3  │  │  @ errands                     4  │ │                               
+   ● finance            2  │  │  @ home                        4  │ │                               
+   ● home               1  │  │  @ phone                       3  │ │                               
+   ● learning           1  │  │  WHEN                             │ │                               
+   ● personal           1  │  │  ◷ due today                   1  │ │                               
+   ● travel             1  │  │  ◷ due within a week           3  │ │                               
+                           │  │  ◷ due within a month          6  │ │                               
+  FILTERS                  │  │  ◷ overdue                     7  │ │                               
+   ⚑ High priority      2  │  │  PRIORITY                         │ │                               
+   ★ Starred            0  │  │  ★ starred                     0  │ │                               
+   ◷ Overdue            7  │  │  SAVE                             │ │                               
                            │  │  + Save "work" as a view…         │ │                               
  ╭───────────────────────╮ │  │  × Clear all filters              │ │                               
  │  Y  you ● file        │ │  ╰───────────────────────────────────╯ │                               

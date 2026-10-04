@@ -176,6 +176,14 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         };
         mode_label = "NOTES".into();
     }
+    if app.trash_screen.is_some() && app.mode == Mode::Normal && !app.sidebar_focus {
+        hint = if app.prefs.hints {
+            "r restore · D delete for good · E empty · Esc list".into()
+        } else {
+            "".into()
+        };
+        mode_label = "TRASH".into();
+    }
     if app.inspector_focus && app.mode == Mode::Normal {
         hint = if !app.prefs.hints {
             "".into()

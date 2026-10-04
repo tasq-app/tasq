@@ -52,6 +52,14 @@ local database, notes, live natural-language capture and more, listed below.
   a search box; the selected one rendered beside the list, checkboxes and
   all, and the tasks that link to it underneath. `e` edits it in
   `$EDITOR`, `p` pins it beside the list, `Enter` goes to its task.
+- **Settings and profile** (`,`): you, then sections — sync and
+  calendars (coming), appearance, lists, capture, data and the trash,
+  keys, about — each a card of settings; `Enter` changes one and it's
+  saved to the config at once.
+- **Trash**: a deleted task waits in the Trash (in the sidebar) for 30
+  days: `r` puts it back, `D` deletes it for good, `E` twice empties it.
+  With the database it's kept there; with a todo.txt, in `trash.txt`
+  beside it.
 - **Readable rows**: a task shows its title, then chips: when (`today ·
   16:00 · 2h`), the deadline (`◷ by fri 9 oct`, red when due or late), the
   repeat (`↻ every mon, wed, fri`), its space in the space's colour and its

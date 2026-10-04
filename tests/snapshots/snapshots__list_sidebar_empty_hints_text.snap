@@ -13,12 +13,12 @@ expression: buffer_to_text(&buf)
    ▦ Calendar              │  NO PRIORITY  1  ──────────────────────│                               
    ✎ Notes                 │  3  ☐ Write up notes                   │                               
    ⌕ Search             /  │                                        │                               
+   ⌫ Trash              0  │                                        │                               
                            │                                        │                               
   FILTERS                  │                                        │                               
    ⚑ High priority      1  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            0  │                                        │                               
-                           │                                        │                               
                            │                                        │                               
                            │                                        │                               
                            │                                        │                               

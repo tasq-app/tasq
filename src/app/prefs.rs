@@ -174,6 +174,11 @@ impl Prefs {
         cfg.show_done = Some(self.show_done);
         cfg.show_future = Some(self.show_future);
         cfg.hidden_keys = self.hidden_keys.clone();
+        cfg.week_start = Some(self.week_start);
+        cfg.recurrence_builder = Some(self.recurrence_builder);
+        cfg.icons = Some(if self.nerd_icons { "nerd" } else { "unicode" }.to_string());
+        cfg.hints = Some(self.hints);
+        cfg.start = Some(if self.start_home { "home" } else { "list" }.to_string());
         cfg.save()
     }
 }

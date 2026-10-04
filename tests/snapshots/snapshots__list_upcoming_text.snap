@@ -13,8 +13,9 @@ expression: buffer_to_text(&buf)
    ▦ Calendar              │  LATER  4  ────────────────────────────│                               
    ✎ Notes                 │  3  ☐ Migrate analytics to new pipeline│  CHECKLIST                    
    ⌕ Search             /  │  4  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│  + add item                   
-                           │  5  ☐ ⚑ Renew passport before summer tr│                               
-  SPACES                   │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
+   ⌫ Trash              0  │  5  ☐ ⚑ Renew passport before summer tr│                               
+                           │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
+  SPACES                   │                                        │                               
    ● work               4  │                                        │                               
    ● health             3  │                                        │                               
    ● finance            2  │                                        │                               
@@ -27,7 +28,6 @@ expression: buffer_to_text(&buf)
    ⚑ High priority      2  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               
  │  Y  you ● file        │ │                                        │                               

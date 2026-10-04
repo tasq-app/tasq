@@ -13,12 +13,12 @@ expression: buffer_to_text(&buf)
    ▦ Calendar         ╭ tasq · welcome ──────────────────────────────────────╮                      
    ✎ Notes            │                    ██          ██                    │                      
    ⌕ Search           │                    ████  ██  ████                    │                      
-                      │                    ██████████████                    │                      
-  FILTERS             │                    ████  ██  ████                    │                      
-   ⚑ High priority    │                    ██          ██                    │                      
-   ★ Starred          │                                                      │                      
-   ◷ Overdue          │  no todo.txt in this folder yet                      │                      
-                      │                                                      │                      
+   ⌫ Trash            │                    ██████████████                    │                      
+                      │                    ████  ██  ████                    │                      
+  FILTERS             │                    ██          ██                    │                      
+   ⚑ High priority    │                                                      │                      
+   ★ Starred          │  no todo.txt in this folder yet                      │                      
+   ◷ Overdue          │                                                      │                      
                       │   c           create ./todo.txt here                 │                      
                       │   s           open the sample                        │                      
                       │   q / Ctrl-c  quit                                   │                      

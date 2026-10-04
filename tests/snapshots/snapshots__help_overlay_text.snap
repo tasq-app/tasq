@@ -13,21 +13,21 @@ expression: buffer_to_text(&buf)
    ▦ │    n / o             new task / open notes     v                 visual / multi-select │     
    ✎ │    e / i             edit (normal / insert)    l                 list view             │     
    ⌕ │    r                 reschedule task           a                 archive view          │     
-     │    x                 toggle complete           A                 archive completed     │     
-  SPA│    dd                delete task               H                 show done in list     │     
-   ● │    p / *             priority A→B→C / star     F                 show future in list   │     
+   ⌫ │    x                 toggle complete           A                 archive completed     │     
+     │    dd                delete task               H                 show done in list     │     
+  SPA│    p / *             priority A→B→C / star     F                 show future in list   │     
    ● │    J / K             move task down / up       [ / ]             toggle filter / detail│     
    ● │    c                 add/remove context        T                 theme picker          │     
    ● │    +                 add project               D                 cycle density         │     
    ● │    yy / yb           copy line / body          L                 toggle line numbers   │     
    ● │    u                 undo                                                              │     
    ● │                                              SYSTEM                                    │     
-     │  RECURRENCE (rec:)                             : / Ctrl-P        command palette       │     
-  FIL│    j / k / Tab       next / prev field         s                 share capture QR      │     
-   ⚑ │    h / l / + / -     change value              ? / ,             help / settings       │     
-   ★ │    Enter / Esc       save / cancel             q / Ctrl-c        quit                  │     
-   ◷ │────────────────────────────────────────────────────────────────────────────────────────│     
-     │  FORMAT                                                                                │     
+   ● │  RECURRENCE (rec:)                             : / Ctrl-P        command palette       │     
+     │    j / k / Tab       next / prev field         s                 share capture QR      │     
+  FIL│    h / l / + / -     change value              ? / ,             help / settings       │     
+   ⚑ │    Enter / Esc       save / cancel             q / Ctrl-c        quit                  │     
+   ★ │────────────────────────────────────────────────────────────────────────────────────────│     
+   ◷ │  FORMAT                                                                                │     
      │    (A)               priority A-Z              due:YYYY-MM-DD    due date (+1w = range)│     
  ╭───│    YYYY-MM-DD        creation / done date      rec:Nu            recur (u in d/w/m/y/b)│     
  │  Y│    +project          project tag(s)            rec:+Nu           strict: anchor on due:│     

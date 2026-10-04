@@ -13,21 +13,21 @@ expression: buffer_to_text(&buf)
    ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
    ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
    ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-                           │  PRIORITY C  2  ───────────────────────│                               
-  SPACES  ╭──────────────────────────────────────────────────────────────────────────────╮          
-   ● work │                                                                              │          
-   ● healt│  > Pay rent  +home   @bank  ▦ plan:2026-06-01 ↻ rec:+1m ◐ t:-3d▏       ↑     │          
-   ● finan│                                                                              │          
-   ● home │         ▦ mon 1 jun     ↻ every month     + home     @ bank     ◐ -3d        │          
-   ● learn│                                                                              │          
-   ● perso╰──────────────────────────────────────────────────────────────────────────────╯          
-   ● travel             1  │ 12  ☐ Read "Designing Data-Intensive Ap│                               
-                           │ 13  ☐ Send thank-you note to mentor @ho│                               
-  FILTERS                  │ 14  ☐ Plan Saturday hike with K.  ● per│                               
-   ⚑ High priority      2  │ 15  ☐ Replace bathroom faucet washer  ●│                               
+   ⌫ Trash              0  │  PRIORITY C  2  ───────────────────────│                               
+          ╭──────────────────────────────────────────────────────────────────────────────╮          
+  SPACES  │                                                                              │          
+   ● work │  > Pay rent  +home   @bank  ▦ plan:2026-06-01 ↻ rec:+1m ◐ t:-3d▏       ↑     │          
+   ● healt│                                                                              │          
+   ● finan│         ▦ mon 1 jun     ↻ every month     + home     @ bank     ◐ -3d        │          
+   ● home │                                                                              │          
+   ● learn╰──────────────────────────────────────────────────────────────────────────────╯          
+   ● personal           1  │ 12  ☐ Read "Designing Data-Intensive Ap│                               
+   ● travel             1  │ 13  ☐ Send thank-you note to mentor @ho│                               
+                           │ 14  ☐ Plan Saturday hike with K.  ● per│                               
+  FILTERS                  │ 15  ☐ Replace bathroom faucet washer  ●│                               
+   ⚑ High priority      2  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               
  │  Y  you ● file        │ │                                        │                               

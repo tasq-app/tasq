@@ -12,11 +12,13 @@ pub mod db;
 mod external;
 mod history;
 mod mutations;
+mod trash;
 
 pub mod calendar;
 pub mod filter;
 pub mod outcome;
 pub mod spaces;
+pub use trash::{KEEP_DAYS, TrashItem};
 
 #[cfg(test)]
 pub(crate) mod test_support;

@@ -13,7 +13,8 @@ expression: buffer_to_text(&buf)
    ▦ Calendar       │──────────────────────────────────────────────────────────│                    
    ✎ Notes          │ ▶ archive completed tasks                              A │m                   
    ⌕ Search         │   toggle archive view                                  a │                    
-                    │   fuzzy search                                         / │                    
+   ⌫ Trash          │   fuzzy search                                         / │                    
+                    │                                                          │                    
   SPACES            │                                                          │                    
    ● work           │                                                          │                    
    ● health         │                                                          │                    
@@ -25,9 +26,8 @@ expression: buffer_to_text(&buf)
                     │                                                          │                    
   FILTERS           │                                                          │                    
    ⚑ High priority  │                                                          │                    
-   ★ Starred        │                                                          │                    
-   ◷ Overdue        │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
-                    ╰──────────────────────────────────────────────────────────╯                    
+   ★ Starred        │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
+   ◷ Overdue        ╰──────────────────────────────────────────────────────────╯                    
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               
  │  Y  you ● file        │ │                                        │                               

@@ -26,6 +26,7 @@ pub enum NavItem {
     Calendar,
     Notes,
     Search,
+    Trash,
     Space(String),
     Preset(Preset),
     /// A saved filter, by its index.
@@ -91,6 +92,7 @@ impl App {
             row(NavItem::Calendar, "Calendar", None),
             row(NavItem::Notes, "Notes", None),
             row(NavItem::Search, "Search", None),
+            row(NavItem::Trash, "Trash", Some(self.store.trash().len())),
         ];
         for s in self.store.space_tree() {
             rows.push(NavRow {
@@ -127,6 +129,9 @@ impl App {
         }
         if self.notes_screen.is_some() {
             return Some(NavItem::Notes);
+        }
+        if self.trash_screen.is_some() {
+            return Some(NavItem::Trash);
         }
         if self.calendar.is_some() {
             return Some(NavItem::Calendar);
@@ -204,8 +209,10 @@ impl App {
         self.calendar = None;
         self.home = false;
         self.notes_screen = None;
+        self.trash_screen = None;
         self.mode = Mode::Normal;
         match item {
+            NavItem::Trash => self.open_trash(),
             NavItem::Home => self.open_home(),
             NavItem::Notes => self.open_notes_screen(),
             NavItem::Inbox => {

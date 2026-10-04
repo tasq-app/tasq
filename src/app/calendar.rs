@@ -122,6 +122,7 @@ impl App {
     pub fn open_cal(&mut self, view: CalView) {
         self.home = false;
         self.notes_screen = None;
+        self.trash_screen = None;
         let today = self.today_naive();
         let state = match self.calendar.take() {
             Some(mut s) => {

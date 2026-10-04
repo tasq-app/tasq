@@ -179,6 +179,11 @@ pub const ENTRIES: &[PaletteEntry] = &[
         dispatch: PaletteDispatch::Global(Action::GoNotes),
     },
     PaletteEntry {
+        label: "go to trash",
+        keys: "",
+        dispatch: PaletteDispatch::Global(Action::GoTrash),
+    },
+    PaletteEntry {
         label: "go to inbox",
         keys: "",
         dispatch: PaletteDispatch::Global(Action::GoInbox),
@@ -775,6 +780,7 @@ mod tests {
             Action::GoHome,
             Action::GoInbox,
             Action::GoNotes,
+            Action::GoTrash,
             Action::PickProject,
             Action::PickContext,
             Action::CycleSort,

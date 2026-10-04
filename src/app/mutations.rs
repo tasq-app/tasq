@@ -213,9 +213,15 @@ impl App {
     }
 
     pub fn delete(&mut self, abs: usize) {
+        let title = self.task_title(abs);
         match self.store.delete(abs) {
             DeleteOutcome::Deleted { .. } => {
-                self.flash("deleted");
+                self.toast(
+                    ToastKind::Info,
+                    "Moved to the trash",
+                    title.map(|t| format!("{t} · u undoes")),
+                    "deleted",
+                );
                 self.recompute_visible();
                 self.clamp_cursor();
             }

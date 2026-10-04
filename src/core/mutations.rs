@@ -147,7 +147,8 @@ impl Store {
             return DeleteOutcome::OutOfRange;
         }
         self.push_history();
-        self.tasks.remove(abs);
+        let gone = self.tasks.remove(abs);
+        self.trash_put(&[gone.raw]);
         match self.persist() {
             Ok(()) => DeleteOutcome::Deleted { abs },
             Err(e) => DeleteOutcome::Error(e),
@@ -614,9 +615,12 @@ impl Store {
         indices.sort_by(|a, b| b.cmp(a));
         self.push_history();
         let deleted = indices.len();
+        let mut gone: Vec<String> = Vec::new();
         for abs in indices {
-            self.tasks.remove(abs);
+            gone.push(self.tasks.remove(abs).raw);
         }
+        gone.reverse();
+        self.trash_put(&gone);
         match self.persist() {
             Ok(()) => BulkDeleteOutcome::Done { deleted },
             Err(e) => BulkDeleteOutcome::Error(e),
