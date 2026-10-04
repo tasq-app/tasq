@@ -2189,6 +2189,7 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('L') => Action::ToggleLineNum,
         KeyCode::Char('H') => Action::ToggleShowDone,
         KeyCode::Char('F') => Action::ToggleShowFuture,
+        KeyCode::Char('X') => Action::ClearFilters,
         KeyCode::Esc => Action::EscapeStack,
         KeyCode::Char('W') => Action::ChangeWeekStart,
         // T11: tmux-pane-style pin/focus toggle for a note (`z`) and close
@@ -2449,6 +2450,12 @@ fn apply_action(app: &mut App, action: Action) {
                 app.flash("only one theme");
             } else {
                 app.enter_pick_theme();
+            }
+        }
+        Action::ClearFilters => {
+            if app.filter().has_any() {
+                app.clear_filter_part(tasq::app::FilterPart::All);
+                app.flash("filters cleared");
             }
         }
         Action::EscapeStack => {
@@ -2761,6 +2768,16 @@ mod tests {
                 assert_eq!(app.mode, Mode::SearchAll, "{k:?}");
             }
         }
+    }
+
+    #[test]
+    fn shift_x_clears_every_filter() {
+        let mut app = build_app();
+        app.set_project_filter(Some("work".into()));
+        app.set_context_filter(Some("lab".into()));
+        handle_key(&mut app, key('X'), &KeyBindings::default());
+        assert!(!app.filter().has_any());
+        assert_eq!(app.tasks().len(), 3, "nothing deleted");
     }
 
     fn build_app() -> App {

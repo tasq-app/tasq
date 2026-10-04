@@ -224,6 +224,11 @@ pub const ENTRIES: &[PaletteEntry] = &[
         dispatch: PaletteDispatch::Global(Action::OpenFilters),
     },
     PaletteEntry {
+        label: "clear all filters",
+        keys: "X",
+        dispatch: PaletteDispatch::Global(Action::ClearFilters),
+    },
+    PaletteEntry {
         label: "filter by project",
         keys: "",
         dispatch: PaletteDispatch::Global(Action::PickProject),
@@ -829,6 +834,7 @@ mod tests {
             Action::ToggleLineNum,
             Action::ToggleShowDone,
             Action::ToggleShowFuture,
+            Action::ClearFilters,
             Action::CopyLine,
             Action::CopyBody,
             Action::OpenNotes,

@@ -622,6 +622,7 @@ The modal keys below apply in Normal mode:
 | `1` / `2` / `3` | Today / Upcoming / All |
 | `4` / `5` / `6` | Calendar: day / week / month (see [Calendar](#calendar)) |
 | `f` | filter popover: type to search spaces (sub-spaces included), tags, deadlines and priority; `↑` / `↓` move, `Enter` adds the filter (or removes it, if it's on), `⌫` with nothing typed drops the last chip, `Esc` closes. With filters on, it can save them as a view or clear them all |
+| `X` | clear every filter on the list (or click a chip to take just that one off) |
 | `Tab` | list → details → sidebar; `Shift-Tab` goes straight to the sidebar |
 | `c` / `C` / `H` / `r` / `d` (sidebar, on a space) | next colour / automatic colour, hide / show, rename, delete an empty one |
 | `S` | cycle sort: priority → due → file order |
