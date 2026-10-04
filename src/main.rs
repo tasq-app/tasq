@@ -689,7 +689,7 @@ fn handle_home(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Esc if app.home_back() => {}
         KeyCode::Enter | KeyCode::Esc => app.close_home(),
         KeyCode::Char('i') => app.open_inbox(),
-        _ => handle_normal(app, key, keybinds),
+        _ => global_key(app, key, keybinds),
     }
 }
 
@@ -712,6 +712,15 @@ fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
                     s.editor = None;
                 }
             }
+        }
+        return;
+    }
+    // A delete waiting for its yes.
+    if app.notes_screen.as_ref().is_some_and(|s| s.confirm_delete) {
+        if key.code == KeyCode::Char('y') {
+            app.notes_screen_delete();
+        } else if let Some(s) = app.notes_screen.as_mut() {
+            s.confirm_delete = false;
         }
         return;
     }
@@ -754,7 +763,33 @@ fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Char('N') => app.notes_screen_next_hit(false),
         KeyCode::Char('p') => app.notes_screen_pin(),
         KeyCode::Char('t') => app.notes_screen_open_task(),
-        _ => handle_normal(app, key, keybinds),
+        KeyCode::Char('d') | KeyCode::Delete => {
+            if app.current_note_entry().is_some()
+                && let Some(s) = app.notes_screen.as_mut()
+            {
+                s.confirm_delete = true;
+            }
+        }
+        _ => global_key(app, key, keybinds),
+    }
+}
+
+/// On a screen of its own (Home, Notes, Trash), only the keys that make
+/// sense everywhere reach the list's handler: the menu, moving between
+/// places, help, settings, the timer, new task. Never a task action like
+/// `dd` or `x` on a list you can't see.
+fn global_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+    let passes = ctrl
+        || matches!(
+            key.code,
+            KeyCode::Char(
+                ' ' | ':' | '?' | ',' | '0'..='6' | '[' | ']' | '{' | '}' | 'q' | 'n' | 'N' | 'P'
+            ) | KeyCode::Tab
+                | KeyCode::BackTab
+        );
+    if passes {
+        handle_normal(app, key, keybinds);
     }
 }
 
@@ -767,7 +802,7 @@ fn handle_trash(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Char('r') | KeyCode::Enter => app.trash_restore_current(),
         KeyCode::Char('D') => app.trash_forget_current(),
         KeyCode::Char('E') => app.trash_empty_confirmed(),
-        _ => handle_normal(app, key, keybinds),
+        _ => global_key(app, key, keybinds),
     }
 }
 
@@ -2676,6 +2711,19 @@ mod tests {
             poll_config_reload(&mut app, &rx),
             "the queued signal must still be applied once the picker closes"
         );
+    }
+
+    #[test]
+    fn dd_on_home_notes_or_trash_never_deletes_a_hidden_task() {
+        for open in [App::open_home, App::open_notes_screen, App::open_trash] {
+            let mut app = build_app();
+            open(&mut app);
+            handle_key(&mut app, key('d'), &KeyBindings::default());
+            handle_key(&mut app, key('d'), &KeyBindings::default());
+            handle_key(&mut app, key('x'), &KeyBindings::default());
+            assert_eq!(app.tasks().len(), 3, "nothing deleted");
+            assert!(app.tasks().iter().all(|t| !t.done), "nothing ticked");
+        }
     }
 
     fn build_app() -> App {

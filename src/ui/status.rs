@@ -176,10 +176,12 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         .filter(|s| app.mode == Mode::Normal && s.editor.is_none())
         && !app.sidebar_focus
     {
-        hint = if ns.searching {
+        hint = if ns.confirm_delete {
+            "y delete this note · any other key keeps it".into()
+        } else if ns.searching {
             "type to search · Enter done · Esc clear".into()
         } else if app.prefs.hints {
-            "Enter edit · / search · n next hit · E $EDITOR · p pin · t its task".into()
+            "Enter edit · / search · n next hit · d delete · E $EDITOR · p pin · t its task".into()
         } else {
             "".into()
         };

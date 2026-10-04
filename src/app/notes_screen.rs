@@ -19,6 +19,8 @@ pub struct NotesScreen {
     pub scroll: u16,
     /// Which search hit in the note `n` / `N` are on.
     pub hit: Option<usize>,
+    /// `d` was pressed: `y` deletes the note.
+    pub confirm_delete: bool,
     /// The note open in the built-in editor (vim keys, `:w` `:q` `:wq`).
     pub editor: Option<crate::app::NoteEditorState>,
 }
@@ -61,6 +63,11 @@ impl App {
         crate::note_store::recent(self.notes_dir(), 1000)
             .into_iter()
             .filter_map(|(path, at)| {
+                // A note goes with its task: deleted, it's out of sight
+                // (and back if the task comes back from the trash).
+                if self.note_tasks(&path).is_empty() {
+                    return None;
+                }
                 let body = crate::note_store::read(&path).unwrap_or_default();
                 let title = note_title(&path, &body);
                 if !query.is_empty()
@@ -153,6 +160,31 @@ impl App {
         let editor = crate::app::NoteEditorState::load(e.path, crate::app::NoteEditorMode::Normal);
         if let Some(s) = self.notes_screen.as_mut() {
             s.editor = Some(editor);
+        }
+    }
+
+    /// `d` then `y`: delete the selected note for good.
+    pub fn notes_screen_delete(&mut self) {
+        if let Some(s) = self.notes_screen.as_mut() {
+            s.confirm_delete = false;
+        }
+        let Some(e) = self.current_note_entry() else {
+            return;
+        };
+        match crate::note_store::remove(&e.path) {
+            Ok(()) => {
+                self.toast(
+                    super::ToastKind::Info,
+                    "Note deleted",
+                    Some(e.title),
+                    "note deleted",
+                );
+                let n = self.note_entries().len();
+                if let Some(s) = self.notes_screen.as_mut() {
+                    s.cursor = s.cursor.min(n.saturating_sub(1));
+                }
+            }
+            Err(err) => self.flash(format!("couldn't delete the note: {err}")),
         }
     }
 
