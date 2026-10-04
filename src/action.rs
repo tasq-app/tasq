@@ -48,6 +48,8 @@ pub enum Action {
     GoHome,
     /// The inbox: captures still to sort.
     GoInbox,
+    /// The Notes screen.
+    GoNotes,
     /// The "+ filter" popover.
     OpenFilters,
     PickProject,
@@ -134,6 +136,7 @@ impl Action {
             "arm_f" => Some(Self::ArmF),
             "go_home" | "home" => Some(Self::GoHome),
             "go_inbox" | "inbox" => Some(Self::GoInbox),
+            "go_notes" | "notes_screen" => Some(Self::GoNotes),
             "open_filters" | "filters" | "filter" => Some(Self::OpenFilters),
             "pick_project" => Some(Self::PickProject),
             "pick_context" => Some(Self::PickContext),

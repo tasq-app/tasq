@@ -11,10 +11,11 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           6  │  FRI 8 MAY  1  ────────────────────────│  priority  ⚑ medium           
    ≡ All tasks         15  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
    ▦ Calendar              │  LATER  4  ────────────────────────────│                               
-   ⌕ Search             /  │  3  ☐ Migrate analytics to new pipeline│  CHECKLIST                    
-                           │  4  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│  + add item                   
-  SPACES                   │  5  ☐ ⚑ Renew passport before summer tr│                               
-   ● work               4  │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
+   ✎ Notes                 │  3  ☐ Migrate analytics to new pipeline│  CHECKLIST                    
+   ⌕ Search             /  │  4  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│  + add item                   
+                           │  5  ☐ ⚑ Renew passport before summer tr│                               
+  SPACES                   │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
+   ● work               4  │                                        │                               
    ● health             3  │                                        │                               
    ● finance            2  │                                        │                               
    ● home               1  │                                        │                               
@@ -26,7 +27,6 @@ expression: buffer_to_text(&buf)
    ⚑ High priority      2  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
                            │                                        │                               
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               

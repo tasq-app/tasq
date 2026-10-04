@@ -11,22 +11,22 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           6  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
    ≡ All tasks         15  │  PRIORITY B  3  ───────────────────────│                               
    ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
-   ⌕ Search             /  │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
-                           │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-  SPACES                   │  PRIORITY C  2  ───────────────────────│                               
-   ● work ╭──────────────────────────────────────────────────────────────────────────────╮          
-   ● healt│                                                                              │          
-   ● finan│  > Schedule team offsite  +work   @phone  /▏                           ↑     │          
-   ● home │                                                                              │          
-   ● learn│                              + work     @ phone                              │          
-   ● perso│                                                                              │          
-   ● trave╰──────────────────────────────────────────────────────────────────────────────╯          
-              ╭──────────────────────────────────────────────────────────╮                          
-  FILTERS     │ ATTACH METADATA                                          │                          
-   ⚑ High prio│  Planned     when you'll do it                     /plan │                          
-   ★ Starred  │  Due date    the deadline                           /due │                          
-   ◷ Overdue  │  Recurrence  repeat after completing                /rec │                          
-              │  Threshold   hide until this date                     /t │                          
+   ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
+   ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
+                           │  PRIORITY C  2  ───────────────────────│                               
+  SPACES  ╭──────────────────────────────────────────────────────────────────────────────╮          
+   ● work │                                                                              │          
+   ● healt│  > Schedule team offsite  +work   @phone  /▏                           ↑     │          
+   ● finan│                                                                              │          
+   ● home │                              + work     @ phone                              │          
+   ● learn│                                                                              │          
+   ● perso╰──────────────────────────────────────────────────────────────────────────────╯          
+   ● travel   ╭──────────────────────────────────────────────────────────╮                          
+              │ ATTACH METADATA                                          │                          
+  FILTERS     │  Planned     when you'll do it                     /plan │                          
+   ⚑ High prio│  Due date    the deadline                           /due │                          
+   ★ Starred  │  Recurrence  repeat after completing                /rec │                          
+   ◷ Overdue  │  Threshold   hide until this date                     /t │                          
               │  Priority    A · B · C                             /prio │                          
               │  + Project   attach to a project                   /proj │                          
  ╭────────────│  @ Context   tool, place or person                  /ctx │                          

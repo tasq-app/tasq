@@ -11,13 +11,13 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           0  │  PRIORITY B  1  ───────────────────────│  + add item                   
    ≡ All tasks          3  │  2  ☐ ⚑ Call mom                       │                               
    ▦ Calendar              │  NO PRIORITY  1  ──────────────────────│                               
-   ⌕ Search             /  │  3  ☐ Write up notes                   │                               
+   ✎ Notes                 │  3  ☐ Write up notes                   │                               
+   ⌕ Search             /  │                                        │                               
                            │                                        │                               
   FILTERS                  │                                        │                               
    ⚑ High priority      1  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            0  │                                        │                               
-                           │                                        │                               
                            │                                        │                               
                            │                                        │                               
                            │                                        │                               

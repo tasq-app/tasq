@@ -11,22 +11,22 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming       ╭ tasq · command ──────────────────────────────────────────╮ @laptop            
    ≡ All tasks      │ > █                                                      │                    
    ▦ Calendar       │──────────────────────────────────────────────────────────│                    
-   ⌕ Search         │ ▶ new task                                             n │m                   
-                    │   edit current task (normal mode)                      e │                    
-  SPACES            │   edit current task (insert mode)                      i │                    
-   ● work           │   toggle complete                                      x │                    
-   ● health         │   delete task                                         dd │                    
-   ● finance        │   cycle priority                                       p │                    
-   ● home           │   star / unstar task (top of its priority)             * │                    
-   ● learning       │   move task down                                       J │                    
-   ● personal       │   move task up                                         K │                    
-   ● travel         │   add project to current task                          + │                    
-                    │   add or remove context on current task                c │                    
-  FILTERS           │   copy line to clipboard                              yy │                    
-   ⚑ High priority  │   copy body to clipboard                              yb │                    
-   ★ Starred        │   open task notes                                      o │                    
-   ◷ Overdue        │   undo                                                 u │                    
-                    │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
+   ✎ Notes          │ ▶ new task                                             n │m                   
+   ⌕ Search         │   edit current task (normal mode)                      e │                    
+                    │   edit current task (insert mode)                      i │                    
+  SPACES            │   toggle complete                                      x │                    
+   ● work           │   delete task                                         dd │                    
+   ● health         │   cycle priority                                       p │                    
+   ● finance        │   star / unstar task (top of its priority)             * │                    
+   ● home           │   move task down                                       J │                    
+   ● learning       │   move task up                                         K │                    
+   ● personal       │   add project to current task                          + │                    
+   ● travel         │   add or remove context on current task                c │                    
+                    │   copy line to clipboard                              yy │                    
+  FILTERS           │   copy body to clipboard                              yb │                    
+   ⚑ High priority  │   open task notes                                      o │                    
+   ★ Starred        │   undo                                                 u │                    
+   ◷ Overdue        │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
                     ╰──────────────────────────────────────────────────────────╯                    
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               

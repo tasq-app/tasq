@@ -11,8 +11,9 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           6  │  PRIORITY B  2  ───────────────────────│  tags      @laptop            
    ≡ All tasks         15  │  2  ☐ ⚑ Review pull requests for auth r│                               
    ▦ Calendar              │  3  ☐ ⚑ Draft hiring rubric for senior │  CHECKLIST                    
-   ⌕ Search             /  │  NO PRIORITY  1  ──────────────────────│  + add item                   
-                           │  4  ☐ Migrate analytics to new pipeline│                               
+   ✎ Notes                 │  NO PRIORITY  1  ──────────────────────│  + add item                   
+   ⌕ Search             /  │  4  ☐ Migrate analytics to new pipeline│                               
+                           │                                        │                               
   SPACES                   │                                        │                               
    ● work               4  │                                        │                               
    ● health             3  │                                        │                               
@@ -26,7 +27,6 @@ expression: buffer_to_text(&buf)
    ⚑ High priority      2  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
                            │                                        │                               
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               

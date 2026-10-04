@@ -174,6 +174,11 @@ pub const ENTRIES: &[PaletteEntry] = &[
         dispatch: PaletteDispatch::Global(Action::GoHome),
     },
     PaletteEntry {
+        label: "go to notes",
+        keys: "N",
+        dispatch: PaletteDispatch::Global(Action::GoNotes),
+    },
+    PaletteEntry {
         label: "go to inbox",
         keys: "",
         dispatch: PaletteDispatch::Global(Action::GoInbox),
@@ -769,6 +774,7 @@ mod tests {
             Action::OpenFilters,
             Action::GoHome,
             Action::GoInbox,
+            Action::GoNotes,
             Action::PickProject,
             Action::PickContext,
             Action::CycleSort,

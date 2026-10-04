@@ -11,22 +11,22 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           6  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
    ≡ All tasks         15  │  PRIORITY B  3  ───────────────────────│                               
    ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
-   ⌕ Search             /  │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
-                           │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-  SPACES                   │  PRIORITY C  2  ───────────────────────│                               
-   ● work ╭──────────────────────────────────────────────────────────────────────────────╮          
-   ● healt│                                                                              │          
-   ● finan│  > Water the plants  +home ▏                                           ↑     │          
-   ● home │                                                                              │          
-   ● learn│     ▦       ◷       ⧗       ↻       ⇥       !      + home      @       ⚑     │          
-   ● perso│                                                                              │          
-   ● trave╰──────────────────────────────────────────────────────────────────────────────╯          
-              ╭ ↻ REPEAT ────────────────────────────────────────────────╮                          
-  FILTERS     │                                                          │                          
-   ⚑ High prio│  every  1    day  business  week  month  year            │                          
-   ★ Starred  │                                                          │                          
-   ◷ Overdue  │  mode   strict   after-complete        next: Wed May 13  │                          
+   ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
+   ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
+                           │  PRIORITY C  2  ───────────────────────│                               
+  SPACES  ╭──────────────────────────────────────────────────────────────────────────────╮          
+   ● work │                                                                              │          
+   ● healt│  > Water the plants  +home ▏                                           ↑     │          
+   ● finan│                                                                              │          
+   ● home │     ▦       ◷       ⧗       ↻       ⇥       !      + home      @       ⚑     │          
+   ● learn│                                                                              │          
+   ● perso╰──────────────────────────────────────────────────────────────────────────────╯          
+   ● travel   ╭ ↻ REPEAT ────────────────────────────────────────────────╮                          
               │                                                          │                          
+  FILTERS     │  every  1    day  business  week  month  year            │                          
+   ⚑ High prio│                                                          │                          
+   ★ Starred  │  mode   strict   after-complete        next: Wed May 13  │                          
+   ◷ Overdue  │                                                          │                          
               │  → writes rec:+1w                                        │                          
               │                                                          │                          
  ╭────────────│  jk field · hl/+- change · Enter save · Esc cancel       │                          

@@ -11,22 +11,22 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           6  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
    ≡ All tasks         15  │  PRIORITY B  3  ───────────────────────│                               
    ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
-   ⌕ Search             /  │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
-                           │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-  SPACES                   │  PRIORITY C  2  ───────────────────────│                               
-   ● work               4  │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
-   ● health             3  │  7  ☐ ⚑ Order new running shoes  ● heal│                               
-   ● finance            2  │  NO PRIORITY  8  ──────────────────────│                               
-   ● home               1  │  8  ☐ Migrate analytics to new pipeline│                               
-   ● learning           1  │  9  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│                               
-   ● personal           1  │ 10  ☐ Pick up dry cleaning @errands    │                               
-   ● travel             1  │ 11  ☐ Schedule annual physical  ● healt│                               
-                           │ 12  ☐ Read "Designing Data-Intensive Ap│                               
-  FILTERS                  │ 13  ☐ Send thank-you note to mentor @ho│                               
-   ⚑ High priority      2  │ 14  ☐ Plan Saturday hike with K.  ● per│                               
-   ★ Starred            0  │ 15  ☐ Replace bathroom faucet washer  ●│                               
+   ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
+   ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
+                           │  PRIORITY C  2  ───────────────────────│                               
+  SPACES                   │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
+   ● work               4  │  7  ☐ ⚑ Order new running shoes  ● heal│                               
+   ● health             3  │  NO PRIORITY  8  ──────────────────────│                               
+   ● finance            2  │  8  ☐ Migrate analytics to new pipeline│                               
+   ● home               1  │  9  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│                               
+   ● learning           1  │ 10  ☐ Pick up dry cleaning @errands    │                               
+   ● personal           1  │ 11  ☐ Schedule annual physical  ● healt│                               
+   ● travel             1  │ 12  ☐ Read "Designing Data-Intensive Ap│                               
+                           │ 13  ☐ Send thank-you note to mentor @ho│                               
+  FILTERS                  │ 14  ☐ Plan Saturday hike with K.  ● per│                               
+   ⚑ High priority      2  │ 15  ☐ Replace bathroom faucet washer  ●│                               
+   ★ Starred            0  │                                        │                               
    ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
                            │                                        │                               
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               

@@ -11,22 +11,22 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           6  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
    ≡ All tasks         15  │  PRIORITY B  3  ───────────────────────│                               
    ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
-   ⌕ Search             /  │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
-                           │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-  SPACES                   │  PRIORITY C  2  ───────────────────────│                               
-   ● work ╭──────────────────────────────────────────────────────────────────────────────╮          
-   ● healt│                                                                              │          
-   ● finan│  > Buy milk  +groceries ▏                                              ↑     │          
-   ● home │                                                                              │          
-   ● learn│                                  + groceries                                 │          
-   ● perso│                                                                              │          
-   ● trave╰──────────────────────────────────────────────────────────────────────────────╯          
-              ╭ PRIORITY ────────────╮d "Designing Data-Intensive Ap│                               
-  FILTERS     │  (A)                 │d thank-you note to mentor @ho│                               
-   ⚑ High prio│  (B)                 │n Saturday hike with K.  ● per│                               
-   ★ Starred  │  (C)                 │lace bathroom faucet washer  ●│                               
-   ◷ Overdue  │  clear               │                              │                               
-              │                      │                              │                               
+   ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
+   ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
+                           │  PRIORITY C  2  ───────────────────────│                               
+  SPACES  ╭──────────────────────────────────────────────────────────────────────────────╮          
+   ● work │                                                                              │          
+   ● healt│  > Buy milk  +groceries ▏                                              ↑     │          
+   ● finan│                                                                              │          
+   ● home │                                  + groceries                                 │          
+   ● learn│                                                                              │          
+   ● perso╰──────────────────────────────────────────────────────────────────────────────╯          
+   ● travel   ╭ PRIORITY ────────────╮d "Designing Data-Intensive Ap│                               
+              │  (A)                 │d thank-you note to mentor @ho│                               
+  FILTERS     │  (B)                 │n Saturday hike with K.  ● per│                               
+   ⚑ High prio│  (C)                 │lace bathroom faucet washer  ●│                               
+   ★ Starred  │  clear               │                              │                               
+   ◷ Overdue  │                      │                              │                               
               │  jk move · Enter set │                              │                               
               ╰──────────────────────╯                              │                               
  ╭───────────────────────╮ │                                        │                               

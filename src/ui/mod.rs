@@ -24,6 +24,7 @@ pub mod menu;
 pub mod mode_colors;
 pub mod note_editor;
 pub mod notes_popup;
+pub mod notes_screen;
 pub mod settings;
 pub mod share;
 pub mod sidebar;
@@ -107,6 +108,9 @@ pub fn draw(frame: &mut Frame, app: &App) {
     if app.home {
         let r = right_area.map_or(center_area, |ra| center_area.union(ra));
         home::render(frame, r, app);
+    } else if app.notes_screen.is_some() {
+        let r = right_area.map_or(center_area, |ra| center_area.union(ra));
+        notes_screen::render(frame, r, app);
     } else if app.calendar.is_some() {
         let r = right_area.map_or(center_area, |ra| center_area.union(ra));
         calendar::render(frame, r, app);
@@ -119,6 +123,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
     if let Some(ra) = right_area
         && app.calendar.is_none()
         && !app.home
+        && app.notes_screen.is_none()
     {
         if app.pinned_notes.is_empty() {
             detail::render(frame, ra, app);

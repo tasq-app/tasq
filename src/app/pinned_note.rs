@@ -98,6 +98,11 @@ impl App {
         let Some(path) = self.notes_popup.selected().cloned() else {
             return;
         };
+        self.pin_note_path(path);
+    }
+
+    /// Pin the note at `path` beside the list, focused.
+    pub fn pin_note_path(&mut self, path: std::path::PathBuf) {
         let editor = NoteEditorState::load(path, NoteEditorMode::Normal);
         self.pinned_notes.push(editor);
         self.active_pin = self.pinned_notes.len() - 1;

@@ -27,6 +27,7 @@ mod menu;
 mod mutations;
 mod note_editor;
 mod notes_popup;
+mod notes_screen;
 pub mod palette;
 mod picker;
 mod pinned_note;
@@ -65,6 +66,7 @@ pub use note_editor::{
     UNSAVED_WARNING, VisualSelection, wrap_indent,
 };
 pub use notes_popup::{NotePromptKind, NotesPopupState};
+pub use notes_screen::{NoteEntry, NotesScreen};
 pub use palette::{CommandPaletteState, NotesEntryAction, PaletteDispatch};
 pub use prefs::{Layout, Prefs};
 pub use routines::{DayMark, Routine};
@@ -139,6 +141,8 @@ pub struct App {
     pub inspector_focus: bool,
     /// The Home screen is up.
     pub home: bool,
+    /// The Notes screen, when it's up.
+    pub notes_screen: Option<NotesScreen>,
     /// The "+ filter" popover's search and cursor.
     pub filter_pop: FilterPop,
     pub inspector_cursor: usize,
@@ -310,6 +314,7 @@ impl App {
             sidebar_focus: false,
             inspector_focus: false,
             home: false,
+            notes_screen: None,
             filter_pop: FilterPop::default(),
             inspector_cursor: 0,
             notes_cache: NotesCache::default(),
@@ -655,6 +660,7 @@ impl App {
     pub fn set_scope(&mut self, scope: Scope) {
         self.calendar = None;
         self.home = false;
+        self.notes_screen = None;
         self.prefs.scope = scope;
         self.set_view(View::List);
         self.cursor = 0;
