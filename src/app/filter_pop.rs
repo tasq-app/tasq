@@ -7,7 +7,6 @@
 use super::App;
 use super::types::{Filter, Mode, Preset};
 use crate::core::{filter, spaces};
-use crate::search::subseq_match_ci;
 
 /// Deadline filters: label and the `due:` search term behind it.
 pub const DUE_TERMS: [(&str, &str); 3] = [
@@ -162,8 +161,7 @@ impl App {
         let q = self.filter_pop.query.trim();
         if !q.is_empty() {
             rows.retain(|r| {
-                matches!(r.pick, PopPick::Save | PopPick::Clear)
-                    || subseq_match_ci(&r.label, q).is_some()
+                matches!(r.pick, PopPick::Save | PopPick::Clear) || label_matches(&r.label, q)
             });
         }
         rows
@@ -262,6 +260,17 @@ impl App {
     }
 }
 
+/// Whether what you typed is in a row's label: whole letters in a row, not
+/// letters scattered through it (`git` must not find "high priority").
+/// `@lab`, `+Uni` and `uni/ex` are read the way the list writes them.
+fn label_matches(label: &str, query: &str) -> bool {
+    let q = query
+        .trim_start_matches(['@', '+'])
+        .to_lowercase()
+        .replace('/', " › ");
+    q.is_empty() || label.to_lowercase().contains(&q)
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -318,6 +327,27 @@ mod tests {
         assert_eq!(app.filter.project.as_deref(), Some("Uni/Exams"));
         app.filter_pop_backspace();
         assert!(!app.filter.has_any());
+    }
+
+    #[test]
+    fn typing_finds_words_not_scattered_letters() {
+        let mut app = build_app("a +Uni/Exams @lab\nb +Code @git\n");
+        let labels = |app: &mut App, q: &str| {
+            app.open_filters();
+            for c in q.chars() {
+                app.filter_pop_type(c);
+            }
+            app.filter_rows()
+                .into_iter()
+                .map(|r| r.label)
+                .collect::<Vec<_>>()
+        };
+        let git = labels(&mut app, "git");
+        assert_eq!(git, ["git"], "{git:?}");
+        assert!(labels(&mut app, "pri").contains(&"high priority".to_string()));
+        assert!(labels(&mut app, "@lab").contains(&"lab".to_string()));
+        assert!(labels(&mut app, "uni/ex").contains(&"Uni › Exams".to_string()));
+        assert!(!labels(&mut app, "hp").contains(&"high priority".to_string()));
     }
 
     #[test]
