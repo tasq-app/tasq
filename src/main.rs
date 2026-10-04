@@ -393,6 +393,23 @@ fn handle_paste(app: &mut App, text: &str, keybinds: &KeyBindings) {
         editor.insert_text(text);
         return;
     }
+    // A pasted list goes in item by item.
+    if app.mode == Mode::PromptChecklist && text.contains('\n') {
+        let typed = app.draft.text().to_string();
+        app.draft_clear();
+        for (i, line) in text.lines().enumerate() {
+            let line = if i == 0 {
+                format!("{typed}{line}")
+            } else {
+                line.to_string()
+            };
+            if !line.trim().is_empty() {
+                app.add_check_item(&line);
+            }
+        }
+        app.mode = Mode::PromptChecklist;
+        return;
+    }
     for c in text.chars() {
         let code = match c {
             '\n' | '\r' => KeyCode::Enter,
@@ -1861,6 +1878,19 @@ fn handle_prompt(app: &mut App, key: KeyEvent) {
         }
     }
 
+    // The checklist prompt stays open: each Enter adds an item, an empty
+    // one (or Esc) is done.
+    if app.mode == Mode::PromptChecklist && key.code == KeyCode::Enter {
+        let value = app.draft.text().trim().to_string();
+        app.draft_clear();
+        if value.is_empty() {
+            app.mode = Mode::Normal;
+        } else {
+            app.add_check_item(&value);
+            app.mode = Mode::PromptChecklist;
+        }
+        return;
+    }
     match key.code {
         KeyCode::Esc => {
             app.mode = Mode::Normal;

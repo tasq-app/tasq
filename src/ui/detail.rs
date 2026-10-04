@@ -364,6 +364,98 @@ fn wrap(s: &str, width: usize) -> Vec<String> {
     out
 }
 
+/// The checklist prompt: the task, what's on its list already, and a line
+/// to type the next item on. It stays open for item after item.
+pub fn render_checklist_prompt(frame: &mut Frame, screen: Rect, app: &App) {
+    let theme = app.theme();
+    let Some(t) = app.cur_task() else {
+        return;
+    };
+    let notes = app.task_notes(t);
+    let shown: Vec<&crate::app::CheckItem> = notes
+        .items
+        .iter()
+        .rev()
+        .take(8)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    let w = 64.min(screen.width.saturating_sub(4));
+    let h = (8 + shown.len() as u16).min(screen.height.saturating_sub(2));
+    let r = super::centered_in(screen, w, h);
+    frame.render_widget(ratatui::widgets::Clear, r);
+    let buf = frame.buffer_mut();
+    let bg = Style::default().bg(theme.panel);
+    for y in r.top()..r.bottom() {
+        for x in r.left()..r.right() {
+            if let Some(c) = buf.cell_mut((x, y)) {
+                let last_x = x == r.right() - 1;
+                let last_y = y == r.bottom() - 1;
+                let sym = match (y == r.top(), last_y, x == r.left(), last_x) {
+                    (true, _, true, _) => "╭",
+                    (true, _, _, true) => "╮",
+                    (_, true, true, _) => "╰",
+                    (_, true, _, true) => "╯",
+                    (true, ..) | (_, true, ..) => "─",
+                    (_, _, true, _) | (_, _, _, true) => "│",
+                    _ => " ",
+                };
+                c.set_symbol(sym);
+                c.set_style(bg.fg(theme.accent));
+            }
+        }
+    }
+    let mut p = Pen {
+        buf,
+        r: Rect {
+            x: r.x + 3,
+            y: r.y + 1,
+            width: r.width.saturating_sub(6),
+            height: r.height.saturating_sub(2),
+        },
+        y: r.y + 1,
+        bg,
+    };
+    p.text(
+        0,
+        "☐ ADD TO CHECKLIST",
+        bg.fg(theme.accent).add_modifier(Modifier::BOLD),
+    );
+    p.y += 1;
+    let title = crate::todo::body_only(&t.raw);
+    p.text(0, &fit(&title, usize::from(p.r.width)), bg.fg(theme.dim));
+    p.y += 2;
+    for item in &shown {
+        let (g, c) = if item.done {
+            ("☑", theme.ok)
+        } else {
+            ("☐", theme.dim)
+        };
+        p.text(0, g, bg.fg(c));
+        p.text(
+            2,
+            &fit(&item.text, usize::from(p.r.width) - 2),
+            bg.fg(theme.fg),
+        );
+        p.y += 1;
+    }
+    // The line you're typing on.
+    p.text(0, "☐", bg.fg(theme.accent));
+    let x = p.r.x + 2;
+    let y = p.y;
+    let spans = crate::ui::dialog::draft_cursor_spans(
+        app.draft.text(),
+        app.draft.cursor(),
+        theme.fg,
+        theme.panel,
+    );
+    let line = ratatui::text::Line::from(spans);
+    p.buf.set_line(x, y, &line, p.r.width.saturating_sub(2));
+    p.y += 2;
+    p.text(0, "Enter add · paste a list · Esc done", bg.fg(theme.dim));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

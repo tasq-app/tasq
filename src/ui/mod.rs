@@ -184,10 +184,10 @@ pub fn draw(frame: &mut Frame, app: &App) {
             frame.render_widget(Clear, body_area);
             settings::render(frame, body_area, app);
         }
+        Mode::PromptChecklist => detail::render_checklist_prompt(frame, area, app),
         Mode::PromptProject
         | Mode::PromptContext
         | Mode::PromptSaveFilter
-        | Mode::PromptChecklist
         | Mode::PromptRenameProject
         | Mode::PromptRenameContext => {
             let w: u16 = PROMPT_MAX_W.min(area.width.saturating_sub(4));

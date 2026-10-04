@@ -111,7 +111,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             Mode::PickContext => "j/k or ↑↓ cycle contexts · r rename · Enter keep · Esc clear",
             Mode::PickSavedFilter => "j/k or ↑↓ cycle filters · Enter keep · Esc revert",
             Mode::PromptSaveFilter => "type a filter name · Enter save · Esc cancel",
-            Mode::PromptChecklist => "type an item · Enter add · Esc cancel",
+            Mode::PromptChecklist => "Enter add · Esc done",
             Mode::CommandPalette => "type to filter · Enter run · Esc cancel",
             Mode::Share => "scan the QR · any key dismisses",
             Mode::Welcome => "c create ./todo.txt · s open sample · q quit",
