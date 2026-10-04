@@ -797,6 +797,7 @@ pub fn render_prompt(frame: &mut Frame, area: Rect, app: &App) {
         Mode::PromptProject => ("+", " ADD PROJECT "),
         Mode::PromptContext => ("@", " TOGGLE CONTEXT "),
         Mode::PromptSaveFilter => ("✦", " SAVE FILTER AS "),
+        Mode::PromptChecklist => ("☐", " ADD TO CHECKLIST "),
         Mode::PromptRenameProject => ("✦", " RENAME PROJECT "),
         Mode::PromptRenameContext => ("✦", " RENAME CONTEXT "),
         _ => return,

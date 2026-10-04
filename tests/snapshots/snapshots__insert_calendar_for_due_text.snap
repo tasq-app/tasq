@@ -2,18 +2,18 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
-  ▣ tasq                   │  15 tasks  ·  sort: priority                                           
-                           │  + filter                               priority  (A)                  
-   ◉ Today              1  │                                         created   2026-05-01           
-   ◷ Upcoming           6  │  PRIORITY A  2  ─────────────────────── due       2026-05-06  today    
-   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod space     work                 
-   ▦ Calendar              │  2  ☐ ⚑ Call dentist to reschedule clea tags      @laptop              
-   ⌕ Search             /  │  PRIORITY B  3  ───────────────────────                                
-                           │  3  ☐ ⚑ Review pull requests for auth r RAW                            
-  SPACES                   │  4  ☐ ⚑ Renew passport before summer tr                                
-   ● work               4  │  5  ☐ ⚑ Draft hiring rubric for senior  (A) 2026-05-01 Finish Q2 board 
-   ● health             3  │  PRIORITY C  2  ─────────────────────── deck +work @laptop             
+                           │  /tmp/tasq-snapshot.txt                │                               
+  ▣ tasq                   │  15 tasks  ·  sort: priority           │  ⚑ Finish Q2 board deck       
+                           │  + filter                              │                               
+   ◉ Today              1  │                                        │  due       today              
+   ◷ Upcoming           6  │  PRIORITY A  2  ───────────────────────│  space     ● work             
+   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
+   ▦ Calendar              │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
+   ⌕ Search             /  │  PRIORITY B  3  ───────────────────────│                               
+                           │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
+  SPACES                   │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
+   ● work               4  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
+   ● health             3  │  PRIORITY C  2  ───────────────────────│                               
    ● finan╭──────────────────────────────────────────────────────────────────────────────╮          
    ● home │                                                                              │          
    ● learn│  > ⚑ (A) Renew passport before summer trip  +travel   @errands ▏       ↑     │          
@@ -21,16 +21,16 @@ expression: buffer_to_text(&buf)
    ● trave│                       + travel     @ errands     ⚑ (A)                       │          
           │                                                                              │          
   FILTERS ╰──────────────────────────────────────────────────────────────────────────────╯          
-   ⚑ High prio╭ DUE ───────────────────────────────────────────╮e Ap                                
-   ★ Starred  │  ‹  May 2026  ›                                │ @ho                                
-   ◷ Overdue  │    S   M   T   W   T   F   S                   │ per                                
-              │                        1   2                   │r  ●                                
-              │    3   4   5   6   7   8   9                   │                                    
-              │   10  11  12  13  14  15  16                   │                                    
-              │   17  18  19  20  21  22  23                   │                                    
-              │   24  25  26  27  28  29  30                   │                                    
- ╭────────────│   31                                           │                                    
- │  Y  you ● f│                                                │                                    
- ╰────────────│  Thu May 7                                     │                                    
-              │  t today · T tmw · w +1w · m +1mo · x clear    │                                    
+   ⚑ High prio╭ DUE ───────────────────────────────────────────╮e Ap│                               
+   ★ Starred  │  ‹  May 2026  ›                                │ @ho│                               
+   ◷ Overdue  │    S   M   T   W   T   F   S                   │ per│                               
+              │                        1   2                   │r  ●│                               
+              │    3   4   5   6   7   8   9                   │    │                               
+              │   10  11  12  13  14  15  16                   │    │                               
+              │   17  18  19  20  21  22  23                   │    │                               
+              │   24  25  26  27  28  29  30                   │    │                               
+ ╭────────────│   31                                           │    │                               
+ │  Y  you ● f│                                                │    │                               
+ ╰────────────│  Thu May 7                                     │    │                               
+              │  t today · T tmw · w +1w · m +1mo · x clear    │    │                               
    ● insert   ╰────────────────────────────────────────────────╯at, +project @context · Tab chips ·

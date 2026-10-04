@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
-  ▣ tasq                   │  4 tasks  ·  sort: priority                                            
-                           │   ⌕ work ×  + filter                    priority  (A)                  
-   ◉ Today              1  │                                         created   2026-05-01           
-   ◷ Upcoming           6  │  PRIORITY A  1  ─────────────────────── due       2026-05-06  today    
-   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod space     work                 
-   ▦ Calendar              │  PRIORITY B  2  ─────────────────────── tags      @laptop              
-   ⌕ Search             /  │  2  ☐ ⚑ Review pull requests for auth r                                
-                           │  3  ☐ ⚑ Draft hiring rubric for senior  RAW                            
-  SPACES                   │  NO PRIORITY  1  ──────────────────────                                
-   ● work               4  │  4  ☐ Migrate analytics to new pipeline (A) 2026-05-01 Finish Q2 board 
-   ● health             3  │                                         deck +work @laptop             
-   ● finance            2  │                                         due:2026-05-06                 
-   ● home               1  │                                                                        
-   ● learning           1  │                                                                        
-   ● personal           1  │                                                                        
-   ● travel             1  │                                                                        
-                           │                                                                        
-  FILTERS                  │                                                                        
-   ⚑ High priority      2  │                                                                        
-   ★ Starred            0  │                                                                        
-   ◷ Overdue            7  │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
- ╭───────────────────────╮ │                                                                        
- │  Y  you ● file        │ │                                                                        
- ╰───────────────────────╯ │                                                                        
-                           │                                                                        
-   ● normal     x done · e edit · r reschedule · Tab sidebar                                 ␣ menu
+                           │  /tmp/tasq-snapshot.txt                │                               
+  ▣ tasq                   │  4 tasks  ·  sort: priority            │  ⚑ Finish Q2 board deck       
+                           │   ⌕ work ×  + filter                   │                               
+   ◉ Today              1  │                                        │  due       today              
+   ◷ Upcoming           6  │  PRIORITY A  1  ───────────────────────│  space     ● work             
+   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
+   ▦ Calendar              │  PRIORITY B  2  ───────────────────────│  tags      @laptop            
+   ⌕ Search             /  │  2  ☐ ⚑ Review pull requests for auth r│                               
+                           │  3  ☐ ⚑ Draft hiring rubric for senior │  CHECKLIST                    
+  SPACES                   │  NO PRIORITY  1  ──────────────────────│  + add item                   
+   ● work               4  │  4  ☐ Migrate analytics to new pipeline│                               
+   ● health             3  │                                        │                               
+   ● finance            2  │                                        │                               
+   ● home               1  │                                        │                               
+   ● learning           1  │                                        │                               
+   ● personal           1  │                                        │                               
+   ● travel             1  │                                        │                               
+                           │                                        │                               
+  FILTERS                  │                                        │                               
+   ⚑ High priority      2  │                                        │                               
+   ★ Starred            0  │                                        │                               
+   ◷ Overdue            7  │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+ ╭───────────────────────╮ │                                        │                               
+ │  Y  you ● file        │ │                                        │                               
+ ╰───────────────────────╯ │                                        │                               
+                           │                                        │                               
+   ● normal     x done · e edit · r reschedule · Tab details                                 ␣ menu

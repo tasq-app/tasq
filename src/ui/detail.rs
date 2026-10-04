@@ -1,115 +1,211 @@
-use ratatui::Frame;
-use ratatui::layout::Rect;
-use ratatui::style::{Modifier, Style};
-use ratatui::text::{Line, Span};
-use ratatui::widgets::Paragraph;
+//! The inspector: the current task in full on the right — its title, when
+//! it happens and where it belongs, its checklist, and the notes linked to
+//! it as cards. `Tab` gives it the keyboard.
 
-use crate::app::App;
+use ratatui::Frame;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::style::{Color, Modifier, Style};
+
+use crate::app::{App, InspectorRow, TaskNotes};
 use crate::theme::Theme;
 use crate::todo::Task;
-use crate::ui::task_row::{due_label, due_token_style, is_url_token, url_token_style};
+use crate::ui::task_row::{chip_date, due_label, tint};
+
+/// Width of the labels column.
+const KEY_W: u16 = 10;
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let theme = app.theme();
     super::fill_bg(frame, area, Style::default().bg(theme.panel));
-
-    let task = app.cur_task();
-    // Wrap to the actual pane width minus 1-char left padding and 1-char
-    // safety margin on the right. Floor at 16 so a tiny pane still wraps.
-    let wrap_w = (area.width as usize).saturating_sub(2).max(16);
-    let lines = build_lines(theme, task, app.today(), wrap_w);
-    let para = Paragraph::new(lines).style(Style::default().bg(theme.panel).fg(theme.fg));
-    frame.render_widget(para, area);
+    if area.width < 12 || area.height < 3 {
+        return;
+    }
+    let buf = frame.buffer_mut();
+    // A hairline between the list and the inspector.
+    for y in area.top()..area.bottom() {
+        if let Some(c) = buf.cell_mut((area.x, y)) {
+            c.set_symbol("│");
+            c.set_style(Style::default().fg(theme.border).bg(theme.panel));
+        }
+    }
+    let inner = Rect {
+        x: area.x + 3,
+        y: area.y + 1,
+        width: area.width - 5,
+        height: area.height - 1,
+    };
+    let mut p = Pen {
+        buf,
+        r: inner,
+        y: inner.y,
+        bg: Style::default().bg(theme.panel),
+    };
+    let Some(t) = app.cur_task() else {
+        p.text(0, "no task selected", p.bg.fg(theme.dim));
+        return;
+    };
+    title(&mut p, t, theme);
+    p.y += 1;
+    facts(&mut p, t, app, theme);
+    let notes = app.task_notes(t);
+    p.y += 1;
+    let focus = app
+        .inspector_focus
+        .then(|| app.inspector_current())
+        .flatten();
+    checklist(&mut p, &notes, focus.as_ref(), theme);
+    note_cards(&mut p, t, &notes, focus.as_ref(), theme);
 }
 
-fn build_lines<'a>(
-    theme: &Theme,
-    task: Option<&'a Task>,
-    today: &'a str,
-    wrap_w: usize,
-) -> Vec<Line<'a>> {
-    let mut rows: Vec<Line> = Vec::new();
-    rows.push(line_panel(
-        theme,
-        vec![Span::styled(
-            " DETAIL",
-            Style::default().fg(theme.dim).add_modifier(Modifier::BOLD),
-        )],
-    ));
-    rows.push(line_panel(theme, vec![Span::raw(" ")]));
-    let Some(t) = task else {
-        rows.push(line_panel(
-            theme,
-            vec![Span::styled(" (no task)", Style::default().fg(theme.dim))],
-        ));
-        return rows;
-    };
+/// Writes down the inspector, a row at a time, clipped to its area.
+struct Pen<'a> {
+    buf: &'a mut Buffer,
+    r: Rect,
+    y: u16,
+    bg: Style,
+}
 
-    let priority_value = if let Some(p) = t.priority {
-        Span::styled(
-            format!("({p})"),
-            Style::default()
-                .fg(theme.priority_color(p))
-                .add_modifier(Modifier::BOLD),
-        )
-    } else {
-        Span::raw("")
-    };
-    rows.push(line_panel(
-        theme,
-        vec![
-            Span::styled(" priority  ", Style::default().fg(theme.dim)),
-            priority_value,
-        ],
-    ));
-    rows.push(line_panel(
-        theme,
-        vec![
-            Span::styled(" created   ", Style::default().fg(theme.dim)),
-            Span::styled(
-                t.created_date.as_deref().unwrap_or("—"),
-                Style::default().fg(theme.fg),
-            ),
-        ],
-    ));
-    if let Some(planned) = &t.planned {
-        rows.push(line_panel(
-            theme,
-            vec![
-                Span::styled(" planned   ", Style::default().fg(theme.dim)),
-                Span::styled(planned.as_str(), Style::default().fg(theme.fg)),
-            ],
-        ));
+impl Pen<'_> {
+    fn room(&self) -> bool {
+        self.y < self.r.bottom()
     }
-    let raw_body = crate::todo::body_after_priority(&t.raw);
-    if let Some(time) = crate::todo::find_kv(raw_body, "at") {
-        let mut value = time;
-        if let Some(m) = t
-            .duration
-            .as_deref()
-            .and_then(crate::duration::parse_minutes)
-        {
-            value.push_str(&format!("  for {}", crate::duration::describe(m)));
+
+    /// Write `s` at column `dx` of the current row; returns its width.
+    fn text(&mut self, dx: u16, s: &str, style: Style) -> u16 {
+        if !self.room() || dx >= self.r.width {
+            return 0;
         }
-        rows.push(line_panel(
-            theme,
-            vec![
-                Span::styled(" time      ", Style::default().fg(theme.dim)),
-                Span::styled(value, Style::default().fg(theme.fg)),
-            ],
-        ));
-    } else if let Some(m) = t
+        let x = self.r.x + dx;
+        let max = usize::from(self.r.width - dx);
+        let (end, _) = self.buf.set_stringn(x, self.y, s, max, style);
+        end.saturating_sub(x)
+    }
+
+    /// Paint the current row (and a column either side) in `bg`.
+    fn fill(&mut self, bg: Color) {
+        if !self.room() {
+            return;
+        }
+        let right = (self.r.right() + 1).min(self.buf.area.right());
+        for x in self.r.x.saturating_sub(1)..right {
+            if let Some(c) = self.buf.cell_mut((x, self.y)) {
+                c.set_symbol(" ");
+                c.set_bg(bg);
+            }
+        }
+    }
+
+    /// The `▎` marker left of the focused row.
+    fn bar(&mut self, theme: &Theme) {
+        if !self.room() || self.r.x < 2 {
+            return;
+        }
+        if let Some(c) = self.buf.cell_mut((self.r.x - 2, self.y)) {
+            c.set_symbol("▎");
+            c.set_fg(theme.accent);
+        }
+    }
+
+    /// Highlight the current row as the cursor; returns its style.
+    fn cursor(&mut self, here: bool, theme: &Theme) -> Style {
+        if !here {
+            return self.bg;
+        }
+        let bg = tint(theme.accent, theme.panel, 0.22).unwrap_or(theme.selected);
+        self.fill(bg);
+        self.bar(theme);
+        self.bg.bg(bg)
+    }
+}
+
+fn title(p: &mut Pen, t: &Task, theme: &Theme) {
+    let mut lead: Vec<(&str, Color)> = Vec::new();
+    if let Some(pri) = t.priority {
+        lead.push(("⚑", theme.priority_color(pri)));
+    }
+    if t.starred {
+        lead.push(("★", theme.matched));
+    }
+    let lead_w = 2 * lead.len() as u16;
+    let body = crate::todo::body_only(&t.raw);
+    let style = if t.done {
+        p.bg.fg(theme.done).add_modifier(Modifier::CROSSED_OUT)
+    } else {
+        p.bg.fg(theme.fg).add_modifier(Modifier::BOLD)
+    };
+    let width = usize::from(p.r.width.saturating_sub(lead_w)).max(8);
+    for (i, line) in wrap(&body, width).iter().take(3).enumerate() {
+        if i == 0 {
+            for (j, (glyph, color)) in lead.iter().enumerate() {
+                p.text(2 * j as u16, glyph, p.bg.fg(*color));
+            }
+        }
+        p.text(lead_w, line, style);
+        p.y += 1;
+    }
+}
+
+/// One `label  value` row.
+fn fact(p: &mut Pen, key: &str, value: &str, color: Color, theme: &Theme) {
+    p.text(0, key, p.bg.fg(theme.dim));
+    p.text(KEY_W, value, p.bg.fg(color));
+    p.y += 1;
+}
+
+fn facts(p: &mut Pen, t: &Task, app: &App, theme: &Theme) {
+    let today = app.today();
+    let raw_body = crate::todo::body_after_priority(&t.raw);
+    let time = crate::todo::find_kv(raw_body, "at");
+    let minutes = t
         .duration
         .as_deref()
-        .and_then(crate::duration::parse_minutes)
-    {
-        rows.push(line_panel(
-            theme,
-            vec![
-                Span::styled(" takes     ", Style::default().fg(theme.dim)),
-                Span::styled(crate::duration::describe(m), Style::default().fg(theme.fg)),
-            ],
-        ));
+        .and_then(crate::duration::parse_minutes);
+
+    // When: the planned day, the time and how long, as one phrase.
+    let mut when: Vec<String> = Vec::new();
+    if let Some(d) = &t.planned {
+        when.push(chip_date(d, today));
+    }
+    match (&time, minutes) {
+        (Some(at), Some(m)) => when.push(format!("{at} – {}", end_time(at, m))),
+        (Some(at), None) => when.push(at.clone()),
+        (None, Some(m)) => when.push(format!("takes {}", crate::duration::describe(m))),
+        (None, None) => {}
+    }
+    if !when.is_empty() {
+        fact(p, "when", &when.join(" · "), theme.fg, theme);
+    }
+    if let Some(due) = &t.due {
+        let color = if !t.done && due.as_str() <= today {
+            theme.overdue
+        } else {
+            theme.due
+        };
+        let (day, rel) = (chip_date(due, today), due_label(due, today));
+        let text = if day == rel {
+            day
+        } else {
+            format!("{day} · {rel}")
+        };
+        fact(p, "due", &text, color, theme);
+    }
+    for s in &t.projects {
+        let color = app.space_color(s);
+        p.text(0, "space", p.bg.fg(theme.dim));
+        p.text(KEY_W, "●", p.bg.fg(color));
+        p.text(KEY_W + 2, &crate::core::spaces::display(s), p.bg.fg(color));
+        p.y += 1;
+    }
+    if let Some(pri) = t.priority {
+        let word = match pri {
+            'A' => "high".to_string(),
+            'B' => "medium".to_string(),
+            'C' => "low".to_string(),
+            other => format!("({other})"),
+        };
+        let color = theme.priority_color(pri);
+        fact(p, "priority", &format!("⚑ {word}"), color, theme);
     }
     if let Some(list) = t
         .reminders
@@ -117,206 +213,178 @@ fn build_lines<'a>(
         .and_then(crate::duration::parse_reminders)
     {
         let text: Vec<String> = list.iter().map(|m| crate::duration::describe(*m)).collect();
-        rows.push(line_panel(
-            theme,
-            vec![
-                Span::styled(" remind    ", Style::default().fg(theme.dim)),
-                Span::styled(
-                    format!("{} before", text.join(", ")),
-                    Style::default().fg(theme.fg),
-                ),
-            ],
-        ));
-    }
-    if let Some(due) = &t.due {
-        rows.push(line_panel(
-            theme,
-            vec![
-                Span::styled(" due       ", Style::default().fg(theme.dim)),
-                Span::styled(due.as_str(), Style::default().fg(theme.fg)),
-                Span::raw("  "),
-                Span::styled(due_label(due, today), Style::default().fg(theme.overdue)),
-            ],
-        ));
+        let text = format!("{} before", text.join(", "));
+        fact(p, "remind", &text, theme.fg, theme);
     }
     if let Some(rec) = &t.rec {
-        let mut text = crate::app::describe_rec(rec);
+        let mut text = format!("↻ {}", crate::app::describe_rec(rec));
         if let Some(until) = &t.until {
-            text.push_str(&format!(" until {until}"));
+            text.push_str(&format!(" until {}", chip_date(until, today)));
         }
         if let Some(n) = &t.times {
-            text.push_str(&format!(", {n} left"));
+            text.push_str(&format!(" · {n} left"));
         }
-        rows.push(line_panel(
-            theme,
-            vec![
-                Span::styled(" repeat    ", Style::default().fg(theme.dim)),
-                Span::styled(text, Style::default().fg(theme.fg)),
-            ],
-        ));
+        fact(p, "repeat", &text, theme.pri_other, theme);
     }
-    rows.push(line_panel(
-        theme,
-        vec![
-            Span::styled(" space     ", Style::default().fg(theme.dim)),
-            Span::styled(
-                t.projects
-                    .iter()
-                    .map(|p| crate::core::spaces::display(p))
-                    .collect::<Vec<_>>()
-                    .join(", "),
-                Style::default().fg(theme.project),
-            ),
-        ],
-    ));
-    rows.push(line_panel(
-        theme,
-        vec![
-            Span::styled(" tags      ", Style::default().fg(theme.dim)),
-            Span::styled(
-                t.contexts
-                    .iter()
-                    .map(|c| format!("@{c}"))
-                    .collect::<Vec<_>>()
-                    .join(" "),
-                Style::default().fg(theme.context),
-            ),
-        ],
-    ));
-
-    // Rendering notes line by line
-    if !t.notes.is_empty() {
-        rows.push(line_panel(
-            theme,
-            vec![Span::styled(" notes", Style::default().fg(theme.dim))],
-        ));
-        for note in &t.notes {
-            let chunks = wrap_words(note, wrap_w.saturating_sub(4));
-            for (i, chunk) in chunks.into_iter().enumerate() {
-                let prefix = if i == 0 { "   - " } else { "     " };
-                rows.push(line_panel(
-                    theme,
-                    vec![Span::styled(
-                        format!("{prefix}{}", chunk.join(" ")),
-                        Style::default().fg(theme.fg),
-                    )],
-                ))
-            }
-        }
+    if !t.contexts.is_empty() {
+        let tags: Vec<String> = t.contexts.iter().map(|c| format!("@{c}")).collect();
+        fact(p, "tags", &tags.join(" "), theme.context, theme);
     }
-
     if t.done {
-        rows.push(line_panel(
-            theme,
-            vec![
-                Span::styled(" done      ", Style::default().fg(theme.dim)),
-                Span::styled(
-                    t.done_date.as_deref().unwrap_or(""),
-                    Style::default().fg(theme.done),
-                ),
-            ],
-        ));
+        let on = t
+            .done_date
+            .as_deref()
+            .map_or_else(String::new, |d| chip_date(d, today));
+        fact(p, "done", &format!("☑ {on}"), theme.pri_c, theme);
     }
-    rows.push(line_panel(theme, vec![Span::raw(" ")]));
-    rows.push(line_panel(
-        theme,
-        vec![Span::styled(
-            " RAW",
-            Style::default().fg(theme.dim).add_modifier(Modifier::BOLD),
-        )],
-    ));
-    rows.push(line_panel(theme, vec![Span::raw(" ")]));
-    let mut state = RawWalk::default();
-    for chunk in wrap_words(&t.raw, wrap_w) {
-        let mut spans: Vec<Span> = vec![Span::raw(" ")];
-        let mut words = chunk.into_iter();
-        if let Some(first) = words.next() {
-            spans.push(style_raw_token(first, t, today, theme, &mut state));
-        }
-        for w in words {
-            spans.push(Span::raw(" "));
-            spans.push(style_raw_token(w, t, today, theme, &mut state));
-        }
-        rows.push(line_panel(theme, spans));
-    }
-    rows
 }
 
-#[derive(Default)]
-struct RawWalk {
-    done_marker_consumed: bool,
-    priority_consumed: bool,
+/// `at` plus `minutes`, as `HH:MM`.
+fn end_time(at: &str, minutes: u32) -> String {
+    let Some((h, m)) = at.split_once(':') else {
+        return String::new();
+    };
+    let (Ok(h), Ok(m)) = (h.parse::<u32>(), m.parse::<u32>()) else {
+        return String::new();
+    };
+    let end = (h * 60 + m + minutes) % (24 * 60);
+    format!("{:02}:{:02}", end / 60, end % 60)
 }
 
-fn style_raw_token<'a>(
-    token: &'a str,
-    task: &Task,
-    today: &str,
-    theme: &Theme,
-    state: &mut RawWalk,
-) -> Span<'a> {
-    if task.done && !state.done_marker_consumed {
-        state.done_marker_consumed = true;
-        if token == "x" {
-            return Span::styled(token, Style::default().fg(theme.done));
-        }
-    }
-    if !state.priority_consumed
-        && let Some(p) = task.priority
-        && token.len() == 3
-        && token.as_bytes()[0] == b'('
-        && token.as_bytes()[1] == p as u8
-        && token.as_bytes()[2] == b')'
-    {
-        state.priority_consumed = true;
-        return Span::styled(
-            token,
-            Style::default()
-                .fg(theme.priority_color(p))
-                .add_modifier(Modifier::BOLD),
+fn checklist(p: &mut Pen, notes: &TaskNotes, focus: Option<&InspectorRow>, theme: &Theme) {
+    let heading = p.bg.fg(theme.dim).add_modifier(Modifier::BOLD);
+    if let Some((done, total)) = notes.progress() {
+        const BAR: usize = 10;
+        let w = p.text(0, &format!("CHECKLIST · {done}/{total}"), heading);
+        let filled = (done * BAR).checked_div(total).unwrap_or(0);
+        p.text(w + 2, &"━".repeat(filled), p.bg.fg(theme.pri_c));
+        p.text(
+            w + 2 + filled as u16,
+            &"━".repeat(BAR - filled),
+            p.bg.fg(theme.border),
         );
+    } else {
+        p.text(0, "CHECKLIST", heading);
     }
-    if let Some(rest) = token.strip_prefix("due:") {
-        return Span::styled(token, due_token_style(task.done, rest, today, theme));
+    p.y += 1;
+    for (i, item) in notes.items.iter().enumerate() {
+        let bg = p.cursor(focus == Some(&InspectorRow::Item(i)), theme);
+        let (glyph, color, text) = if item.done {
+            ("☑", theme.pri_c, bg.fg(theme.dim))
+        } else {
+            ("☐", theme.dim, bg.fg(theme.fg))
+        };
+        p.text(0, glyph, bg.fg(color));
+        p.text(2, &item.text, text);
+        p.y += 1;
     }
-    if is_url_token(token) {
-        return Span::styled(token, url_token_style(task.done, theme));
-    }
-    if token.len() > 1 && token.starts_with('+') {
-        return Span::styled(token, Style::default().fg(theme.project));
-    }
-    if token.len() > 1 && token.starts_with('@') {
-        return Span::styled(token, Style::default().fg(theme.context));
-    }
-    Span::styled(token, Style::default().fg(theme.fg))
+    let here = focus == Some(&InspectorRow::AddItem);
+    let bg = p.cursor(here, theme);
+    p.text(
+        0,
+        "+ add item",
+        bg.fg(if here { theme.accent } else { theme.dim }),
+    );
+    p.y += 1;
 }
 
-fn line_panel<'a>(theme: &Theme, spans: Vec<Span<'a>>) -> Line<'a> {
-    Line::from(spans).style(Style::default().bg(theme.panel))
+fn note_cards(
+    p: &mut Pen,
+    t: &Task,
+    notes: &TaskNotes,
+    focus: Option<&InspectorRow>,
+    theme: &Theme,
+) {
+    if notes.notes.is_empty() && t.notes.is_empty() {
+        return;
+    }
+    p.y += 1;
+    p.text(0, "NOTES", p.bg.fg(theme.dim).add_modifier(Modifier::BOLD));
+    p.y += 1;
+    for line in &t.notes {
+        p.text(0, line, p.bg.fg(theme.status_fg));
+        p.y += 1;
+    }
+    let w = p.r.width;
+    let inner = usize::from(w.saturating_sub(4));
+    let line = "─".repeat(usize::from(w.saturating_sub(2)));
+    for (i, n) in notes.notes.iter().enumerate() {
+        if p.y + 3 > p.r.bottom() {
+            let left = notes.notes.len() - i;
+            p.text(0, &format!("+{left} more"), p.bg.fg(theme.dim));
+            break;
+        }
+        let here = focus == Some(&InspectorRow::Note(i));
+        let border = p.bg.fg(if here { theme.accent } else { theme.border });
+        p.text(0, &format!("╭{line}╮"), border);
+        p.y += 1;
+        p.text(0, "│", border);
+        p.text(w - 1, "│", border);
+        let tw = p.text(2, "≡ ", p.bg.fg(theme.accent));
+        p.text(
+            2 + tw,
+            &fit(&n.title, inner.saturating_sub(usize::from(tw))),
+            p.bg.fg(theme.fg).add_modifier(Modifier::BOLD),
+        );
+        p.y += 1;
+        if !n.preview.is_empty() {
+            p.text(0, "│", border);
+            p.text(w - 1, "│", border);
+            p.text(2, &fit(&n.preview, inner), p.bg.fg(theme.status_fg));
+            p.y += 1;
+        }
+        p.text(0, &format!("╰{line}╯"), border);
+        p.y += 1;
+    }
 }
 
-/// Wrap `s` to roughly `width` graphemes, returning each output line as a
-/// vector of borrowed words. Borrowing avoids the per-frame `String` alloc
-/// that the previous `Vec<String>` form forced on every render.
-fn wrap_words(s: &str, width: usize) -> Vec<Vec<&str>> {
-    let mut out: Vec<Vec<&str>> = Vec::new();
-    let mut acc: Vec<&str> = Vec::new();
-    let mut acc_len = 0;
+fn fit(s: &str, w: usize) -> String {
+    if s.chars().count() <= w {
+        return s.to_string();
+    }
+    if w == 0 {
+        return String::new();
+    }
+    s.chars().take(w - 1).collect::<String>() + "…"
+}
+
+/// Wrap `s` on spaces to lines of at most `width` characters.
+fn wrap(s: &str, width: usize) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let mut cur = String::new();
     for word in s.split_whitespace() {
-        let wlen = word.chars().count();
-        let extra = if acc.is_empty() { 0 } else { 1 };
-        if acc_len + wlen + extra > width && !acc.is_empty() {
-            out.push(std::mem::take(&mut acc));
-            acc_len = 0;
+        let need = cur.chars().count() + usize::from(!cur.is_empty()) + word.chars().count();
+        if need > width && !cur.is_empty() {
+            out.push(std::mem::take(&mut cur));
         }
-        if !acc.is_empty() {
-            acc_len += 1;
+        if !cur.is_empty() {
+            cur.push(' ');
         }
-        acc.push(word);
-        acc_len += wlen;
+        cur.push_str(word);
     }
-    if !acc.is_empty() {
-        out.push(acc);
+    if !cur.is_empty() {
+        out.push(cur);
+    }
+    if out.is_empty() {
+        out.push(String::new());
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_block_ends_when_its_duration_says() {
+        assert_eq!(end_time("09:00", 120), "11:00");
+        assert_eq!(end_time("23:30", 60), "00:30");
+        assert_eq!(end_time("x", 60), "");
+    }
+
+    #[test]
+    fn titles_wrap_on_words() {
+        assert_eq!(wrap("Teoría AII y más", 9), vec!["Teoría", "AII y más"]);
+        assert_eq!(wrap("", 9), vec![String::new()]);
+    }
 }

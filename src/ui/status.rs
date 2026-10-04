@@ -29,6 +29,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         Mode::PromptRenameContext => "RENAME @CONTEXT".into(),
         Mode::PickSavedFilter => "PICK FILTER".into(),
         Mode::PromptSaveFilter => "SAVE FILTER".into(),
+        Mode::PromptChecklist => "CHECKLIST".into(),
         Mode::CommandPalette => "COMMAND".into(),
         Mode::Share => "SHARE".into(),
         Mode::PickTheme => "PICK THEME".into(),
@@ -109,6 +110,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             Mode::PickContext => "j/k or ↑↓ cycle contexts · r rename · Enter keep · Esc clear",
             Mode::PickSavedFilter => "j/k or ↑↓ cycle filters · Enter keep · Esc revert",
             Mode::PromptSaveFilter => "type a filter name · Enter save · Esc cancel",
+            Mode::PromptChecklist => "type an item · Enter add · Esc cancel",
             Mode::CommandPalette => "type to filter · Enter run · Esc cancel",
             Mode::Share => "scan the QR · any key dismisses",
             Mode::Welcome => "c create ./todo.txt · s open sample · q quit",
@@ -136,15 +138,33 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         && app.calendar.is_none()
         && editor_mode.is_none()
         && !app.pinned_focus
-        && !app.sidebar_focus;
+        && !app.sidebar_focus
+        && !app.inspector_focus;
     if list_normal {
         hint = if !app.prefs.hints {
             "".into()
         } else if app.cur_abs().is_some() {
-            "x done · e edit · r reschedule · Tab sidebar".into()
+            "x done · e edit · r reschedule · Tab details".into()
         } else {
             "n new task · Tab sidebar".into()
         };
+    }
+    if app.inspector_focus && app.mode == Mode::Normal {
+        hint = if !app.prefs.hints {
+            "".into()
+        } else {
+            match app.inspector_current() {
+                Some(crate::app::InspectorRow::Item(_)) => {
+                    "x check · a add · d remove · Tab sidebar · Esc list"
+                }
+                Some(crate::app::InspectorRow::Note(_)) => {
+                    "Enter open · a add item · Tab sidebar · Esc list"
+                }
+                _ => "Enter add item · Tab sidebar · Esc list",
+            }
+            .into()
+        };
+        mode_label = "DETAILS".into();
     }
     if app.sidebar_focus && app.mode == Mode::Normal {
         hint = if app.prefs.hints {

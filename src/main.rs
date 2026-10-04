@@ -244,6 +244,8 @@ fn run(
             dirty = true;
         }
         if dirty {
+            // Notes are read at most once a frame: forget last frame's.
+            app.notes_cache.clear();
             // Extract URL runs from the completed frame before the borrow on
             // terminal ends, then write the OSC 8 overlay directly to the
             // backend writer. Doing this here (rather than inside `ui::draw`)
@@ -440,6 +442,7 @@ fn is_exit_key(key: KeyEvent) -> bool {
 }
 
 fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    app.notes_cache.clear();
     // Detect external edits before processing the key. On detection the
     // file is reloaded, the keystroke is consumed (re-press to act on the
     // new state), and the per-mutator checks become no-ops downstream.
@@ -510,7 +513,8 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         | Mode::PromptContext
         | Mode::PromptRenameProject
         | Mode::PromptRenameContext
-        | Mode::PromptSaveFilter => handle_prompt(app, key),
+        | Mode::PromptSaveFilter
+        | Mode::PromptChecklist => handle_prompt(app, key),
         Mode::PickProject | Mode::PickContext | Mode::PickSavedFilter => handle_pick(app, key),
         Mode::PickTheme => handle_pick_theme(app, key),
         Mode::CommandPalette => handle_command_palette(app, key),
@@ -519,8 +523,41 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::Welcome => handle_welcome(app, key),
         Mode::Menu => handle_menu(app, key),
         Mode::Normal if app.sidebar_focus => handle_sidebar(app, key, keybinds),
+        Mode::Normal if app.inspector_focus => handle_inspector(app, key, keybinds),
         Mode::Normal if app.calendar.is_some() => handle_calendar(app, key, keybinds),
         Mode::Normal | Mode::Visual => handle_normal(app, key, keybinds),
+    }
+}
+
+/// Keys while the inspector has the keyboard: walk the checklist and the
+/// notes, tick, add, remove, open. Anything else is the list's key.
+fn handle_inspector(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    use tasq::app::InspectorRow;
+    let row = app.inspector_current();
+    match key.code {
+        KeyCode::Char('j') | KeyCode::Down => app.inspector_move(true),
+        KeyCode::Char('k') | KeyCode::Up => app.inspector_move(false),
+        KeyCode::Char('x' | ' ') if matches!(row, Some(InspectorRow::Item(_))) => {
+            app.inspector_toggle();
+        }
+        KeyCode::Enter => match row {
+            Some(InspectorRow::Item(_)) => app.inspector_toggle(),
+            Some(InspectorRow::Note(_)) => app.inspector_open_note(),
+            _ => app.begin_add_check_item(),
+        },
+        KeyCode::Char('a' | 'n') => app.begin_add_check_item(),
+        KeyCode::Char('d') | KeyCode::Delete => app.inspector_remove(),
+        KeyCode::Tab => {
+            app.inspector_focus = false;
+            app.sidebar_toggle_focus();
+        }
+        KeyCode::Esc | KeyCode::Char('h') | KeyCode::Left | KeyCode::BackTab => {
+            app.inspector_focus = false;
+        }
+        _ => {
+            app.inspector_focus = false;
+            handle_normal(app, key, keybinds);
+        }
     }
 }
 
@@ -1715,6 +1752,7 @@ fn handle_prompt(app: &mut App, key: KeyEvent) {
                 Mode::PromptProject => app.add_project_to_current(&value),
                 Mode::PromptContext => app.toggle_context_on_current(&value),
                 Mode::PromptSaveFilter => app.save_current_filter_as(&value),
+                Mode::PromptChecklist => app.add_check_item(&value),
                 Mode::PromptRenameProject => app.rename_current_project_as(&value),
                 Mode::PromptRenameContext => app.rename_current_context_as(&value),
                 _ => {}
@@ -2130,9 +2168,18 @@ fn apply_action(app: &mut App, action: Action) {
 }
 
 fn handle_normal(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
-    // Tab hands the keyboard to the sidebar; space opens the menu.
-    if app.mode == Mode::Normal && key.code == KeyCode::Tab && key.modifiers.is_empty() {
+    // Tab walks list → details → sidebar (Shift-Tab straight to the
+    // sidebar); space opens the menu.
+    if app.mode == Mode::Normal && key.code == KeyCode::BackTab {
         app.sidebar_toggle_focus();
+        return;
+    }
+    if app.mode == Mode::Normal && key.code == KeyCode::Tab && key.modifiers.is_empty() {
+        if app.calendar.is_none() && app.cur_task().is_some() {
+            app.inspector_focus_on();
+        } else {
+            app.sidebar_toggle_focus();
+        }
         return;
     }
     if app.mode == Mode::Normal && key.code == KeyCode::Char(' ') && key.modifiers.is_empty() {

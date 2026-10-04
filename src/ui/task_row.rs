@@ -21,6 +21,8 @@ pub struct RowOpts<'a> {
     pub hidden_keys: &'a [String],
     /// The colour a space (a `+project` path) is painted in.
     pub space_color: &'a dyn Fn(&str) -> Color,
+    /// `(done, total)` of the task's checklist, if it has one.
+    pub checklist: Option<(usize, usize)>,
 }
 
 impl Default for RowOpts<'_> {
@@ -36,6 +38,7 @@ impl Default for RowOpts<'_> {
             today: "",
             hidden_keys: &[],
             space_color: &|_| Color::Reset,
+            checklist: None,
         }
     }
 }
@@ -403,7 +406,17 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
             Style::default().fg(if done { theme.done } else { theme.context }),
         ));
     }
-    if crate::todo::find_kv(&task.clean_raw, "notes").is_some() && shown("notes") {
+    if let Some((d, n)) = opts.checklist {
+        let color = if d == n && !done {
+            theme.pri_c
+        } else {
+            theme.dim
+        };
+        spans.push(Span::styled(
+            format!("  ≡ {d}/{n}"),
+            Style::default().fg(color),
+        ));
+    } else if crate::todo::find_kv(&task.clean_raw, "notes").is_some() && shown("notes") {
         spans.push(Span::styled(" ≡", Style::default().fg(theme.dim)));
     }
 }
@@ -596,6 +609,7 @@ mod tests {
             today: "2026-05-06",
             hidden_keys: &[],
             space_color: &|_| Color::Reset,
+            checklist: None,
         };
         // Build must not panic; we don't assert on the rendered spans.
         let _ = build_line(&task, opts, &MUTED);
@@ -618,6 +632,7 @@ mod tests {
             today: "2026-05-06",
             hidden_keys: &[],
             space_color: &|_| Color::Reset,
+            checklist: None,
         };
         let line = build_line(&task, opts, &MUTED);
         let highlight_bg = MUTED.matched;
@@ -647,6 +662,7 @@ mod tests {
             today: "2026-05-06",
             hidden_keys: hidden,
             space_color: &|_| Color::Reset,
+            checklist: None,
         };
         let line = build_line(&task, opts, &MUTED);
         line.spans
@@ -716,6 +732,7 @@ mod tests {
             today: "2026-05-06",
             hidden_keys: &[],
             space_color: &|_| Color::Reset,
+            checklist: None,
         };
         let line = build_line(&task, opts, &MUTED);
         let url_span = line
@@ -748,6 +765,7 @@ mod tests {
             today: "2026-05-06",
             hidden_keys: &[],
             space_color: &|_| Color::Reset,
+            checklist: None,
         };
         let line = build_line(&task, opts, &MUTED);
         let url_span = line

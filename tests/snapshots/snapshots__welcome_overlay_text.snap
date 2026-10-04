@@ -2,14 +2,14 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
-  ▣ tasq                   │  0 tasks  ·  sort: priority                                            
-                           │  + filter                               (no task)                      
-   ◉ Today              0  │                                                                        
-   ◷ Upcoming           0  │                                                                        
-   ≡ All tasks          0  │                                                                        
-   ▦ Calendar              │                                                                        
-   ⌕ Search             /  │                                                                        
+                           │  /tmp/tasq-snapshot.txt                │                               
+  ▣ tasq                   │  0 tasks  ·  sort: priority            │  no task selected             
+                           │  + filter                              │                               
+   ◉ Today              0  │                                        │                               
+   ◷ Upcoming           0  │                                        │                               
+   ≡ All tasks          0  │                                        │                               
+   ▦ Calendar              │                                        │                               
+   ⌕ Search             /  │                                        │                               
                       ╭ tasq · welcome ──────────────────────────────────────╮                      
   FILTERS             │                    ██          ██                    │                      
    ⚑ High priority    │                    ████  ██  ████                    │                      
@@ -26,11 +26,11 @@ expression: buffer_to_text(&buf)
                       │                                                      │                      
                       │                                                      │                      
                       ╰──────────────────────────────────────────────────────╯                      
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
- ╭───────────────────────╮ │                                                                        
- │  Y  you ● file        │ │                                                                        
- ╰───────────────────────╯ │                                                                        
-                           │                                                                        
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+ ╭───────────────────────╮ │                                        │                               
+ │  Y  you ● file        │ │                                        │                               
+ ╰───────────────────────╯ │                                        │                               
+                           │                                        │                               
    ● welcome     c create ./todo.txt · s open sample · q quit
