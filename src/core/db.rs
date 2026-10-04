@@ -319,6 +319,23 @@ impl Db {
         Ok(())
     }
 
+    /// Make the kept spaces exactly `spaces` (undo).
+    pub fn replace_spaces(&mut self, spaces: &[Space]) -> std::io::Result<()> {
+        let now = now_rfc3339();
+        let tx = self.conn.transaction().map_err(io_err)?;
+        tx.execute("DELETE FROM spaces", []).map_err(io_err)?;
+        for s in spaces {
+            tx.execute(
+                "INSERT INTO spaces (path, hidden, created_at, color) VALUES (?1, ?2, ?3, ?4)",
+                params![s.path, s.hidden, now, s.color],
+            )
+            .map_err(io_err)?;
+        }
+        tx.commit().map_err(io_err)?;
+        self.data_version = self.read_data_version().map_err(io_err)?;
+        Ok(())
+    }
+
     /// Forget the space `path` and its sub-spaces.
     pub fn delete_space(&mut self, path: &str) -> std::io::Result<()> {
         self.conn
@@ -967,5 +984,24 @@ mod tests {
                 .and_then(|k| k.color.clone()),
             Some("5".to_string())
         );
+    }
+
+    #[test]
+    fn undoing_a_rename_takes_the_space_name_back() {
+        let mut s = Store::in_memory_db("2026-10-03");
+        s.add_finalized("study +Uni/Exams");
+        s.set_space_hidden("Uni", true);
+        s.rename_project("Uni", "School");
+        s.undo();
+        let paths: Vec<(String, bool)> = s
+            .known_spaces()
+            .iter()
+            .map(|k| (k.path.clone(), k.hidden))
+            .collect();
+        assert_eq!(
+            paths,
+            [("Uni".to_string(), true), ("Uni/Exams".to_string(), false)]
+        );
+        assert!(s.tasks()[0].raw.ends_with("+Uni/Exams"));
     }
 }

@@ -128,7 +128,7 @@ impl Store {
         }
         match self.persist() {
             Ok(()) => {
-                self.history.push(previous);
+                self.history.push(previous, self.spaces.clone());
                 MoveOutcome::Moved
             }
             Err(e) => {
@@ -370,9 +370,8 @@ impl Store {
         if to_rename.is_empty() && !kept {
             return RenameOutcome::NothingToRename;
         }
-        if !to_rename.is_empty() {
-            self.push_history();
-        }
+        // Undo puts the old name back, even for an empty space.
+        self.push_history();
 
         let mut renamed = 0;
         for abs in to_rename {
