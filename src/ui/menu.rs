@@ -36,6 +36,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let title = match app.menu_page {
         MenuPage::Root => "␣ menu",
         MenuPage::Go => "␣ menu › go to",
+        MenuPage::Timer => "␣ menu › timer",
     };
     put(
         buf,

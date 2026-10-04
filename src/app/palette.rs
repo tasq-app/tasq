@@ -184,6 +184,21 @@ pub const ENTRIES: &[PaletteEntry] = &[
         dispatch: PaletteDispatch::Global(Action::GoTrash),
     },
     PaletteEntry {
+        label: "focus timer: start / pause",
+        keys: "P",
+        dispatch: PaletteDispatch::Global(Action::Pomodoro),
+    },
+    PaletteEntry {
+        label: "focus timer: take a break",
+        keys: "",
+        dispatch: PaletteDispatch::Global(Action::PomodoroBreak),
+    },
+    PaletteEntry {
+        label: "focus timer: stop",
+        keys: "",
+        dispatch: PaletteDispatch::Global(Action::PomodoroStop),
+    },
+    PaletteEntry {
         label: "go to inbox",
         keys: "",
         dispatch: PaletteDispatch::Global(Action::GoInbox),
@@ -781,6 +796,9 @@ mod tests {
             Action::GoInbox,
             Action::GoNotes,
             Action::GoTrash,
+            Action::Pomodoro,
+            Action::PomodoroBreak,
+            Action::PomodoroStop,
             Action::PickProject,
             Action::PickContext,
             Action::CycleSort,

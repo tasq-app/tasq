@@ -60,6 +60,9 @@ local database, notes, live natural-language capture and more, listed below.
   days: `r` puts it back, `D` deletes it for good, `E` twice empties it.
   With the database it's kept there; with a todo.txt, in `trash.txt`
   beside it.
+- **Focus timer** (`P`): 25 minutes on the current task, then a 5-minute
+  break, pinned at the top right while it runs (other notices stack under
+  it). `P` pauses and resumes; `␣ t` takes a break or stops it.
 - **Readable rows**: a task shows its title, then chips: when (`today ·
   16:00 · 2h`), the deadline (`◷ by fri 9 oct`, red when due or late), the
   repeat (`↻ every mon, wed, fri`), its space in the space's colour and its
@@ -604,6 +607,7 @@ The modal keys below apply in Normal mode:
 | --- | --- |
 | `/` | search (a `due:` term filters by date range; see [todo.txt format](#todotxt-format)) |
 | `0` | Home (`Enter` or `Esc` there goes to Today, `i` to the Inbox) |
+| `P` | focus timer: start on the current task, pause, resume (`␣ t` for a break or to stop) |
 | `N` | Notes screen (`/` search, `j` / `k` move, `J` / `K` scroll, `e` edit in `$EDITOR`, `p` pin, `Enter` its task, `Esc` back) |
 | `1` / `2` / `3` | Today / Upcoming / All |
 | `4` / `5` / `6` | Calendar: day / week / month (see [Calendar](#calendar)) |

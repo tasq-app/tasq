@@ -303,6 +303,10 @@ fn run(
             app.clear_flash();
             dirty = true;
         }
+        // The focus timer counts down on screen, and moves on when it ends.
+        if app.pomodoro_tick(Instant::now()) {
+            dirty = true;
+        }
         // Toasts animate: redraw while any is on screen, and drop the gone.
         if !app.toasts.is_empty() {
             app.toasts.sweep(Instant::now());
@@ -1927,6 +1931,7 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('l') => Action::GoList,
         KeyCode::Char('0') => Action::GoHome,
         KeyCode::Char('N') => Action::GoNotes,
+        KeyCode::Char('P') => Action::Pomodoro,
         KeyCode::Char('1') => Action::ScopeToday,
         KeyCode::Char('2') => Action::ScopeUpcoming,
         KeyCode::Char('3') => Action::ScopeAll,
@@ -2191,6 +2196,9 @@ fn apply_action(app: &mut App, action: Action) {
         Action::GoInbox => app.open_inbox(),
         Action::GoNotes => app.open_notes_screen(),
         Action::GoTrash => app.open_trash(),
+        Action::Pomodoro => app.pomodoro_toggle(),
+        Action::PomodoroBreak => app.pomodoro_break(),
+        Action::PomodoroStop => app.pomodoro_stop(),
         Action::PickProject => app.enter_pick_project(),
         Action::PickContext => app.enter_pick_context(),
         Action::PickSavedFilter => app.enter_pick_saved(),

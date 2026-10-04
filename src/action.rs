@@ -52,6 +52,11 @@ pub enum Action {
     GoNotes,
     /// The Trash screen.
     GoTrash,
+    /// Start the focus timer, or pause / resume it.
+    Pomodoro,
+    /// A 5-minute break now.
+    PomodoroBreak,
+    PomodoroStop,
     /// The "+ filter" popover.
     OpenFilters,
     PickProject,
@@ -140,6 +145,9 @@ impl Action {
             "go_inbox" | "inbox" => Some(Self::GoInbox),
             "go_notes" | "notes_screen" => Some(Self::GoNotes),
             "go_trash" | "trash" => Some(Self::GoTrash),
+            "pomodoro" | "timer" => Some(Self::Pomodoro),
+            "pomodoro_break" => Some(Self::PomodoroBreak),
+            "pomodoro_stop" => Some(Self::PomodoroStop),
             "open_filters" | "filters" | "filter" => Some(Self::OpenFilters),
             "pick_project" => Some(Self::PickProject),
             "pick_context" => Some(Self::PickContext),
