@@ -5,16 +5,18 @@ expression: buffer_to_text(&buf)
                            │  /tmp/tasq-snapshot.txt                │                               
   ▣ tasq                   │  6 tasks  ·  sort: priority            │  ⚑ Review pull requests for   
                            │  + filter                              │    auth refactor              
-   ◉ Today              1  │                                        │                               
-   ◷ Upcoming           6  │  TOMORROW  1  ─────────────────────────│  due       tomorrow           
-   ≡ All tasks         15  │  1 ▎☐ ⚑ Review pull requests for auth r│  space     ● work             
-   ▦ Calendar              │  FRI 8 MAY  1  ────────────────────────│  priority  ⚑ medium           
-   ⌕ Search             /  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
-                           │  LATER  4  ────────────────────────────│                               
-  SPACES                   │  3  ☐ Migrate analytics to new pipeline│  CHECKLIST                    
-   ● work               4  │  4  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│  + add item                   
-   ● health             3  │  5  ☐ ⚑ Renew passport before summer tr│                               
-   ● finance            2  │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
+   ⌂ Home                  │                                        │                               
+   ▤ Inbox              3  │  TOMORROW  1  ─────────────────────────│  due       tomorrow           
+   ◉ Today              1  │  1 ▎☐ ⚑ Review pull requests for auth r│  space     ● work             
+   ◷ Upcoming           6  │  FRI 8 MAY  1  ────────────────────────│  priority  ⚑ medium           
+   ≡ All tasks         15  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
+   ▦ Calendar              │  LATER  4  ────────────────────────────│                               
+   ⌕ Search             /  │  3  ☐ Migrate analytics to new pipeline│  CHECKLIST                    
+                           │  4  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│  + add item                   
+  SPACES                   │  5  ☐ ⚑ Renew passport before summer tr│                               
+   ● work               4  │  6  ☐ ⚑ Pay quarterly estimated taxes  │                               
+   ● health             3  │                                        │                               
+   ● finance            2  │                                        │                               
    ● home               1  │                                        │                               
    ● learning           1  │                                        │                               
    ● personal           1  │                                        │                               
@@ -24,8 +26,6 @@ expression: buffer_to_text(&buf)
    ⚑ High priority      2  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
-                           │                                        │                               
                            │                                        │                               
                            │                                        │                               
                            │                                        │                               

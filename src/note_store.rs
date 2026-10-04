@@ -163,6 +163,54 @@ pub fn list_md(dir: &Path) -> Vec<PathBuf> {
     files
 }
 
+/// The task notes changed most recently, newest first, with when.
+pub fn recent(notes_dir: &Path, limit: usize) -> Vec<(PathBuf, chrono::DateTime<chrono::Utc>)> {
+    use chrono::{DateTime, Utc};
+    if let Some(db) = DB.get().and_then(|d| d.lock().ok()) {
+        let prefix = format!("{NOTES_TASKS_SUBDIR}/");
+        let Ok(mut stmt) = db.conn.prepare(
+            "SELECT path, updated_at FROM notes WHERE substr(path, 1, ?2) = ?1
+             ORDER BY updated_at DESC LIMIT ?3",
+        ) else {
+            return Vec::new();
+        };
+        let rows = stmt.query_map(params![prefix, prefix.len() as i64, limit as i64], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+        });
+        return rows
+            .map(|rows| {
+                rows.filter_map(Result::ok)
+                    .filter_map(|(p, at)| {
+                        let at = DateTime::parse_from_rfc3339(&at).ok()?.with_timezone(&Utc);
+                        Some((db.notes_dir.join(p), at))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+    }
+    let mut out: Vec<(PathBuf, DateTime<Utc>)> = Vec::new();
+    let Ok(folders) = std::fs::read_dir(notes_dir.join(NOTES_TASKS_SUBDIR)) else {
+        return out;
+    };
+    for folder in folders.filter_map(Result::ok) {
+        let Ok(files) = std::fs::read_dir(folder.path()) else {
+            continue;
+        };
+        for f in files.filter_map(Result::ok) {
+            let path = f.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("md") {
+                continue;
+            }
+            if let Ok(at) = f.metadata().and_then(|m| m.modified()) {
+                out.push((path, DateTime::<Utc>::from(at)));
+            }
+        }
+    }
+    out.sort_by_key(|e| std::cmp::Reverse(e.1));
+    out.truncate(limit);
+    out
+}
+
 pub fn remove(path: &Path) -> io::Result<()> {
     if let Some(r) = with_db(path, |db, k| {
         db.conn

@@ -44,6 +44,10 @@ pub enum Action {
     CalendarMonth,
     ArchiveCompleted,
     ArmF,
+    /// The Home screen.
+    GoHome,
+    /// The inbox: captures still to sort.
+    GoInbox,
     /// The "+ filter" popover.
     OpenFilters,
     PickProject,
@@ -128,6 +132,8 @@ impl Action {
             "calendar_month" | "month" => Some(Self::CalendarMonth),
             "archive_completed" => Some(Self::ArchiveCompleted),
             "arm_f" => Some(Self::ArmF),
+            "go_home" | "home" => Some(Self::GoHome),
+            "go_inbox" | "inbox" => Some(Self::GoInbox),
             "open_filters" | "filters" | "filter" => Some(Self::OpenFilters),
             "pick_project" => Some(Self::PickProject),
             "pick_context" => Some(Self::PickContext),

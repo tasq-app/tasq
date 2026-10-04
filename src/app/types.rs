@@ -206,16 +206,27 @@ pub enum Preset {
     Starred,
     /// Open tasks past their deadline.
     Overdue,
+    /// Captures still to sort: no space, no date, no repeat.
+    Inbox,
 }
 
 impl Preset {
+    /// The built-in filters the sidebar lists under FILTERS.
     pub const ALL: [Preset; 3] = [Preset::HighPriority, Preset::Starred, Preset::Overdue];
+    /// Every built-in filter, the inbox too.
+    pub const EVERY: [Preset; 4] = [
+        Preset::HighPriority,
+        Preset::Starred,
+        Preset::Overdue,
+        Preset::Inbox,
+    ];
 
     pub fn label(self) -> &'static str {
         match self {
             Preset::HighPriority => "High priority",
             Preset::Starred => "Starred",
             Preset::Overdue => "Overdue",
+            Preset::Inbox => "Inbox",
         }
     }
 
@@ -224,6 +235,7 @@ impl Preset {
             Preset::HighPriority => "⚑",
             Preset::Starred => "★",
             Preset::Overdue => "◷",
+            Preset::Inbox => "▤",
         }
     }
 
@@ -233,6 +245,7 @@ impl Preset {
             Preset::HighPriority => "high",
             Preset::Starred => "starred",
             Preset::Overdue => "overdue",
+            Preset::Inbox => "inbox",
         }
     }
 }
@@ -307,7 +320,7 @@ impl Filter {
                 f.context = Some(c.to_string());
             } else if let Some(p) = word
                 .strip_prefix("is:")
-                .and_then(|k| Preset::ALL.into_iter().find(|p| p.key() == k))
+                .and_then(|k| Preset::EVERY.into_iter().find(|p| p.key() == k))
             {
                 f.preset = Some(p);
             } else {

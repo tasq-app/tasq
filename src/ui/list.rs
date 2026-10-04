@@ -208,6 +208,7 @@ fn title_block(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
             Preset::HighPriority => theme.pri_a,
             Preset::Starred => theme.matched,
             Preset::Overdue => theme.overdue,
+            Preset::Inbox => theme.accent,
         };
         name.push(Span::styled(
             format!("{} ", p.icon()),

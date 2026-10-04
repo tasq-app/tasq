@@ -18,6 +18,8 @@ pub const SIDEBAR_SLIDE: Duration = Duration::from_millis(160);
 /// One place the sidebar can take you.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NavItem {
+    Home,
+    Inbox,
     Today,
     Upcoming,
     All,
@@ -71,7 +73,13 @@ impl App {
             count,
             dimmed: false,
         };
+        let inbox = tasks
+            .iter()
+            .filter(|t| filter::passes_preset(t, Preset::Inbox))
+            .count();
         let mut rows = vec![
+            row(NavItem::Home, "Home", None),
+            row(NavItem::Inbox, "Inbox", Some(inbox)),
             row(NavItem::Today, "Today", Some(open_in(Scope::Today))),
             row(
                 NavItem::Upcoming,
@@ -112,8 +120,14 @@ impl App {
 
     /// The place you're in, as the sidebar marks it.
     pub fn sidebar_active(&self) -> Option<NavItem> {
+        if self.home {
+            return Some(NavItem::Home);
+        }
         if self.calendar.is_some() {
             return Some(NavItem::Calendar);
+        }
+        if self.filter.preset == Some(Preset::Inbox) {
+            return Some(NavItem::Inbox);
         }
         if let Some(i) = self
             .saved_filters()
@@ -183,8 +197,15 @@ impl App {
     /// the caller, which owns the search prompt.
     pub fn sidebar_open(&mut self, item: &NavItem) {
         self.calendar = None;
+        self.home = false;
         self.mode = Mode::Normal;
         match item {
+            NavItem::Home => self.open_home(),
+            NavItem::Inbox => {
+                self.filter.clear();
+                self.filter.preset = Some(Preset::Inbox);
+                self.set_scope(Scope::All);
+            }
             NavItem::Today | NavItem::Upcoming | NavItem::All => {
                 self.filter.project = None;
                 self.filter.preset = None;

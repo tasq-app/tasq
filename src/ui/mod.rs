@@ -15,6 +15,7 @@ pub mod filter_pop;
 pub mod filters;
 pub mod header;
 pub mod help;
+pub mod home;
 pub mod hyperlinks;
 pub mod list;
 pub mod logo;
@@ -103,7 +104,10 @@ pub fn draw(frame: &mut Frame, app: &App) {
         sidebar::render(frame, la, app);
     }
     // The calendar takes the centre and the detail column.
-    if app.calendar.is_some() {
+    if app.home {
+        let r = right_area.map_or(center_area, |ra| center_area.union(ra));
+        home::render(frame, r, app);
+    } else if app.calendar.is_some() {
         let r = right_area.map_or(center_area, |ra| center_area.union(ra));
         calendar::render(frame, r, app);
     } else {
@@ -114,6 +118,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
     }
     if let Some(ra) = right_area
         && app.calendar.is_none()
+        && !app.home
     {
         if app.pinned_notes.is_empty() {
             detail::render(frame, ra, app);

@@ -49,6 +49,8 @@ pub struct Prefs {
     pub nerd_icons: bool,
     /// Short hints for what's selected in the bottom line (`hints`).
     pub hints: bool,
+    /// Open on Home (`start = "home"`, the default) or the list.
+    pub start_home: bool,
 }
 
 impl Prefs {
@@ -76,6 +78,7 @@ impl Prefs {
             recurrence_builder: cfg.recurrence_builder.unwrap_or(true),
             nerd_icons: cfg.icons.as_deref() == Some("nerd"),
             hints: cfg.hints.unwrap_or(true),
+            start_home: cfg.start.as_deref() != Some("list"),
         }
     }
 

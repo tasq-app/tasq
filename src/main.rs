@@ -107,6 +107,9 @@ fn main() -> Result<()> {
     // Copying the old note files in (first run only) is a write from the
     // notes' own connection; it isn't news to the task list.
     app_state.settle_external_changes();
+    if app_state.prefs.start_home {
+        app_state.open_home();
+    }
     app_state.config_path = Config::path();
     if let Some(i) = &imported {
         app_state.flash(format!(
@@ -525,6 +528,7 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::Filters => handle_filters(app, key),
         Mode::Normal if app.sidebar_focus => handle_sidebar(app, key, keybinds),
         Mode::Normal if app.inspector_focus => handle_inspector(app, key, keybinds),
+        Mode::Normal if app.home => handle_home(app, key, keybinds),
         Mode::Normal if app.calendar.is_some() => handle_calendar(app, key, keybinds),
         Mode::Normal | Mode::Visual => handle_normal(app, key, keybinds),
     }
@@ -575,6 +579,16 @@ fn handle_filters(app: &mut App, key: KeyEvent) {
         KeyCode::Backspace => app.filter_pop_backspace(),
         KeyCode::Char(c) if !ctrl => app.filter_pop_type(c),
         _ => {}
+    }
+}
+
+/// Keys on Home: `Enter` or `Esc` goes to Today, `i` to the inbox; the
+/// rest are the list's keys (`n` adds, `␣` opens the menu…).
+fn handle_home(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    match key.code {
+        KeyCode::Enter | KeyCode::Esc => app.close_home(),
+        KeyCode::Char('i') => app.open_inbox(),
+        _ => handle_normal(app, key, keybinds),
     }
 }
 
@@ -1842,6 +1856,7 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('r') => Action::Reschedule,
         KeyCode::Char('a') => Action::ToggleArchiveView,
         KeyCode::Char('l') => Action::GoList,
+        KeyCode::Char('0') => Action::GoHome,
         KeyCode::Char('1') => Action::ScopeToday,
         KeyCode::Char('2') => Action::ScopeUpcoming,
         KeyCode::Char('3') => Action::ScopeAll,
@@ -2102,6 +2117,8 @@ fn apply_action(app: &mut App, action: Action) {
         }
         Action::ArmF => app.chord.arm('f'),
         Action::OpenFilters => app.open_filters(),
+        Action::GoHome => app.open_home(),
+        Action::GoInbox => app.open_inbox(),
         Action::PickProject => app.enter_pick_project(),
         Action::PickContext => app.enter_pick_context(),
         Action::PickSavedFilter => app.enter_pick_saved(),
@@ -2212,7 +2229,7 @@ fn handle_normal(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         return;
     }
     if app.mode == Mode::Normal && key.code == KeyCode::Tab && key.modifiers.is_empty() {
-        if app.calendar.is_none() && app.cur_task().is_some() {
+        if app.calendar.is_none() && !app.home && app.cur_task().is_some() {
             app.inspector_focus_on();
         } else {
             app.sidebar_toggle_focus();

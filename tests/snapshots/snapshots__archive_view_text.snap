@@ -5,6 +5,8 @@ expression: buffer_to_text(&buf)
                            │ ▶▮◀ done.txt  •  0 tasks  •  sort:compl│                               
   ▣ tasq                   │                                        │  no task selected             
                            │   no completed tasks yet               │                               
+   ⌂ Home                  │                                        │                               
+   ▤ Inbox              3  │                                        │                               
    ◉ Today              1  │                                        │                               
    ◷ Upcoming           6  │                                        │                               
    ≡ All tasks         15  │                                        │                               
@@ -24,8 +26,6 @@ expression: buffer_to_text(&buf)
    ⚑ High priority      2  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
-                           │                                        │                               
                            │                                        │                               
                            │                                        │                               
                            │                                        │                               

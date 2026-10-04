@@ -163,6 +163,7 @@ fn icon(pick: &PopPick, app: &App, theme: &Theme) -> (String, Color) {
         PopPick::Preset(Preset::Overdue) => ("◷".into(), theme.overdue),
         PopPick::Preset(Preset::HighPriority) => ("⚑".into(), theme.pri_a),
         PopPick::Preset(Preset::Starred) => ("★".into(), theme.matched),
+        PopPick::Preset(Preset::Inbox) => ("▤".into(), theme.accent),
         PopPick::Saved(_) => ("☰".into(), theme.dim),
         PopPick::Save => ("+".into(), theme.accent),
         PopPick::Clear => ("×".into(), theme.dim),
