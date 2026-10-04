@@ -37,35 +37,61 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         width: area.width - 4,
         height: area.height - 1,
     };
-    let mut p = Pen {
-        buf,
-        r: inner,
-        y: inner.y,
-        bg: Style::default().bg(ibg),
-        marks: Vec::new(),
-    };
     let Some(t) = app.cur_task() else {
+        let mut p = Pen::new(buf, inner, Style::default().bg(ibg));
         p.text(0, "no task selected", p.bg.fg(theme.dim));
+        app.inspector_scroll.set(0);
         return;
     };
-    title(&mut p, t, theme);
-    p.y += 1;
-    facts(&mut p, t, app, theme);
     let notes = app.task_notes(t);
-    p.y += 1;
     let focus = app
         .inspector_focus
         .then(|| app.inspector_current())
         .flatten();
-    checklist(&mut p, &notes, focus.as_ref(), theme);
-    note_cards(&mut p, t, &notes, focus.as_ref(), theme);
+    let body = |p: &mut Pen| {
+        title(p, t, theme);
+        p.y += 1;
+        facts(p, t, app, theme);
+        p.y += 1;
+        checklist(p, &notes, focus.as_ref(), theme);
+        note_cards(p, t, &notes, focus.as_ref(), theme);
+    };
+    // A long checklist runs off the bottom: a dry run finds where the
+    // cursor lands, and the column scrolls to keep it in view.
+    let off = if focus.is_some() {
+        let mut dry = Pen::new(buf, inner, Style::default().bg(ibg));
+        dry.draw = false;
+        body(&mut dry);
+        let line = dry.cursor_y.map(|y| usize::from(y - inner.y));
+        let total = usize::from(dry.y - inner.y);
+        super::keep_cursor_visible(app.inspector_scroll.get(), line, inner.height, total)
+    } else {
+        0
+    };
+    app.inspector_scroll.set(off);
+    let mut p = Pen::new(buf, inner, Style::default().bg(ibg));
+    p.off = off;
+    body(&mut p);
     let used = p.y;
     // In Today, your day at a glance at the foot of the column.
-    if app.prefs.scope == crate::app::Scope::Today && app.calendar.is_none() {
+    if off == 0 && app.prefs.scope == crate::app::Scope::Today && app.calendar.is_none() {
         your_day(p.buf, inner, used, app, theme, ibg);
     }
     for (r, h) in p.marks {
-        app.hits.add(r, h);
+        // Marks are in the column's own rows; on screen they shift by the
+        // scroll, and what scrolled away can't be clicked.
+        let top = r.y.saturating_sub(off).max(inner.y);
+        let bottom = (r.y + r.height).saturating_sub(off).min(inner.bottom());
+        if bottom > top {
+            app.hits.add(
+                Rect {
+                    y: top,
+                    height: bottom - top,
+                    ..r
+                },
+                h,
+            );
+        }
     }
     // The edge between the list and the inspector, to drag wider.
     app.hits.add(
@@ -86,32 +112,68 @@ struct Pen<'a> {
     bg: Style,
     /// What was drawn where, for the mouse.
     marks: Vec<(Rect, crate::app::Hit)>,
+    /// Rows scrolled off the top: `y` counts the column's own rows, and
+    /// row `y` lands on screen at `y - off`.
+    off: u16,
+    /// False for a dry run that only measures.
+    draw: bool,
+    /// The first row the cursor was drawn on.
+    cursor_y: Option<u16>,
+}
+
+impl<'a> Pen<'a> {
+    fn new(buf: &'a mut Buffer, r: Rect, bg: Style) -> Self {
+        Self {
+            buf,
+            r,
+            y: r.y,
+            bg,
+            marks: Vec::new(),
+            off: 0,
+            draw: true,
+            cursor_y: None,
+        }
+    }
 }
 
 impl Pen<'_> {
-    fn room(&self) -> bool {
-        self.y < self.r.bottom()
+    /// The screen row the current row lands on, if it's in view.
+    fn screen_y(&self) -> Option<u16> {
+        let y = self.y.checked_sub(self.off)?;
+        (self.draw && y >= self.r.y && y < self.r.bottom()).then_some(y)
+    }
+
+    /// The last row there's room for, in the column's own rows.
+    fn bottom(&self) -> u16 {
+        if self.draw {
+            self.r.bottom().saturating_add(self.off)
+        } else {
+            u16::MAX
+        }
     }
 
     /// Write `s` at column `dx` of the current row; returns its width.
     fn text(&mut self, dx: u16, s: &str, style: Style) -> u16 {
-        if !self.room() || dx >= self.r.width {
+        let Some(y) = self.screen_y() else {
+            return 0;
+        };
+        if dx >= self.r.width {
             return 0;
         }
         let x = self.r.x + dx;
         let max = usize::from(self.r.width - dx);
-        let (end, _) = self.buf.set_stringn(x, self.y, s, max, style);
+        let (end, _) = self.buf.set_stringn(x, y, s, max, style);
         end.saturating_sub(x)
     }
 
     /// Paint the current row (and a column either side) in `bg`.
     fn fill(&mut self, bg: Color) {
-        if !self.room() {
+        let Some(y) = self.screen_y() else {
             return;
-        }
+        };
         let right = (self.r.right() + 1).min(self.buf.area.right());
         for x in self.r.x.saturating_sub(1)..right {
-            if let Some(c) = self.buf.cell_mut((x, self.y)) {
+            if let Some(c) = self.buf.cell_mut((x, y)) {
                 c.set_symbol(" ");
                 c.set_bg(bg);
             }
@@ -134,10 +196,13 @@ impl Pen<'_> {
 
     /// The `▎` marker left of the focused row.
     fn bar(&mut self, theme: &Theme) {
-        if !self.room() || self.r.x < 2 {
+        let Some(y) = self.screen_y() else {
+            return;
+        };
+        if self.r.x < 2 {
             return;
         }
-        if let Some(c) = self.buf.cell_mut((self.r.x - 2, self.y)) {
+        if let Some(c) = self.buf.cell_mut((self.r.x - 2, y)) {
             c.set_symbol("▎");
             c.set_fg(theme.accent);
         }
@@ -148,6 +213,7 @@ impl Pen<'_> {
         if !here {
             return self.bg;
         }
+        self.cursor_y.get_or_insert(self.y);
         let bg = tint(theme.accent, theme.panel, 0.22).unwrap_or(theme.selected);
         self.fill(bg);
         self.bar(theme);
@@ -481,7 +547,7 @@ fn note_cards(
         let preview = wrap(&n.preview, inner);
         let lines: Vec<&String> = preview.iter().filter(|l| !l.is_empty()).take(2).collect();
         let h = 3 + lines.len() as u16;
-        if p.y + h > p.r.bottom() {
+        if p.y + h > p.bottom() {
             let left = notes.notes.len() - i;
             p.text(0, &format!("+{left} more"), p.bg.fg(theme.dim));
             break;
@@ -598,18 +664,16 @@ pub fn render_checklist_prompt(frame: &mut Frame, screen: Rect, app: &App) {
             }
         }
     }
-    let mut p = Pen {
+    let mut p = Pen::new(
         buf,
-        r: Rect {
+        Rect {
             x: r.x + 3,
             y: r.y + 1,
             width: r.width.saturating_sub(6),
             height: r.height.saturating_sub(2),
         },
-        y: r.y + 1,
         bg,
-        marks: Vec::new(),
-    };
+    );
     p.text(
         0,
         "☐ ADD TO CHECKLIST",
@@ -658,6 +722,59 @@ mod tests {
         assert_eq!(end_time("09:00", 120), "11:00");
         assert_eq!(end_time("23:30", 60), "00:30");
         assert_eq!(end_time("x", 60), "");
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn a_long_checklist_scrolls_to_follow_the_cursor() {
+        use crate::app::test_support::build_app_with_config;
+        use ratatui::{Terminal, backend::TestBackend};
+        let dir = std::env::temp_dir().join(format!(
+            "tasq-inspector-scroll-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        let cfg = crate::config::Config {
+            notes_dir: Some(dir.to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        let mut app = build_app_with_config("Backlog +work\n", cfg);
+        app.inspector_focus_on();
+        for i in 0..40 {
+            app.add_check_item(&format!("item number {i}"));
+        }
+        let screen = |app: &App| {
+            let mut term = Terminal::new(TestBackend::new(120, 24)).unwrap();
+            term.draw(|f| crate::ui::draw(f, app)).unwrap();
+            let buf = term.backend().buffer().clone();
+            (0..buf.area.height)
+                .map(|y| {
+                    (0..buf.area.width)
+                        .map(|x| buf[(x, y)].symbol().to_string())
+                        .collect::<String>()
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+        app.inspector_cursor = 0;
+        let top = screen(&app);
+        assert!(top.contains("item number 0"), "{top}");
+        assert!(!top.contains("item number 39"), "{top}");
+        for _ in 0..39 {
+            app.inspector_move(true);
+            screen(&app);
+        }
+        let bottom = screen(&app);
+        assert!(bottom.contains("item number 39"), "{bottom}");
+        assert!(!bottom.contains("item number 0 "), "{bottom}");
+        // Back up again, and the top comes back into view.
+        for _ in 0..39 {
+            app.inspector_move(false);
+            screen(&app);
+        }
+        assert!(screen(&app).contains("item number 0"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

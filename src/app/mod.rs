@@ -234,6 +234,8 @@ pub struct App {
     /// view, keyed by `View::idx()`. Updated at render time via `Cell` so the
     /// renderer can keep the cursor row visible without taking `&mut self`.
     pub(crate) view_scroll: [Cell<u16>; 2],
+    /// How far the details column is scrolled, to follow its cursor.
+    pub(crate) inspector_scroll: Cell<u16>,
     /// Handle to the in-TUI capture server. `None` until the first time
     /// the user presses `s` (or invokes "show capture QR" from the
     /// palette). Once bound, the entry stays for the rest of the
@@ -381,6 +383,7 @@ impl App {
             frozen_now: None,
             command_palette: CommandPaletteState::default(),
             view_scroll: [Cell::new(0), Cell::new(0)],
+            inspector_scroll: Cell::new(0),
             share: None,
             notes_dir: note_dir,
             notes_popup: NotesPopupState::default(),
