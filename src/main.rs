@@ -596,6 +596,18 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::SearchAll => handle_search_all(app, key),
         Mode::Normal if app.sidebar_focus => handle_sidebar(app, key, keybinds),
         Mode::Normal if app.inspector_focus => handle_inspector(app, key, keybinds),
+        // Ctrl keys (Ctrl-K search, Ctrl-P palette, …) mean the same on every
+        // screen, so `k` moving the cursor can't swallow Ctrl-K.
+        Mode::Normal
+            if key.modifiers.contains(KeyModifiers::CONTROL)
+                && (app.home
+                    || app.trash_screen.is_some()
+                    || app.notes_screen.as_ref().is_some_and(|s| {
+                        s.editor.is_none() && !s.searching && !s.confirm_delete
+                    })) =>
+        {
+            global_key(app, key, keybinds);
+        }
         Mode::Normal if app.home => handle_home(app, key, keybinds),
         Mode::Normal if app.notes_screen.is_some() => handle_notes_screen(app, key, keybinds),
         Mode::Normal if app.trash_screen.is_some() => handle_trash(app, key, keybinds),
@@ -672,6 +684,15 @@ fn handle_filters(app: &mut App, key: KeyEvent) {
 /// rest are the list's keys (`n` adds, `␣` opens the menu…).
 fn handle_home(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     let picked = app.home_sel.is_some();
+    // With the "Add a task" bar picked, typing writes the task.
+    if app.home_sel.is_some_and(|s| s.tile == 0)
+        && let KeyCode::Char(c) = key.code
+        && !key.modifiers.contains(KeyModifiers::CONTROL)
+    {
+        apply_action(app, Action::BeginAdd);
+        app.draft_insert_char(c);
+        return;
+    }
     match key.code {
         KeyCode::Tab => app.home_tab(true),
         KeyCode::BackTab => app.home_tab(false),
@@ -689,7 +710,7 @@ fn handle_home(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Esc if app.home_back() => {}
         KeyCode::Enter | KeyCode::Esc => app.close_home(),
         KeyCode::Char('i') => app.open_inbox(),
-        _ => handle_normal(app, key, keybinds),
+        _ => global_key(app, key, keybinds),
     }
 }
 
@@ -712,6 +733,15 @@ fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
                     s.editor = None;
                 }
             }
+        }
+        return;
+    }
+    // A delete waiting for its yes.
+    if app.notes_screen.as_ref().is_some_and(|s| s.confirm_delete) {
+        if key.code == KeyCode::Char('y') {
+            app.notes_screen_delete();
+        } else if let Some(s) = app.notes_screen.as_mut() {
+            s.confirm_delete = false;
         }
         return;
     }
@@ -754,7 +784,33 @@ fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Char('N') => app.notes_screen_next_hit(false),
         KeyCode::Char('p') => app.notes_screen_pin(),
         KeyCode::Char('t') => app.notes_screen_open_task(),
-        _ => handle_normal(app, key, keybinds),
+        KeyCode::Char('d') | KeyCode::Delete => {
+            if app.current_note_entry().is_some()
+                && let Some(s) = app.notes_screen.as_mut()
+            {
+                s.confirm_delete = true;
+            }
+        }
+        _ => global_key(app, key, keybinds),
+    }
+}
+
+/// On a screen of its own (Home, Notes, Trash), only the keys that make
+/// sense everywhere reach the list's handler: the menu, moving between
+/// places, help, settings, the timer, new task. Never a task action like
+/// `dd` or `x` on a list you can't see.
+fn global_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+    let passes = ctrl
+        || matches!(
+            key.code,
+            KeyCode::Char(
+                ' ' | ':' | '?' | ',' | '0'..='6' | '[' | ']' | '{' | '}' | 'q' | 'n' | 'N' | 'P'
+            ) | KeyCode::Tab
+                | KeyCode::BackTab
+        );
+    if passes {
+        handle_normal(app, key, keybinds);
     }
 }
 
@@ -767,7 +823,7 @@ fn handle_trash(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Char('r') | KeyCode::Enter => app.trash_restore_current(),
         KeyCode::Char('D') => app.trash_forget_current(),
         KeyCode::Char('E') => app.trash_empty_confirmed(),
-        _ => handle_normal(app, key, keybinds),
+        _ => global_key(app, key, keybinds),
     }
 }
 
@@ -2044,7 +2100,7 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
             KeyCode::Char('d') => Some(Action::HalfPageDown),
             KeyCode::Char('u') => Some(Action::HalfPageUp),
             KeyCode::Char('p') => Some(Action::OpenCommandPalette),
-            KeyCode::Char('k' | 'f') => Some(Action::SearchAll),
+            KeyCode::Char('k' | 'K' | 'f' | 'F') => Some(Action::SearchAll),
             KeyCode::Char('x') => Some(Action::PomodoroStop),
             _ => None,
         };
@@ -2133,6 +2189,7 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('L') => Action::ToggleLineNum,
         KeyCode::Char('H') => Action::ToggleShowDone,
         KeyCode::Char('F') => Action::ToggleShowFuture,
+        KeyCode::Char('X') => Action::ClearFilters,
         KeyCode::Esc => Action::EscapeStack,
         KeyCode::Char('W') => Action::ChangeWeekStart,
         // T11: tmux-pane-style pin/focus toggle for a note (`z`) and close
@@ -2393,6 +2450,12 @@ fn apply_action(app: &mut App, action: Action) {
                 app.flash("only one theme");
             } else {
                 app.enter_pick_theme();
+            }
+        }
+        Action::ClearFilters => {
+            if app.filter().has_any() {
+                app.clear_filter_part(tasq::app::FilterPart::All);
+                app.flash("filters cleared");
             }
         }
         Action::EscapeStack => {
@@ -2676,6 +2739,45 @@ mod tests {
             poll_config_reload(&mut app, &rx),
             "the queued signal must still be applied once the picker closes"
         );
+    }
+
+    #[test]
+    fn dd_on_home_notes_or_trash_never_deletes_a_hidden_task() {
+        for open in [App::open_home, App::open_notes_screen, App::open_trash] {
+            let mut app = build_app();
+            open(&mut app);
+            handle_key(&mut app, key('d'), &KeyBindings::default());
+            handle_key(&mut app, key('d'), &KeyBindings::default());
+            handle_key(&mut app, key('x'), &KeyBindings::default());
+            assert_eq!(app.tasks().len(), 3, "nothing deleted");
+            assert!(app.tasks().iter().all(|t| !t.done), "nothing ticked");
+        }
+    }
+
+    #[test]
+    fn ctrl_k_opens_search_with_or_without_shift_from_anywhere() {
+        let shifted = KeyEvent::new(
+            KeyCode::Char('K'),
+            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+        );
+        for k in [ctrl('k'), ctrl('f'), shifted] {
+            for open in [App::open_home, App::open_notes_screen, |_: &mut App| {}] {
+                let mut app = build_app();
+                open(&mut app);
+                handle_key(&mut app, k, &KeyBindings::default());
+                assert_eq!(app.mode, Mode::SearchAll, "{k:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn shift_x_clears_every_filter() {
+        let mut app = build_app();
+        app.set_project_filter(Some("work".into()));
+        app.set_context_filter(Some("lab".into()));
+        handle_key(&mut app, key('X'), &KeyBindings::default());
+        assert!(!app.filter().has_any());
+        assert_eq!(app.tasks().len(), 3, "nothing deleted");
     }
 
     fn build_app() -> App {

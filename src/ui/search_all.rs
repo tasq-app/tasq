@@ -48,12 +48,13 @@ pub fn render(frame: &mut Frame, screen: Rect, app: &App) {
     let mut x = q.x + 2;
     x += put(buf, x, q.y + 1, "⌕ ", 2, bg.fg(theme.dim));
     if typed.is_empty() {
+        // The hint sits after the caret, so the caret doesn't cover the `s`.
         put(
             buf,
-            x,
+            x + 1,
             q.y + 1,
             "search tasks, notes and spaces…",
-            q.right().saturating_sub(x + 1),
+            q.right().saturating_sub(x + 2),
             bg.fg(theme.dim),
         );
     } else {

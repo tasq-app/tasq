@@ -26,6 +26,17 @@ pub struct RecentNote {
     pub when: String,
 }
 
+/// Minutes in a few characters: `45m`, `2h`, `1h 20m`.
+fn short(m: u32) -> String {
+    if m < 60 {
+        format!("{m}m")
+    } else if m.is_multiple_of(60) {
+        format!("{}h", m / 60)
+    } else {
+        format!("{}h {}m", m / 60, m % 60)
+    }
+}
+
 /// A note's `# ` heading, else its file name.
 pub fn note_title(path: &std::path::Path, body: &str) -> String {
     body.lines()
@@ -134,22 +145,28 @@ impl App {
         let now = chrono::Local::now();
         let now_min = now.hour() * 60 + now.minute();
         let occs = calendar::occurrences(self.store.tasks(), today, today, today);
-        let o = occs
+        // Today's open things with a time, in order.
+        let mut timed: Vec<(u32, u32, usize)> = occs
             .iter()
             .filter(|o| !self.store.tasks()[o.abs].done)
-            .filter_map(|o| o.start.map(|s| (s, o)))
-            .filter(|(s, _)| *s >= now_min)
-            .min_by_key(|(s, _)| *s)?;
-        let (start, occ) = o;
-        let left = start - now_min;
-        let till = if left < 60 {
-            format!("in {left}m")
-        } else if left.is_multiple_of(60) {
-            format!("in {}h", left / 60)
-        } else {
-            format!("in {}h {}m", left / 60, left % 60)
-        };
-        let title = todo::body_only(&self.store.tasks()[occ.abs].raw);
+            .filter_map(|o| Some((o.start?, o.end()?, o.abs)))
+            .collect();
+        timed.sort();
+        // What's on now or next; failing that, the last one you missed.
+        let (start, till, abs) =
+            if let Some(&(start, end, abs)) = timed.iter().find(|(_, end, _)| *end > now_min) {
+                let till = if start <= now_min {
+                    let left = end - now_min;
+                    format!("now · {} left", short(left))
+                } else {
+                    format!("in {}", short(start - now_min))
+                };
+                (start, till, abs)
+            } else {
+                let &(start, _, abs) = timed.last()?;
+                (start, "late".to_string(), abs)
+            };
+        let title = todo::body_only(&self.store.tasks()[abs].raw);
         Some((format!("{:02}:{:02}", start / 60, start % 60), title, till))
     }
 

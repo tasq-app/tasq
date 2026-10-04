@@ -53,6 +53,8 @@ pub struct Prefs {
     pub start_home: bool,
     /// Width of the details pane, in columns (`{` / `}` or drag its edge).
     pub details_w: u16,
+    /// Ticking a checklist's last box marks its task done.
+    pub checklist_completes: bool,
 }
 
 /// The details pane's width: by default, and how narrow or wide it goes.
@@ -60,14 +62,30 @@ pub const DETAILS_W: u16 = 34;
 pub const DETAILS_MIN: u16 = 24;
 pub const DETAILS_MAX: u16 = 100;
 
+/// Terminals that draw Nerd Font symbols out of the box, whatever font
+/// you picked (Ghostty and WezTerm bundle them).
+fn terminal_has_nerd_symbols() -> bool {
+    std::env::var("TERM_PROGRAM")
+        .map(|t| {
+            let t = t.to_ascii_lowercase();
+            t == "ghostty" || t == "wezterm"
+        })
+        .unwrap_or(false)
+}
+
 /// The look this build saves its config under.
-const DESIGN: u32 = 5;
+const DESIGN: u32 = 6;
 
 impl Prefs {
     pub fn from_config(mut cfg: Config) -> Self {
         // A config saved before the redesign holds the old defaults, not
         // choices: move them to the new look once.
-        if cfg.design.unwrap_or(0) < DESIGN {
+        // An earlier build saved `icons = unicode` whether you chose it or
+        // not: let the terminal decide again.
+        if cfg.design.unwrap_or(0) < 6 && cfg.icons.as_deref() == Some("unicode") {
+            cfg.icons = None;
+        }
+        if cfg.design.unwrap_or(0) < 5 {
             if cfg.theme.as_deref() == Some("Muted Slate") {
                 cfg.theme = None;
             }
@@ -95,9 +113,14 @@ impl Prefs {
             hidden_keys: cfg.hidden_keys,
             week_start: cfg.week_start.unwrap_or(WeekStart::Sunday),
             recurrence_builder: cfg.recurrence_builder.unwrap_or(true),
-            nerd_icons: cfg.icons.as_deref() == Some("nerd"),
+            nerd_icons: match cfg.icons.as_deref() {
+                Some("nerd") => true,
+                Some(_) => false,
+                None => terminal_has_nerd_symbols(),
+            },
             hints: cfg.hints.unwrap_or(true),
             start_home: cfg.start.as_deref() == Some("home"),
+            checklist_completes: cfg.checklist_completes.unwrap_or(true),
             details_w: cfg
                 .details_width
                 .unwrap_or(DETAILS_W)
@@ -199,10 +222,13 @@ impl Prefs {
         cfg.hidden_keys = self.hidden_keys.clone();
         cfg.week_start = Some(self.week_start);
         cfg.recurrence_builder = Some(self.recurrence_builder);
-        cfg.icons = Some(if self.nerd_icons { "nerd" } else { "unicode" }.to_string());
+        // Kept only when it's not what the terminal would pick anyway.
+        cfg.icons = (self.nerd_icons != terminal_has_nerd_symbols())
+            .then(|| if self.nerd_icons { "nerd" } else { "unicode" }.to_string());
         cfg.hints = Some(self.hints);
         cfg.design = Some(DESIGN);
         cfg.details_width = Some(self.details_w);
+        cfg.checklist_completes = Some(self.checklist_completes);
         cfg.start = Some(if self.start_home { "home" } else { "list" }.to_string());
         cfg.save()
     }

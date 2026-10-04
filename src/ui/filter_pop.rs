@@ -59,15 +59,16 @@ pub fn render(frame: &mut Frame, list: Rect, app: &App) {
     let mut cx = q.x + 2;
     cx += put(buf, cx, q.y + 1, "⌕ ", q.right() - cx, bg.fg(theme.dim));
     if typed.is_empty() {
+        // The caret first, the hint after it, so it doesn't cover the `s`.
+        put(buf, cx, q.y + 1, "▏", 1, bg.fg(theme.accent));
         put(
             buf,
-            cx,
+            cx + 1,
             q.y + 1,
             "search spaces, tags, dates…",
-            q.right().saturating_sub(cx + 1),
+            q.right().saturating_sub(cx + 2),
             bg.fg(theme.dim),
         );
-        put(buf, cx, q.y + 1, "▏", 1, bg.fg(theme.accent));
     } else {
         cx += put(
             buf,
@@ -160,6 +161,7 @@ fn icon(pick: &PopPick, app: &App, theme: &Theme) -> (String, Color) {
         PopPick::Space(p) => ("●".into(), app.space_color(p)),
         PopPick::Tag(_) => ("@".into(), theme.context),
         PopPick::Due(_) => ("◷".into(), theme.due),
+        PopPick::Text(_) => ("⌕".into(), theme.accent),
         PopPick::Preset(Preset::Overdue) => ("◷".into(), theme.overdue),
         PopPick::Preset(Preset::HighPriority) => ("⚑".into(), theme.pri_a),
         PopPick::Preset(Preset::Starred) => ("★".into(), theme.matched),

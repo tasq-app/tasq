@@ -622,6 +622,7 @@ The modal keys below apply in Normal mode:
 | `1` / `2` / `3` | Today / Upcoming / All |
 | `4` / `5` / `6` | Calendar: day / week / month (see [Calendar](#calendar)) |
 | `f` | filter popover: type to search spaces (sub-spaces included), tags, deadlines and priority; `↑` / `↓` move, `Enter` adds the filter (or removes it, if it's on), `⌫` with nothing typed drops the last chip, `Esc` closes. With filters on, it can save them as a view or clear them all |
+| `X` | clear every filter on the list (or click a chip to take just that one off) |
 | `Tab` | list → details → sidebar; `Shift-Tab` goes straight to the sidebar |
 | `c` / `C` / `H` / `r` / `d` (sidebar, on a space) | next colour / automatic colour, hide / show, rename, delete an empty one |
 | `S` | cycle sort: priority → due → file order |
@@ -899,9 +900,11 @@ task; `o` only opens an existing linked note.
 notes_dir = ~/notes
 ```
 
-Icons are plain Unicode by default, so they work with any font. With a
+Icons are plain Unicode by default, so they work with any font; in
+Ghostty and WezTerm, which draw Nerd Font symbols out of the box, tasq
+uses them by itself (round chips and pills). With a
 [Nerd Font](https://www.nerdfonts.com/) (e.g. JetBrainsMono Nerd Font) set
-in your terminal, switch to its icons:
+in another terminal, switch to its icons:
 
 ```toml
 icons = nerd
@@ -911,6 +914,13 @@ tasq opens on Home; to open on the list instead:
 
 ```toml
 start = "list"
+```
+
+Ticking the last box of a task's checklist marks the task done; to keep
+them apart:
+
+```toml
+checklist_completes = false
 ```
 
 The short hints at the bottom, about what's selected, can be turned off:

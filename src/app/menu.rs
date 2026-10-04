@@ -51,6 +51,7 @@ pub fn entries(p: MenuPage) -> Vec<MenuEntry> {
             act('*', "star", Action::ToggleStar),
             page('g', "go to…", MenuPage::Go),
             act('f', "filter…", Action::OpenFilters),
+            act('X', "clear filters", Action::ClearFilters),
             act('o', "notes", Action::OpenNotes),
             page('t', "timer…", MenuPage::Timer),
             act('/', "search", Action::BeginSearch),

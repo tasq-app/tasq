@@ -159,9 +159,8 @@ impl App {
         if let Some(p) = &self.filter.project {
             return Some(NavItem::Space(p.clone()));
         }
-        if !self.filter.search.is_empty() {
-            return Some(NavItem::Search);
-        }
+        // A text or date filter is a chip on the list, not the Search
+        // window: the list's own row stays lit.
         Some(match self.prefs.scope {
             Scope::Today => NavItem::Today,
             Scope::Upcoming => NavItem::Upcoming,

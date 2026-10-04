@@ -98,6 +98,10 @@ pub struct ResolvedNeedle {
     /// original search string when no `due:` term parsed.
     pub text: String,
     due_range: Option<(String, String)>,
+    /// A `when:FROM..TO` term: the task's day (planned or due) in the
+    /// range. An empty `FROM` means "or earlier" — `when:..2026-10-09` is
+    /// everything with a date up to that day, late ones included.
+    when_range: Option<(String, String)>,
 }
 
 /// Resolve `needle` against `today`: pull the first parseable `due:` term out
@@ -105,16 +109,42 @@ pub struct ResolvedNeedle {
 /// search text. An unparseable `due:` term, or a second `due:` term, is left
 /// in place as literal text — only the first parseable one is honored.
 pub fn resolve_needle(needle: &str, today: &str) -> ResolvedNeedle {
-    match extract_due_range(needle, today) {
+    let (needle, when_range) = match extract_when_range(needle) {
+        Some((rest, range)) => (rest, Some(range)),
+        None => (needle.to_string(), None),
+    };
+    match extract_due_range(&needle, today) {
         Some((rest, range)) => ResolvedNeedle {
             text: rest,
             due_range: Some(range),
+            when_range,
         },
         None => ResolvedNeedle {
-            text: needle.to_string(),
+            text: needle,
             due_range: None,
+            when_range,
         },
     }
+}
+
+/// Pull the first `when:FROM..TO` term out of `needle` (see
+/// [`ResolvedNeedle`]), returning the rest and the range.
+fn extract_when_range(needle: &str) -> Option<(String, (String, String))> {
+    let is_date = |s: &str| NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok();
+    let mut found = None;
+    let mut rest: Vec<&str> = Vec::new();
+    for term in needle.split_whitespace() {
+        if found.is_none()
+            && let Some((from, to)) = term.strip_prefix("when:").and_then(|v| v.split_once(".."))
+            && (from.is_empty() || is_date(from))
+            && is_date(to)
+        {
+            found = Some((from.to_string(), to.to_string()));
+            continue;
+        }
+        rest.push(term);
+    }
+    found.map(|range| (rest.join(" "), range))
 }
 
 /// Project / context / search predicate, shared by every view that honors
@@ -161,6 +191,13 @@ pub fn passes_user_filter(t: &Task, filter: &Filter, needle: Option<&ResolvedNee
         return false;
     }
     if let Some(needle) = needle {
+        if let Some((from, to)) = &needle.when_range {
+            let within =
+                |d: Option<&str>| d.is_some_and(|d| d >= from.as_str() && d <= to.as_str());
+            if !within(t.planned.as_deref()) && !within(t.due.as_deref()) {
+                return false;
+            }
+        }
         if let Some((from, to)) = &needle.due_range {
             match t.due.as_deref() {
                 Some(d) if d >= from.as_str() && d <= to.as_str() => {}

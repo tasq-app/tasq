@@ -80,6 +80,8 @@ pub enum Action {
     ToggleLineNum,
     ToggleShowDone,
     ToggleShowFuture,
+    /// Take every filter off the list (default key `X`).
+    ClearFilters,
     CopyLine,
     CopyBody,
     /// Open the floating notes popup for the current task, listing the
@@ -171,6 +173,7 @@ impl Action {
             "toggle_line_num" | "toggle_line_numbers" => Some(Self::ToggleLineNum),
             "toggle_show_done" => Some(Self::ToggleShowDone),
             "toggle_show_future" => Some(Self::ToggleShowFuture),
+            "clear_filters" => Some(Self::ClearFilters),
             "copy_line" => Some(Self::CopyLine),
             "copy_body" => Some(Self::CopyBody),
             "open_notes" | "notes" => Some(Self::OpenNotes),

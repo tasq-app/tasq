@@ -660,3 +660,47 @@ fn list_scrolls_to_keep_cursor_visible_when_below_fold() {
         "cursor row {label:?} should be visible in the scrolled viewport:\n{text}"
     );
 }
+
+/// Where `needle` sits on screen, as (column, row).
+fn find_on_screen(buf: &Buffer, needle: &str) -> Option<(u16, u16)> {
+    let area = buf.area;
+    for y in 0..area.height {
+        let row: Vec<String> = (0..area.width)
+            .map(|x| buf[(x, y)].symbol().to_string())
+            .collect();
+        let line: String = row.concat();
+        if let Some(byte) = line.find(needle) {
+            let col = line[..byte].chars().count();
+            // Map back from chars to cells (every cell here is one symbol).
+            let mut chars = 0;
+            for (x, cell) in row.iter().enumerate() {
+                if chars >= col {
+                    return Some((x as u16, y));
+                }
+                chars += cell.chars().count();
+            }
+        }
+    }
+    None
+}
+
+#[test]
+fn clicking_a_filter_chip_takes_it_off() {
+    let mut app = make_app();
+    app.set_project_filter(Some("work".to_string()));
+    app.set_context_filter(Some("laptop".to_string()));
+
+    // A click on the @laptop chip takes only that one off.
+    let buf = render(&app);
+    let (x, y) = find_on_screen(&buf, "@laptop ×").expect("tag chip drawn");
+    app.click(x + 2, y);
+    assert_eq!(app.filter().context, None);
+    assert_eq!(app.filter().project.as_deref(), Some("work"));
+
+    // With two on, "× clear" takes them all off.
+    app.set_context_filter(Some("laptop".to_string()));
+    let buf = render(&app);
+    let (x, y) = find_on_screen(&buf, "× clear").expect("clear chip drawn");
+    app.click(x + 1, y);
+    assert!(!app.filter().has_any());
+}

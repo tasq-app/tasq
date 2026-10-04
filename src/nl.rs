@@ -904,6 +904,14 @@ fn length_at(
     {
         return Some((n.checked_mul(per)?, 2));
     }
+    // "1.5 hours", "1,5 h".
+    if let Some(n) = crate::duration::parse_decimal(w)
+        && live(i + 1)
+        && let Some(per) = unit_minutes(scratch.word_lc(words[i + 1]), days)
+    {
+        let minutes = (n * f64::from(per)).round();
+        return (minutes >= 1.0 && minutes < f64::from(u32::MAX)).then_some((minutes as u32, 2));
+    }
     // One word: "90m", "1h30m", "2d".
     let compact = crate::duration::parse_minutes(w)?;
     let has_long_unit = w.contains('d') || w.contains('w');
@@ -1957,6 +1965,10 @@ mod tests {
             ("review 45 min", 45, "review"),
             ("focus 1h30m", 90, "focus"),
             ("lunch for an hour", 60, "lunch"),
+            ("study for 1.5h", 90, "study"),
+            ("study for 1,5h", 90, "study"),
+            ("study for 1.5 hours", 90, "study"),
+            ("study for 2,5 h", 150, "study"),
         ] {
             let p = detect(input, today, &[]).parsed;
             assert_eq!(p.duration, Some(minutes), "{input}");

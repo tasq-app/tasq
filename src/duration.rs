@@ -10,23 +10,37 @@ pub fn parse_minutes(s: &str) -> Option<u32> {
     let mut num = String::new();
     let mut any = false;
     for c in s.chars() {
-        if c.is_ascii_digit() {
-            num.push(c);
+        // A decimal part, with a point or a comma: "1.5h", "1,5h".
+        if c.is_ascii_digit() || ((c == '.' || c == ',') && !num.is_empty() && !num.contains('.')) {
+            num.push(if c == ',' { '.' } else { c });
             continue;
         }
-        let n: u32 = num.parse().ok()?;
+        let n: f64 = num.parse().ok()?;
         num.clear();
-        let per = match c {
+        let per: u32 = match c {
             'm' => 1,
             'h' => 60,
             'd' => 60 * 24,
             'w' => 60 * 24 * 7,
             _ => return None,
         };
-        total = total.checked_add(n.checked_mul(per)?)?;
+        let minutes = (n * f64::from(per)).round();
+        if !(0.0..=f64::from(u32::MAX)).contains(&minutes) {
+            return None;
+        }
+        total = total.checked_add(minutes as u32)?;
         any = true;
     }
     (any && num.is_empty() && total > 0).then_some(total)
+}
+
+/// A number with an optional decimal part (point or comma): `1.5`, `1,5`.
+pub fn parse_decimal(s: &str) -> Option<f64> {
+    let s = s.replace(',', ".");
+    if s.is_empty() || !s.chars().all(|c| c.is_ascii_digit() || c == '.') {
+        return None;
+    }
+    s.parse().ok()
 }
 
 /// The tag form of `minutes`: whole weeks, days and hours where they fit
@@ -72,6 +86,15 @@ pub fn parse_reminders(s: &str) -> Option<Vec<u32>> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn half_hours_with_a_point_or_a_comma() {
+        assert_eq!(super::parse_minutes("1.5h"), Some(90));
+        assert_eq!(super::parse_minutes("1,5h"), Some(90));
+        assert_eq!(super::parse_minutes("0.25h"), Some(15));
+        assert_eq!(super::parse_minutes("1.5.5h"), None);
+        assert_eq!(super::parse_minutes(".5h"), None);
+    }
+
     use super::*;
 
     #[test]

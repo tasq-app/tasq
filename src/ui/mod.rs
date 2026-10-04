@@ -62,6 +62,7 @@ const PALETTE_MAX_W: u16 = 80;
 
 pub fn draw(frame: &mut Frame, app: &App) {
     app.hits.clear();
+    app.home_bar.set(None);
     app.screen_w.set(frame.area().width);
     let theme = app.theme();
     let area = frame.area();
@@ -167,7 +168,14 @@ pub fn draw(frame: &mut Frame, app: &App) {
                 .min(u32::from(area.width.saturating_sub(2))) as u16;
             // Live capture: toast, input, gap, chips, padding.
             let dlg_h = if app.live_add_active() { 7 } else { DIALOG_H };
-            let dlg = centered_in(area, dlg_w, dlg_h);
+            // On Home a new task is typed in its own bar.
+            let dlg = match app.home_bar.get() {
+                Some(bar) if app.home && app.selection.editing().is_none() => Rect {
+                    height: dlg_h.min(area.bottom().saturating_sub(bar.y)),
+                    ..bar
+                },
+                _ => centered_in(area, dlg_w, dlg_h),
+            };
             frame.render_widget(Clear, dlg);
             dialog::render(frame, dlg, app);
             // At most one overlay shows at a time. The autocomplete popup is
