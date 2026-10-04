@@ -1211,6 +1211,9 @@ fn handle_live_add_keys(app: &mut App, key: KeyEvent) -> bool {
             app.live_add();
             true
         }
+        // "in ex" matching several spaces: choose without leaving the text.
+        KeyCode::Down => app.live_space_step(true),
+        KeyCode::Up => app.live_space_step(false),
         _ => false,
     }
 }

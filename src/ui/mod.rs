@@ -144,7 +144,11 @@ pub fn draw(frame: &mut Frame, app: &App) {
             // suppressed while a metadata picker is open so we don't stack
             // two floating panels in the same spot.
             if !dialog::render_overlay(frame, dlg, area, app) {
-                dialog::render_autocomplete(frame, dlg, area, app);
+                if app.autocomplete_visible() {
+                    dialog::render_autocomplete(frame, dlg, area, app);
+                } else {
+                    dialog::render_space_choice(frame, dlg, area, app);
+                }
             }
         }
         Mode::Help => {
