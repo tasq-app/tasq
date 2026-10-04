@@ -672,6 +672,15 @@ fn handle_filters(app: &mut App, key: KeyEvent) {
 /// rest are the list's keys (`n` adds, `␣` opens the menu…).
 fn handle_home(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     let picked = app.home_sel.is_some();
+    // With the "Add a task" bar picked, typing writes the task.
+    if app.home_sel.is_some_and(|s| s.tile == 0)
+        && let KeyCode::Char(c) = key.code
+        && !key.modifiers.contains(KeyModifiers::CONTROL)
+    {
+        apply_action(app, Action::BeginAdd);
+        app.draft_insert_char(c);
+        return;
+    }
     match key.code {
         KeyCode::Tab => app.home_tab(true),
         KeyCode::BackTab => app.home_tab(false),

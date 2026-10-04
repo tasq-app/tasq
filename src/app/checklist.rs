@@ -275,6 +275,16 @@ impl App {
                 Some(item.text),
                 title.to_lowercase(),
             );
+            // The last box ticked: the task is done too (a setting).
+            if done
+                && self.prefs.checklist_completes
+                && let Some(t) = self.cur_task().cloned()
+                && !t.done
+                && self.task_notes(&t).progress().is_some_and(|(d, n)| d == n)
+                && let Some(abs) = self.cur_abs()
+            {
+                self.toggle_complete(abs);
+            }
         }
     }
 
@@ -475,6 +485,32 @@ mod tests {
         let n = app.task_notes(&t);
         assert_eq!(n.progress(), Some((1, 1)));
         assert_eq!(n.items[0].text, "Tema 3");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn ticking_the_last_box_finishes_the_task() {
+        use crate::app::test_support::build_app_with_config;
+        let dir = std::env::temp_dir().join(format!(
+            "tasq-checklist-done-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        let cfg = crate::config::Config {
+            notes_dir: Some(dir.to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        let mut app = build_app_with_config("Repasar\n", cfg);
+        app.inspector_focus_on();
+        app.add_check_item("uno");
+        app.add_check_item("dos");
+        app.inspector_cursor = 0;
+        app.inspector_toggle();
+        assert!(!app.tasks()[0].done, "one box left");
+        app.inspector_cursor = 1;
+        app.inspector_toggle();
+        assert!(app.tasks()[0].done, "all ticked: done");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

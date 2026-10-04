@@ -53,6 +53,8 @@ pub struct Prefs {
     pub start_home: bool,
     /// Width of the details pane, in columns (`{` / `}` or drag its edge).
     pub details_w: u16,
+    /// Ticking a checklist's last box marks its task done.
+    pub checklist_completes: bool,
 }
 
 /// The details pane's width: by default, and how narrow or wide it goes.
@@ -98,6 +100,7 @@ impl Prefs {
             nerd_icons: cfg.icons.as_deref() == Some("nerd"),
             hints: cfg.hints.unwrap_or(true),
             start_home: cfg.start.as_deref() == Some("home"),
+            checklist_completes: cfg.checklist_completes.unwrap_or(true),
             details_w: cfg
                 .details_width
                 .unwrap_or(DETAILS_W)
@@ -203,6 +206,7 @@ impl Prefs {
         cfg.hints = Some(self.hints);
         cfg.design = Some(DESIGN);
         cfg.details_width = Some(self.details_w);
+        cfg.checklist_completes = Some(self.checklist_completes);
         cfg.start = Some(if self.start_home { "home" } else { "list" }.to_string());
         cfg.save()
     }

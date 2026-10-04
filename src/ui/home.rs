@@ -68,6 +68,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     };
     rounded(buf, cap, Style::default().bg(theme.panel).fg(cap_border));
     app.hits.add(cap, crate::app::Hit::HomeCapture);
+    app.home_bar.set(Some(cap));
     let pbg = Style::default().bg(theme.panel);
     let mut x = cap.x + 2;
     x += put(
@@ -83,13 +84,13 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         x,
         cap.y + 1,
         "\"repasar tema 4 tomorrow at 10 in exams\"",
-        cap.right().saturating_sub(x + 6),
+        cap.right().saturating_sub(x + 14),
         pbg.fg(theme.dim),
     );
     // The key that does it: n (or a click).
     put(
         buf,
-        cap.right() - 11,
+        cap.right() - 12,
         cap.y + 1,
         " n ",
         3,
@@ -100,10 +101,10 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     );
     put(
         buf,
-        cap.right() - 7,
+        cap.right() - 9,
         cap.y + 1,
-        " to add",
-        7,
+        "to add",
+        6,
         pbg.fg(theme.dim),
     );
 

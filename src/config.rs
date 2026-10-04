@@ -71,6 +71,8 @@ pub struct Config {
     pub mouse: Option<bool>,
     /// Width of the details pane, in columns.
     pub details_width: Option<u16>,
+    /// Ticking a checklist's last box marks its task done.
+    pub checklist_completes: Option<bool>,
     pub hints: Option<bool>,
 }
 
@@ -200,6 +202,7 @@ fn parse(s: &str) -> Config {
             "design" => c.design = v.parse().ok(),
             "mouse" => c.mouse = parse_bool(v),
             "details_width" => c.details_width = v.parse().ok(),
+            "checklist_completes" => c.checklist_completes = parse_bool(v),
             // Saved searches: `filter.<name> = <query>`. The name is the
             // (trimmed) text after the `filter.` prefix; the query is the
             // (unquoted) value, which may itself contain `=`. A repeated
@@ -281,6 +284,9 @@ fn serialize(c: &Config) -> String {
     if let Some(v) = c.mouse {
         let _ = writeln!(out, "mouse = {v}");
     }
+    if let Some(v) = c.checklist_completes {
+        let _ = writeln!(out, "checklist_completes = {v}");
+    }
     if let Some(v) = c.details_width {
         let _ = writeln!(out, "details_width = {v}");
     }
@@ -336,6 +342,7 @@ mod tests {
             design: Some(5),
             mouse: None,
             details_width: None,
+            checklist_completes: None,
             share_port: Some(18080),
             filters: vec![
                 ("weekly".into(), "report".into()),
@@ -503,6 +510,7 @@ mod tests {
             design: None,
             mouse: None,
             details_width: None,
+            checklist_completes: None,
             share_port: None,
             filters: vec![("errand".into(), "@errand".into())],
             notes_dir: Some("/tmp/notes".into()),

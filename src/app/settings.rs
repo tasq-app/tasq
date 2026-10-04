@@ -44,6 +44,7 @@ pub enum SetKey {
     Sort,
     WeekStart,
     RecBuilder,
+    ChecklistCompletes,
     PhoneCapture,
     Trash,
     Help,
@@ -194,6 +195,12 @@ impl App {
                     "Natural language",
                     "type prose: \"gym every mon 7am in personal\"".to_string(),
                     None,
+                ),
+                row(
+                    "Capture",
+                    "Checklist → done",
+                    on(p.checklist_completes),
+                    Some(SetKey::ChecklistCompletes),
                 ),
                 row(
                     "Capture",
@@ -358,6 +365,10 @@ impl App {
             }
             SetKey::StartOn => {
                 self.prefs.start_home = !self.prefs.start_home;
+                None
+            }
+            SetKey::ChecklistCompletes => {
+                self.prefs.checklist_completes = !self.prefs.checklist_completes;
                 None
             }
             SetKey::RecBuilder => {

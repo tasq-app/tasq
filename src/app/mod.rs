@@ -161,6 +161,9 @@ pub struct App {
     pub resizing: bool,
     /// The screen's width, as last drawn.
     pub screen_w: std::cell::Cell<u16>,
+    /// Where Home's "Add a task" bar was drawn: adding from Home types
+    /// there.
+    pub home_bar: std::cell::Cell<Option<ratatui::layout::Rect>>,
     /// The Notes screen, when it's up.
     pub notes_screen: Option<NotesScreen>,
     /// The Trash screen, when it's up.
@@ -345,6 +348,7 @@ impl App {
             search_all: SearchAll::default(),
             resizing: false,
             screen_w: std::cell::Cell::new(0),
+            home_bar: std::cell::Cell::new(None),
             notes_screen: None,
             trash_screen: None,
             settings: SettingsState::default(),
