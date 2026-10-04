@@ -391,7 +391,9 @@ fn disable_bracketed_paste() {
 /// bracketed paste, so pasting into the task dialog, search, prompts… works
 /// exactly as before.
 fn handle_paste(app: &mut App, text: &str, keybinds: &KeyBindings) {
-    let insert_editor = if app.pinned_focus {
+    let insert_editor = if let Some(e) = app.notes_screen.as_mut().and_then(|s| s.editor.as_mut()) {
+        Some(e)
+    } else if app.pinned_focus {
         app.active_pinned_note_mut()
     } else if app.mode == Mode::Notes {
         app.notes_popup.active_editor.as_mut()
@@ -678,6 +680,24 @@ fn handle_home(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
 /// the preview, `e` edits in `$EDITOR`, `p` pins it beside the list,
 /// `Enter` goes to its task, `Esc` back to the list.
 fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    // The note open in the built-in editor takes every key.
+    if let Some(editor) = app.notes_screen.as_mut().and_then(|s| s.editor.as_mut()) {
+        let signal = match editor.mode() {
+            NoteEditorMode::Insert => handle_note_editor_insert(editor, key),
+            _ => handle_note_editor_normal(editor, key),
+        };
+        match signal {
+            NoteEditorSignal::Handled => {}
+            NoteEditorSignal::SaveFailed(msg) => app.flash(msg),
+            NoteEditorSignal::OpenExternal(path) => app.queue_editor_path(path),
+            NoteEditorSignal::Esc | NoteEditorSignal::CloseRequested => {
+                if let Some(s) = app.notes_screen.as_mut() {
+                    s.editor = None;
+                }
+            }
+        }
+        return;
+    }
     let searching = app.notes_screen.as_ref().is_some_and(|s| s.searching);
     if searching {
         match key.code {
@@ -709,9 +729,14 @@ fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Char('k') | KeyCode::Up => app.notes_screen_move(false),
         KeyCode::Char('J') | KeyCode::PageDown => app.notes_screen_scroll(true),
         KeyCode::Char('K') | KeyCode::PageUp => app.notes_screen_scroll(false),
-        KeyCode::Char('e') => app.notes_screen_edit(),
+        KeyCode::Enter | KeyCode::Char('e' | 'l') | KeyCode::Right => {
+            app.notes_screen_open_editor();
+        }
+        KeyCode::Char('E') => app.notes_screen_edit(),
+        KeyCode::Char('n') => app.notes_screen_next_hit(true),
+        KeyCode::Char('N') => app.notes_screen_next_hit(false),
         KeyCode::Char('p') => app.notes_screen_pin(),
-        KeyCode::Enter => app.notes_screen_open_task(),
+        KeyCode::Char('t') => app.notes_screen_open_task(),
         _ => handle_normal(app, key, keybinds),
     }
 }

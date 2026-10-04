@@ -123,7 +123,16 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         put(buf, x, y + 1, &e.when, rest, row.fg(theme.dim));
     }
 
-    // The note.
+    // The note: in the built-in editor when it's open there.
+    if let Some(editor) = state.editor.as_ref() {
+        let r = Rect {
+            x: doc.x + 1,
+            width: doc.width.saturating_sub(1),
+            ..doc
+        };
+        super::note_editor::render_editor(frame, r, theme, editor, true);
+        return;
+    }
     let Some(e) = entries.get(state.cursor) else {
         return;
     };
@@ -146,7 +155,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         inner.x,
         inner.y + 1,
         &format!(
-            "edited {} · e edit in $EDITOR · p pin beside the list",
+            "edited {} · Enter edit · E $EDITOR · p pin · t its task",
             e.when
         ),
         inner.width,
@@ -178,11 +187,77 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         usize::from(body.width),
         theme,
     );
+    // The search, found in the note: n / N walk its hits.
+    let query = state.query.trim().to_lowercase();
+    let hit_lines: Vec<usize> = if query.is_empty() {
+        Vec::new()
+    } else {
+        rendered
+            .lines
+            .iter()
+            .enumerate()
+            .filter(|(_, l)| {
+                l.spans
+                    .iter()
+                    .map(|s| s.content.as_ref())
+                    .collect::<String>()
+                    .to_lowercase()
+                    .contains(&query)
+            })
+            .map(|(i, _)| i)
+            .collect()
+    };
+    let current = state
+        .hit
+        .filter(|_| !hit_lines.is_empty())
+        .map(|h| hit_lines[h % hit_lines.len()]);
+    let scroll = current.map_or(state.scroll, |l| l.saturating_sub(2) as u16);
     let para = Paragraph::new(rendered.lines)
         .style(bg.fg(theme.fg))
         .wrap(Wrap { trim: false })
-        .scroll((state.scroll, 0));
+        .scroll((scroll, 0));
     frame.render_widget(para, body);
+    if !query.is_empty() {
+        let n = query.chars().count();
+        let buf = frame.buffer_mut();
+        for y in body.top()..body.bottom() {
+            let cells: Vec<String> = (body.left()..body.right())
+                .map(|x| buf[(x, y)].symbol().to_lowercase())
+                .collect();
+            let is_current = current.is_some_and(|l| l as u16 == scroll + (y - body.y));
+            let mut i = 0;
+            while i + n <= cells.len() {
+                if cells[i..i + n].concat() == query {
+                    for k in i..i + n {
+                        let c = &mut buf[(body.x + k as u16, y)];
+                        let mark = if is_current {
+                            theme.accent
+                        } else {
+                            theme.matched
+                        };
+                        c.set_bg(mark);
+                        c.set_fg(theme.bg);
+                    }
+                    i += n;
+                } else {
+                    i += 1;
+                }
+            }
+        }
+        if !hit_lines.is_empty() {
+            let at = state.hit.map_or(0, |h| h % hit_lines.len() + 1);
+            let label = format!(" {at}/{} · n N ", hit_lines.len());
+            let w = label.chars().count() as u16;
+            put(
+                buf,
+                inner.right().saturating_sub(w),
+                inner.y,
+                &label,
+                w,
+                bg.fg(theme.matched),
+            );
+        }
+    }
     if foot > 0 {
         let buf = frame.buffer_mut();
         let y = inner.bottom() - 2;

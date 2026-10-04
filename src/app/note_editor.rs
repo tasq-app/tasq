@@ -567,7 +567,9 @@ impl App {
     /// `app.mode` alone (it stays `Mode::Normal` while a pinned note has
     /// focus — see `src/app/pinned_note.rs`).
     pub fn focused_note_editor(&self) -> Option<&NoteEditorState> {
-        if self.pinned_focus {
+        if let Some(e) = self.notes_screen.as_ref().and_then(|s| s.editor.as_ref()) {
+            Some(e)
+        } else if self.pinned_focus {
             self.active_pinned_note()
         } else if self.mode == super::types::Mode::Notes {
             self.notes_popup.active_editor.as_ref()
@@ -582,6 +584,12 @@ impl App {
             .active_editor
             .iter_mut()
             .chain(self.pinned_notes.iter_mut())
+            .chain(
+                self.notes_screen
+                    .as_mut()
+                    .and_then(|s| s.editor.as_mut())
+                    .into_iter(),
+            )
     }
 
     /// After `path` was edited in `$EDITOR`, re-read it into every open

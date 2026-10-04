@@ -50,8 +50,10 @@ local database, notes, live natural-language capture and more, listed below.
   (`Gym · 13 in a row`).
 - **Notes screen** (`N`): every note, the one you touched last on top, with
   a search box; the selected one rendered beside the list, checkboxes and
-  all, and the tasks that link to it underneath. `e` edits it in
-  `$EDITOR`, `p` pins it beside the list, `Enter` goes to its task.
+  all, and the tasks that link to it underneath. A search lights up its
+  hits in the note (`n` / `N` walk them). `Enter` opens the note in the
+  built-in vim-style editor (`:w`, `:q`, `:wq`), `E` in `$EDITOR`, `p`
+  pins it beside the list, `t` goes to its task.
 - **Settings and profile** (`,`): you, then sections — sync and
   calendars (coming), appearance, lists, capture, data and the trash,
   keys, about — each a card of settings; `Enter` changes one and it's
@@ -608,7 +610,7 @@ The modal keys below apply in Normal mode:
 | `/` | search (a `due:` term filters by date range; see [todo.txt format](#todotxt-format)) |
 | `0` | Home (`Enter` or `Esc` there goes to Today, `i` to the Inbox) |
 | `P` | focus timer: start on the current task, pause, resume (`␣ t` for a break or to stop) |
-| `N` | Notes screen (`/` search, `j` / `k` move, `J` / `K` scroll, `e` edit in `$EDITOR`, `p` pin, `Enter` its task, `Esc` back) |
+| `N` | Notes screen (`/` search, `n` / `N` next / previous hit, `j` / `k` move, `J` / `K` scroll, `Enter` edit in the built-in editor, `E` in `$EDITOR`, `p` pin, `t` its task, `Esc` back) |
 | `1` / `2` / `3` | Today / Upcoming / All |
 | `4` / `5` / `6` | Calendar: day / week / month (see [Calendar](#calendar)) |
 | `f` | filter popover: type to search spaces (sub-spaces included), tags, deadlines and priority; `↑` / `↓` move, `Enter` adds the filter (or removes it, if it's on), `⌫` with nothing typed drops the last chip, `Esc` closes. With filters on, it can save them as a view or clear them all |

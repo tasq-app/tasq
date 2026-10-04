@@ -171,13 +171,13 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     if let Some(ns) = app
         .notes_screen
         .as_ref()
-        .filter(|_| app.mode == Mode::Normal)
+        .filter(|s| app.mode == Mode::Normal && s.editor.is_none())
         && !app.sidebar_focus
     {
         hint = if ns.searching {
             "type to search · Enter done · Esc clear".into()
         } else if app.prefs.hints {
-            "/ search · e edit · p pin · Enter its task · J/K scroll · Esc list".into()
+            "Enter edit · / search · n next hit · E $EDITOR · p pin · t its task".into()
         } else {
             "".into()
         };
@@ -260,7 +260,13 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             format!("  {} selected", app.selection.len()),
             bg.fg(theme.accent),
         ));
-    } else if app.mode == Mode::Normal && !app.home && app.calendar.is_none() {
+    } else if app.mode == Mode::Normal
+        && !app.home
+        && app.calendar.is_none()
+        && app.notes_screen.is_none()
+        && app.trash_screen.is_none()
+        && editor_mode.is_none()
+    {
         left.push(Span::styled(
             format!("  {}", where_you_are(app)),
             bg.fg(theme.dim),
