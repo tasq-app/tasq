@@ -63,6 +63,7 @@ pub fn entries(p: MenuPage) -> Vec<MenuEntry> {
         MenuPage::Go => vec![
             act('h', "home", Action::GoHome),
             act('i', "inbox", Action::GoInbox),
+            act('n', "notes", Action::GoNotes),
             act('t', "today", Action::ScopeToday),
             act('u', "upcoming", Action::ScopeUpcoming),
             act('a', "all tasks", Action::ScopeAll),

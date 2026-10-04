@@ -11,6 +11,7 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           6  │                                        │                               
    ≡ All tasks         15  │                                        │                               
    ▦ Calendar              │                                        │                               
+   ✎ Notes                 │                                        │                               
    ⌕ Search             /  │                                        │                               
                            │                                        │                               
   SPACES                   │                                        │                               
@@ -26,7 +27,6 @@ expression: buffer_to_text(&buf)
    ⚑ High priority      2  │                                        │                               
    ★ Starred            0  │                                        │                               
    ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
                            │                                        │                               
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               

@@ -25,9 +25,45 @@ pub struct RecentNote {
     pub when: String,
 }
 
+/// A note's `# ` heading, else its file name.
+pub fn note_title(path: &std::path::Path, body: &str) -> String {
+    body.lines()
+        .find_map(|l| l.strip_prefix("# "))
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| {
+            path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("note")
+                .replace(['-', '_'], " ")
+        })
+}
+
+/// When, in a few words: "just now", "5m ago", "2h ago", "yesterday",
+/// "thu", "28 sep".
+pub fn ago(at: chrono::DateTime<chrono::Utc>, today: NaiveDate) -> String {
+    let mins = (chrono::Utc::now() - at).num_minutes().max(0);
+    let day = at.with_timezone(&chrono::Local).date_naive();
+    if mins < 1 {
+        "just now".to_string()
+    } else if mins < 60 {
+        format!("{mins}m ago")
+    } else if day == today {
+        format!("{}h ago", mins / 60)
+    } else if Some(day) == today.pred_opt() {
+        "yesterday".to_string()
+    } else if (today - day).num_days() < 7 {
+        day.format("%a").to_string().to_lowercase()
+    } else {
+        day.format("%-d %b").to_string().to_lowercase()
+    }
+}
+
 impl App {
     pub fn open_home(&mut self) {
         self.calendar = None;
+        self.notes_screen = None;
         self.home = true;
         self.mode = Mode::Normal;
         self.inspector_focus = false;
@@ -130,40 +166,15 @@ impl App {
 
     /// The notes you changed last.
     pub fn home_recent_notes(&self, limit: usize) -> Vec<RecentNote> {
-        let now = chrono::Utc::now();
         let today = self.today_naive();
         crate::note_store::recent(self.notes_dir(), limit)
             .into_iter()
             .map(|(path, at)| {
                 let body = crate::note_store::read(&path).unwrap_or_default();
-                let title = body
-                    .lines()
-                    .find_map(|l| l.strip_prefix("# "))
-                    .map(str::trim)
-                    .filter(|t| !t.is_empty())
-                    .map(str::to_string)
-                    .unwrap_or_else(|| {
-                        path.file_stem()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or("note")
-                            .replace(['-', '_'], " ")
-                    });
-                let mins = (now - at).num_minutes().max(0);
-                let day = at.with_timezone(&chrono::Local).date_naive();
-                let when = if mins < 1 {
-                    "just now".to_string()
-                } else if mins < 60 {
-                    format!("{mins}m ago")
-                } else if day == today {
-                    format!("{}h ago", mins / 60)
-                } else if Some(day) == today.pred_opt() {
-                    "yesterday".to_string()
-                } else if (today - day).num_days() < 7 {
-                    day.format("%a").to_string().to_lowercase()
-                } else {
-                    day.format("%-d %b").to_string().to_lowercase()
-                };
-                RecentNote { title, when }
+                RecentNote {
+                    title: note_title(&path, &body),
+                    when: ago(at, today),
+                }
             })
             .collect()
     }

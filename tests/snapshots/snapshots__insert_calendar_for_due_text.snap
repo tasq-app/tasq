@@ -11,22 +11,22 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           6  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
    ≡ All tasks         15  │  PRIORITY B  3  ───────────────────────│                               
    ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
-   ⌕ Search             /  │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
-                           │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-  SPACES                   │  PRIORITY C  2  ───────────────────────│                               
-   ● work ╭──────────────────────────────────────────────────────────────────────────────╮          
-   ● healt│                                                                              │          
-   ● finan│  > ⚑ (A) Renew passport before summer trip  +travel   @errands ▏       ↑     │          
-   ● home │                                                                              │          
-   ● learn│                       + travel     @ errands     ⚑ (A)                       │          
-   ● perso│                                                                              │          
-   ● trave╰──────────────────────────────────────────────────────────────────────────────╯          
-              ╭ DUE ───────────────────────────────────────────╮e Ap│                               
-  FILTERS     │  ‹  May 2026  ›                                │ @ho│                               
-   ⚑ High prio│    S   M   T   W   T   F   S                   │ per│                               
-   ★ Starred  │                        1   2                   │r  ●│                               
-   ◷ Overdue  │    3   4   5   6   7   8   9                   │    │                               
-              │   10  11  12  13  14  15  16                   │    │                               
+   ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
+   ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
+                           │  PRIORITY C  2  ───────────────────────│                               
+  SPACES  ╭──────────────────────────────────────────────────────────────────────────────╮          
+   ● work │                                                                              │          
+   ● healt│  > ⚑ (A) Renew passport before summer trip  +travel   @errands ▏       ↑     │          
+   ● finan│                                                                              │          
+   ● home │                       + travel     @ errands     ⚑ (A)                       │          
+   ● learn│                                                                              │          
+   ● perso╰──────────────────────────────────────────────────────────────────────────────╯          
+   ● travel   ╭ DUE ───────────────────────────────────────────╮e Ap│                               
+              │  ‹  May 2026  ›                                │ @ho│                               
+  FILTERS     │    S   M   T   W   T   F   S                   │ per│                               
+   ⚑ High prio│                        1   2                   │r  ●│                               
+   ★ Starred  │    3   4   5   6   7   8   9                   │    │                               
+   ◷ Overdue  │   10  11  12  13  14  15  16                   │    │                               
               │   17  18  19  20  21  22  23                   │    │                               
               │   24  25  26  27  28  29  30                   │    │                               
  ╭────────────│   31                                           │    │                               

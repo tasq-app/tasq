@@ -11,22 +11,22 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           6  │  2  ☐ ⚑ Call dentist to reschedule clea│  tags      @laptop            
    ≡ All tasks         15  │  PRIORITY B  3  ───────────────────────│                               
    ▦ Calendar              │  3  ☐ ⚑ Review pull requests for auth r│  CHECKLIST                    
-   ⌕ Search             /  │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
-                           │  5  ☐ ⚑ Draft hiring rubric for senior │                               
-  SPACES                   │  PRIORITY C  2  ───────────────────────│                               
-   ● work ╭──────────────────────────────────────────────────────────────────────────────╮          
-   ● healt│                                                                              │          
-   ● finan│  > ⚑ (A) Buy milk  +groceries   @errands  ⇥ due:2026-05-10▏            ↑     │          
-   ● home │                                                                              │          
-   ● learn│            ⇥ by sun 10 may     + groceries     @ errands     ⚑ (A)           │          
-   ● perso│                                                                              │          
-   ● trave╰──────────────────────────────────────────────────────────────────────────────╯          
-                           │ 12  ☐ Read "Designing Data-Intensive Ap│                               
-  FILTERS                  │ 13  ☐ Send thank-you note to mentor @ho│                               
-   ⚑ High priority      2  │ 14  ☐ Plan Saturday hike with K.  ● per│                               
-   ★ Starred            0  │ 15  ☐ Replace bathroom faucet washer  ●│                               
+   ✎ Notes                 │  4  ☐ ⚑ Renew passport before summer tr│  + add item                   
+   ⌕ Search             /  │  5  ☐ ⚑ Draft hiring rubric for senior │                               
+                           │  PRIORITY C  2  ───────────────────────│                               
+  SPACES  ╭──────────────────────────────────────────────────────────────────────────────╮          
+   ● work │                                                                              │          
+   ● healt│  > ⚑ (A) Buy milk  +groceries   @errands  ⇥ due:2026-05-10▏            ↑     │          
+   ● finan│                                                                              │          
+   ● home │            ⇥ by sun 10 may     + groceries     @ errands     ⚑ (A)           │          
+   ● learn│                                                                              │          
+   ● perso╰──────────────────────────────────────────────────────────────────────────────╯          
+   ● travel             1  │ 12  ☐ Read "Designing Data-Intensive Ap│                               
+                           │ 13  ☐ Send thank-you note to mentor @ho│                               
+  FILTERS                  │ 14  ☐ Plan Saturday hike with K.  ● per│                               
+   ⚑ High priority      2  │ 15  ☐ Replace bathroom faucet washer  ●│                               
+   ★ Starred            0  │                                        │                               
    ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
                            │                                        │                               
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               

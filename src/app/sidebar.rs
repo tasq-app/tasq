@@ -24,6 +24,7 @@ pub enum NavItem {
     Upcoming,
     All,
     Calendar,
+    Notes,
     Search,
     Space(String),
     Preset(Preset),
@@ -88,6 +89,7 @@ impl App {
             ),
             row(NavItem::All, "All tasks", Some(open_in(Scope::All))),
             row(NavItem::Calendar, "Calendar", None),
+            row(NavItem::Notes, "Notes", None),
             row(NavItem::Search, "Search", None),
         ];
         for s in self.store.space_tree() {
@@ -122,6 +124,9 @@ impl App {
     pub fn sidebar_active(&self) -> Option<NavItem> {
         if self.home {
             return Some(NavItem::Home);
+        }
+        if self.notes_screen.is_some() {
+            return Some(NavItem::Notes);
         }
         if self.calendar.is_some() {
             return Some(NavItem::Calendar);
@@ -198,9 +203,11 @@ impl App {
     pub fn sidebar_open(&mut self, item: &NavItem) {
         self.calendar = None;
         self.home = false;
+        self.notes_screen = None;
         self.mode = Mode::Normal;
         match item {
             NavItem::Home => self.open_home(),
+            NavItem::Notes => self.open_notes_screen(),
             NavItem::Inbox => {
                 self.filter.clear();
                 self.filter.preset = Some(Preset::Inbox);

@@ -11,22 +11,22 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           6  │  THIS WEEK  2  ────────────────────────│  tags      @laptop            
    ≡ All tasks         15  │  2  ☐ ⚑ Review pull requests for auth r│                               
    ▦ Calendar              │  3  ☐ ⚑ Call dentist to reschedule clea│  CHECKLIST                    
-   ⌕ Search             /  │  NEXT WEEK  2  ────────────────────────│  + add item                   
-                           │  4  ☐ Migrate analytics to new pipeline│                               
-  SPACES                   │  5  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│                               
-   ● work               4  │  LATER  2  ────────────────────────────│                               
-   ● health             3  │  6  ☐ ⚑ Renew passport before summer tr│                               
-   ● finance            2  │  7  ☐ ⚑ Pay quarterly estimated taxes  │                               
-   ● home               1  │  NO DUE DATE  8  ──────────────────────│                               
-   ● learning           1  │  8  ☐ ⚑ Draft hiring rubric for senior │                               
-   ● personal           1  │  9  ☐ ⚑ Order new running shoes  ● heal│                               
-   ● travel             1  │ 10  ☐ Pick up dry cleaning @errands    │                               
-                           │ 11  ☐ Schedule annual physical  ● healt│                               
-  FILTERS                  │ 12  ☐ Read "Designing Data-Intensive Ap│                               
-   ⚑ High priority      2  │ 13  ☐ Send thank-you note to mentor @ho│                               
-   ★ Starred            0  │ 14  ☐ Plan Saturday hike with K.  ● per│                               
-   ◷ Overdue            7  │ 15  ☐ Replace bathroom faucet washer  ●│                               
-                           │                                        │                               
+   ✎ Notes                 │  NEXT WEEK  2  ────────────────────────│  + add item                   
+   ⌕ Search             /  │  4  ☐ Migrate analytics to new pipeline│                               
+                           │  5  ☐ Pay rent  ◷ by fri 15 may   ↻ eve│                               
+  SPACES                   │  LATER  2  ────────────────────────────│                               
+   ● work               4  │  6  ☐ ⚑ Renew passport before summer tr│                               
+   ● health             3  │  7  ☐ ⚑ Pay quarterly estimated taxes  │                               
+   ● finance            2  │  NO DUE DATE  8  ──────────────────────│                               
+   ● home               1  │  8  ☐ ⚑ Draft hiring rubric for senior │                               
+   ● learning           1  │  9  ☐ ⚑ Order new running shoes  ● heal│                               
+   ● personal           1  │ 10  ☐ Pick up dry cleaning @errands    │                               
+   ● travel             1  │ 11  ☐ Schedule annual physical  ● healt│                               
+                           │ 12  ☐ Read "Designing Data-Intensive Ap│                               
+  FILTERS                  │ 13  ☐ Send thank-you note to mentor @ho│                               
+   ⚑ High priority      2  │ 14  ☐ Plan Saturday hike with K.  ● per│                               
+   ★ Starred            0  │ 15  ☐ Replace bathroom faucet washer  ●│                               
+   ◷ Overdue            7  │                                        │                               
                            │                                        │                               
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               

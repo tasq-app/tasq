@@ -11,13 +11,13 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           0  │                                        │                               
    ≡ All tasks          0  │                                        │                               
    ▦ Calendar         ╭ tasq · welcome ──────────────────────────────────────╮                      
-   ⌕ Search           │                    ██          ██                    │                      
-                      │                    ████  ██  ████                    │                      
-  FILTERS             │                    ██████████████                    │                      
-   ⚑ High priority    │                    ████  ██  ████                    │                      
-   ★ Starred          │                    ██          ██                    │                      
-   ◷ Overdue          │                                                      │                      
-                      │  no todo.txt in this folder yet                      │                      
+   ✎ Notes            │                    ██          ██                    │                      
+   ⌕ Search           │                    ████  ██  ████                    │                      
+                      │                    ██████████████                    │                      
+  FILTERS             │                    ████  ██  ████                    │                      
+   ⚑ High priority    │                    ██          ██                    │                      
+   ★ Starred          │                                                      │                      
+   ◷ Overdue          │  no todo.txt in this folder yet                      │                      
                       │                                                      │                      
                       │   c           create ./todo.txt here                 │                      
                       │   s           open the sample                        │                      

@@ -529,6 +529,7 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::Normal if app.sidebar_focus => handle_sidebar(app, key, keybinds),
         Mode::Normal if app.inspector_focus => handle_inspector(app, key, keybinds),
         Mode::Normal if app.home => handle_home(app, key, keybinds),
+        Mode::Normal if app.notes_screen.is_some() => handle_notes_screen(app, key, keybinds),
         Mode::Normal if app.calendar.is_some() => handle_calendar(app, key, keybinds),
         Mode::Normal | Mode::Visual => handle_normal(app, key, keybinds),
     }
@@ -588,6 +589,48 @@ fn handle_home(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     match key.code {
         KeyCode::Enter | KeyCode::Esc => app.close_home(),
         KeyCode::Char('i') => app.open_inbox(),
+        _ => handle_normal(app, key, keybinds),
+    }
+}
+
+/// Keys on the Notes screen: `/` searches, `j`/`k` move, `J`/`K` scroll
+/// the preview, `e` edits in `$EDITOR`, `p` pins it beside the list,
+/// `Enter` goes to its task, `Esc` back to the list.
+fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
+    let searching = app.notes_screen.as_ref().is_some_and(|s| s.searching);
+    if searching {
+        match key.code {
+            KeyCode::Esc => {
+                if let Some(s) = app.notes_screen.as_mut() {
+                    s.query.clear();
+                    s.searching = false;
+                }
+            }
+            KeyCode::Enter | KeyCode::Down | KeyCode::Tab => {
+                if let Some(s) = app.notes_screen.as_mut() {
+                    s.searching = false;
+                }
+            }
+            KeyCode::Backspace => app.notes_screen_backspace(),
+            KeyCode::Char(c) => app.notes_screen_type(c),
+            _ => {}
+        }
+        return;
+    }
+    match key.code {
+        KeyCode::Esc => app.close_notes_screen(),
+        KeyCode::Char('/') => {
+            if let Some(s) = app.notes_screen.as_mut() {
+                s.searching = true;
+            }
+        }
+        KeyCode::Char('j') | KeyCode::Down => app.notes_screen_move(true),
+        KeyCode::Char('k') | KeyCode::Up => app.notes_screen_move(false),
+        KeyCode::Char('J') | KeyCode::PageDown => app.notes_screen_scroll(true),
+        KeyCode::Char('K') | KeyCode::PageUp => app.notes_screen_scroll(false),
+        KeyCode::Char('e') => app.notes_screen_edit(),
+        KeyCode::Char('p') => app.notes_screen_pin(),
+        KeyCode::Enter => app.notes_screen_open_task(),
         _ => handle_normal(app, key, keybinds),
     }
 }
@@ -1857,6 +1900,7 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('a') => Action::ToggleArchiveView,
         KeyCode::Char('l') => Action::GoList,
         KeyCode::Char('0') => Action::GoHome,
+        KeyCode::Char('N') => Action::GoNotes,
         KeyCode::Char('1') => Action::ScopeToday,
         KeyCode::Char('2') => Action::ScopeUpcoming,
         KeyCode::Char('3') => Action::ScopeAll,
@@ -2119,6 +2163,7 @@ fn apply_action(app: &mut App, action: Action) {
         Action::OpenFilters => app.open_filters(),
         Action::GoHome => app.open_home(),
         Action::GoInbox => app.open_inbox(),
+        Action::GoNotes => app.open_notes_screen(),
         Action::PickProject => app.enter_pick_project(),
         Action::PickContext => app.enter_pick_context(),
         Action::PickSavedFilter => app.enter_pick_saved(),
@@ -2229,7 +2274,11 @@ fn handle_normal(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         return;
     }
     if app.mode == Mode::Normal && key.code == KeyCode::Tab && key.modifiers.is_empty() {
-        if app.calendar.is_none() && !app.home && app.cur_task().is_some() {
+        if app.calendar.is_none()
+            && !app.home
+            && app.notes_screen.is_none()
+            && app.cur_task().is_some()
+        {
             app.inspector_focus_on();
         } else {
             app.sidebar_toggle_focus();

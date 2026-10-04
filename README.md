@@ -48,6 +48,10 @@ local database, notes, live natural-language capture and more, listed below.
 - **Routines and streaks**: a repeating task counts how many times in a
   row you've done it, and the done notice says so the moment you tick it
   (`Gym · 13 in a row`).
+- **Notes screen** (`N`): every note, the one you touched last on top, with
+  a search box; the selected one rendered beside the list, checkboxes and
+  all, and the tasks that link to it underneath. `e` edits it in
+  `$EDITOR`, `p` pins it beside the list, `Enter` goes to its task.
 - **Readable rows**: a task shows its title, then chips: when (`today ·
   16:00 · 2h`), the deadline (`◷ by fri 9 oct`, red when due or late), the
   repeat (`↻ every mon, wed, fri`), its space in the space's colour and its
@@ -592,6 +596,7 @@ The modal keys below apply in Normal mode:
 | --- | --- |
 | `/` | search (a `due:` term filters by date range; see [todo.txt format](#todotxt-format)) |
 | `0` | Home (`Enter` or `Esc` there goes to Today, `i` to the Inbox) |
+| `N` | Notes screen (`/` search, `j` / `k` move, `J` / `K` scroll, `e` edit in `$EDITOR`, `p` pin, `Enter` its task, `Esc` back) |
 | `1` / `2` / `3` | Today / Upcoming / All |
 | `4` / `5` / `6` | Calendar: day / week / month (see [Calendar](#calendar)) |
 | `f` | filter popover: type to search spaces (sub-spaces included), tags, deadlines and priority; `↑` / `↓` move, `Enter` adds the filter (or removes it, if it's on), `⌫` with nothing typed drops the last chip, `Esc` closes. With filters on, it can save them as a view or clear them all |

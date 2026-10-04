@@ -121,6 +121,7 @@ impl App {
     /// Open the calendar on `view`, at today (or where it was).
     pub fn open_cal(&mut self, view: CalView) {
         self.home = false;
+        self.notes_screen = None;
         let today = self.today_naive();
         let state = match self.calendar.take() {
             Some(mut s) => {

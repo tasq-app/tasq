@@ -11,9 +11,10 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming       ╭ tasq · command ──────────────────────────────────────────╮ @laptop            
    ≡ All tasks      │ > arch█  3 matches                                       │                    
    ▦ Calendar       │──────────────────────────────────────────────────────────│                    
-   ⌕ Search         │ ▶ archive completed tasks                              A │m                   
-                    │   toggle archive view                                  a │                    
-  SPACES            │   fuzzy search                                         / │                    
+   ✎ Notes          │ ▶ archive completed tasks                              A │m                   
+   ⌕ Search         │   toggle archive view                                  a │                    
+                    │   fuzzy search                                         / │                    
+  SPACES            │                                                          │                    
    ● work           │                                                          │                    
    ● health         │                                                          │                    
    ● finance        │                                                          │                    
@@ -25,8 +26,7 @@ expression: buffer_to_text(&buf)
   FILTERS           │                                                          │                    
    ⚑ High priority  │                                                          │                    
    ★ Starred        │                                                          │                    
-   ◷ Overdue        │                                                          │                    
-                    │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
+   ◷ Overdue        │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
                     ╰──────────────────────────────────────────────────────────╯                    
                            │                                        │                               
  ╭───────────────────────╮ │                                        │                               

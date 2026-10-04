@@ -161,6 +161,21 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         };
         mode_label = "HOME".into();
     }
+    if let Some(ns) = app
+        .notes_screen
+        .as_ref()
+        .filter(|_| app.mode == Mode::Normal)
+        && !app.sidebar_focus
+    {
+        hint = if ns.searching {
+            "type to search · Enter done · Esc clear".into()
+        } else if app.prefs.hints {
+            "/ search · e edit · p pin · Enter its task · J/K scroll · Esc list".into()
+        } else {
+            "".into()
+        };
+        mode_label = "NOTES".into();
+    }
     if app.inspector_focus && app.mode == Mode::Normal {
         hint = if !app.prefs.hints {
             "".into()
