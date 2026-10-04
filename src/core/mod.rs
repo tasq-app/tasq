@@ -133,6 +133,14 @@ impl Store {
         Self::from_db(db::Db::in_memory(), PathBuf::from(":memory:"), today.into()).unwrap()
     }
 
+    /// Treat whatever other connections have written so far as already
+    /// seen (our own process, at startup).
+    pub fn settle_external_changes(&mut self) {
+        if let Some(db) = self.db.as_mut() {
+            let _ = db.changed_externally();
+        }
+    }
+
     /// True when backed by a database rather than a todo.txt file.
     pub fn is_db(&self) -> bool {
         self.db.is_some()

@@ -18,7 +18,7 @@ expression: buffer_to_text(&buf)
    ● learn│                                                                              │          
    ● perso│  > Buy milk  +groceries ▏                                              ↑     │          
    ● trave│                                                                              │          
-          │    + groceries                                                               │          
+          │                                  + groceries                                 │          
  TAGS     │                                                                              │          
    @errand╰──────────────────────────────────────────────────────────────────────────────╯          
    @home      ╭ PRIORITY ────────────╮ Saturday hike with K.  ● pe                                  

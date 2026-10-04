@@ -37,8 +37,26 @@ impl Flash {
 }
 
 impl App {
+    /// Show a message: a toast at the top right, its kind guessed from the
+    /// wording.
     pub fn flash(&mut self, msg: impl Into<String>) {
+        let msg = msg.into();
+        let kind = super::ToastKind::of(&msg);
+        self.toasts.push(kind, msg.clone(), None, Instant::now());
         self.flash_state.set(msg);
+    }
+
+    /// A toast with a title and a detail, e.g. "Done · Gym"; `flash` is the
+    /// plain message kept for anything that reads it back.
+    pub fn toast(
+        &mut self,
+        kind: super::ToastKind,
+        title: impl Into<String>,
+        detail: Option<String>,
+        flash: impl Into<String>,
+    ) {
+        self.toasts.push(kind, title.into(), detail, Instant::now());
+        self.flash_state.set(flash);
     }
 
     pub fn clear_flash(&mut self) {

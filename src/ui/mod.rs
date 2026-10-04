@@ -27,6 +27,7 @@ pub mod status;
 pub mod task_row;
 pub mod theme_picker;
 pub mod title;
+pub mod toast;
 pub mod welcome;
 
 // Pane and overlay sizing. Promoted out of inline literals so the three
@@ -223,6 +224,8 @@ pub fn draw(frame: &mut Frame, app: &App) {
         }
         _ => {}
     }
+    // Toasts float above everything.
+    toast::render(frame, area, app, 1);
     // OSC 8 hyperlinks are applied post-draw by the caller (see
     // `hyperlinks::collect` + `emit_overlay`). Doing it inside the buffer
     // breaks ratatui's diff width calculation — keep cell symbols pristine.

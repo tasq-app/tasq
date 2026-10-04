@@ -54,9 +54,6 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     {
         mode_label = cal.view.label().into();
     }
-    if let Some(f) = app.flash_active() {
-        mode_label = format!("{mode_label} · {f}").into();
-    }
 
     // T11: while the pinned note has keyboard focus, `app.mode` stays
     // `Mode::Normal` (that's the point — see `src/app/pinned_note.rs`), so

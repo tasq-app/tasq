@@ -18,7 +18,7 @@ expression: buffer_to_text(&buf)
    ● learn│                                                                              │          
    ● perso│  > ⚑ (A) Renew passport before summer trip  +travel   @errands ▏       ↑     │          
    ● trave│                                                                              │          
-          │    + travel     @ errands     ⚑ (A)                                          │          
+          │                       + travel     @ errands     ⚑ (A)                       │          
  TAGS     │                                                                              │          
    @errand╰──────────────────────────────────────────────────────────────────────────────╯          
    @home      ╭ DUE ───────────────────────────────────────────╮pe                                  
