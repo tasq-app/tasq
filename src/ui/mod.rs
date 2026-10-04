@@ -40,7 +40,7 @@ pub mod welcome;
 // Pane and overlay sizing. Promoted out of inline literals so the three
 // `MIN_BODY_W` references below stay in sync, and so tweaking a sidebar
 // width is a one-line change.
-const RIGHT_PANE_W: u16 = 36;
+const RIGHT_PANE_W: u16 = 34;
 const MIN_BODY_W: u16 = 40;
 
 const DIALOG_H: u16 = 8;

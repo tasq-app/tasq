@@ -11,7 +11,7 @@ use super::types::{Filter, Mode, Preset, Scope};
 use crate::core::{filter, spaces};
 
 /// Full width of the sidebar, in columns.
-pub const SIDEBAR_W: u16 = 28;
+pub const SIDEBAR_W: u16 = 24;
 /// How long it takes to open or close.
 pub const SIDEBAR_SLIDE: Duration = Duration::from_millis(160);
 
@@ -79,21 +79,27 @@ impl App {
             .iter()
             .filter(|t| filter::passes_preset(t, Preset::Inbox))
             .count();
-        let mut rows = vec![
-            row(NavItem::Home, "Home", None),
-            row(NavItem::Inbox, "Inbox", Some(inbox)),
+        let trash = self.store.trash().len();
+        let mut rows = vec![row(NavItem::Home, "Home", None)];
+        // The inbox and the trash only show when there's something in them
+        // (or you're in them).
+        if inbox > 0 || self.filter.preset == Some(Preset::Inbox) {
+            rows.push(row(NavItem::Inbox, "Inbox", Some(inbox)));
+        }
+        rows.extend([
             row(NavItem::Today, "Today", Some(open_in(Scope::Today))),
             row(
                 NavItem::Upcoming,
                 "Upcoming",
                 Some(open_in(Scope::Upcoming)),
             ),
-            row(NavItem::All, "All tasks", Some(open_in(Scope::All))),
             row(NavItem::Calendar, "Calendar", None),
             row(NavItem::Notes, "Notes", None),
             row(NavItem::Search, "Search", None),
-            row(NavItem::Trash, "Trash", Some(self.store.trash().len())),
-        ];
+        ]);
+        if trash > 0 || self.trash_screen.is_some() {
+            rows.push(row(NavItem::Trash, "Trash", Some(trash)));
+        }
         for s in self.store.space_tree() {
             rows.push(NavRow {
                 label: spaces::leaf(&s.path).to_string(),

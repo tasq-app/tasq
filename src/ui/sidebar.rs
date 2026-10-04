@@ -92,7 +92,7 @@ fn draw(buf: &mut Buffer, r: Rect, app: &App) {
     let mut y = r.y + 1;
 
     // Brand.
-    put(buf, r.x + 2, y, "▣", 1, bg.fg(theme.accent));
+    put(buf, r.x + 2, y, "■", 1, bg.fg(theme.accent));
     put(
         buf,
         r.x + 4,
@@ -105,7 +105,7 @@ fn draw(buf: &mut Buffer, r: Rect, app: &App) {
 
     let rows = app.sidebar_rows();
     let active = app.sidebar_active();
-    let card_h = 4;
+    let card_h = 5;
     let bottom = r.bottom().saturating_sub(card_h + 1);
     let mut section = 0u8;
     for (i, row) in rows.iter().enumerate() {
@@ -122,14 +122,7 @@ fn draw(buf: &mut Buffer, r: Rect, app: &App) {
                 break;
             }
             let label = if this == 1 { "SPACES" } else { "FILTERS" };
-            put(
-                buf,
-                r.x + 2,
-                y,
-                label,
-                inner_w,
-                bg.fg(theme.dim).add_modifier(Modifier::BOLD),
-            );
+            put(buf, r.x + 2, y, label, inner_w, bg.fg(theme.dim));
             y += 1;
         }
         if y >= bottom {
@@ -180,7 +173,18 @@ fn draw_row(
     }
     let indent = 2 + 2 * row.depth as u16;
     let (ic, ic_color) = icon(&row.item, app, theme);
-    let ic_color = if row.dimmed { theme.dim } else { ic_color };
+    // A view's icon reads in its row's colour; spaces and filters keep
+    // their own.
+    let view = !matches!(row.item, NavItem::Space(_) | NavItem::Preset(_));
+    let ic_color = if row.dimmed {
+        theme.dim
+    } else if view && (is_active || focused) {
+        theme.fg
+    } else if view {
+        theme.status_fg
+    } else {
+        ic_color
+    };
     let x = r.x + 1 + indent;
     put(buf, x, y, &ic, 1, base.fg(ic_color));
     let text_style = if row.dimmed {
@@ -218,18 +222,23 @@ fn fit(s: &str, w: usize) -> String {
 /// You, at the bottom: a round avatar with your initial, your name, and how
 /// your tasks are kept (on this machine, until sync lands).
 fn profile_card(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
-    if r.height < 10 {
+    if r.height < 12 {
         return;
     }
     let w = r.width - 3;
     let x = r.x + 1;
-    let y = r.bottom() - 4;
-    let border = Style::default().fg(theme.border).bg(theme.panel);
+    let y = r.bottom() - 5;
+    // A raised card: the main background, a hairline round it.
+    let border = Style::default().fg(theme.border).bg(theme.bg);
+    let inside = Style::default().bg(theme.bg);
     let line = "─".repeat(usize::from(w - 2));
     put(buf, x, y, &format!("╭{line}╮"), w, border);
-    put(buf, x, y + 2, &format!("╰{line}╯"), w, border);
-    put(buf, x, y + 1, "│", 1, border);
-    put(buf, x + w - 1, y + 1, "│", 1, border);
+    put(buf, x, y + 3, &format!("╰{line}╯"), w, border);
+    for dy in 1..3 {
+        fill_row(buf, x, y + dy, w, inside);
+        put(buf, x, y + dy, "│", 1, border);
+        put(buf, x + w - 1, y + dy, "│", 1, border);
+    }
     let name = &app.user_name;
     let initial: String = name
         .chars()
@@ -240,22 +249,19 @@ fn profile_card(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
         .fg(theme.bg)
         .add_modifier(Modifier::BOLD);
     put(buf, x + 2, y + 1, &format!(" {initial} "), 3, avatar);
-    let bg = Style::default().bg(theme.panel);
-    let used = put(
+    let room = w.saturating_sub(8);
+    put(
         buf,
         x + 6,
         y + 1,
-        &fit(name, usize::from(w.saturating_sub(16))),
-        w.saturating_sub(16),
-        bg.fg(theme.fg).add_modifier(Modifier::BOLD),
+        &fit(name, usize::from(room)),
+        room,
+        inside.fg(theme.fg).add_modifier(Modifier::BOLD),
     );
-    let status = if app.is_db() { "● local" } else { "● file" };
-    put(
-        buf,
-        x + 7 + used,
-        y + 1,
-        status,
-        w.saturating_sub(8 + used),
-        bg.fg(theme.pri_c),
-    );
+    let status = if app.is_db() {
+        "● local · this device"
+    } else {
+        "● todo.txt"
+    };
+    put(buf, x + 6, y + 2, status, room, inside.fg(theme.ok));
 }

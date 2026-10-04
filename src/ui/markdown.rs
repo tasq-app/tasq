@@ -234,7 +234,7 @@ impl<'t> Builder<'t> {
             }
             Event::TaskListMarker(done) => {
                 let (glyph, color) = if done {
-                    ("☑ ", theme.pri_c)
+                    ("☑ ", theme.ok)
                 } else {
                     ("☐ ", theme.dim)
                 };

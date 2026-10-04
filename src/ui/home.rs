@@ -166,7 +166,7 @@ fn today(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
             r.y,
             &"━".repeat(filled),
             BAR as u16,
-            pbg.fg(theme.pri_c),
+            pbg.fg(theme.ok),
         );
         put(
             buf,
@@ -341,7 +341,7 @@ fn routines(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
         let mut x = r.x + name_w;
         for m in rt.week {
             let (g, c) = match m {
-                DayMark::Done => ("▮", theme.pri_c),
+                DayMark::Done => ("▮", theme.ok),
                 DayMark::Missed => ("▯", theme.overdue),
                 DayMark::Pending => ("▯", theme.dim),
                 DayMark::Off => ("·", theme.border),
@@ -355,11 +355,7 @@ fn routines(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
             format!("{}×", rt.streak)
         };
         let sw = streak.chars().count() as u16;
-        let color = if rt.streak > 0 {
-            theme.pri_c
-        } else {
-            theme.dim
-        };
+        let color = if rt.streak > 0 { theme.ok } else { theme.dim };
         if x + sw < r.right() {
             put(
                 buf,

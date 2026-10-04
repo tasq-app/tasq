@@ -2,23 +2,23 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  /tmp/tasq-snapshot.txt                │                               
-  ▣ tasq                   │  0 tasks  ·  sort: priority            │  no task selected             
-                           │  + filter                              │                               
-   ⌂ Home                  │                                        │                               
-   ▤ Inbox              0  │                                        │                               
-   ◉ Today              0  │                                        │                               
-   ◷ Upcoming           0  │                                        │                               
-   ≡ All tasks          0  │                                        │                               
-   ▦ Calendar         ╭ tasq · welcome ──────────────────────────────────────╮                      
-   ✎ Notes            │                    ██          ██                    │                      
-   ⌕ Search           │                    ████  ██  ████                    │                      
-   ⌫ Trash            │                    ██████████████                    │                      
-                      │                    ████  ██  ████                    │                      
-  FILTERS             │                    ██          ██                    │                      
-   ⚑ High priority    │                                                      │                      
-   ★ Starred          │  no todo.txt in this folder yet                      │                      
-   ◷ Overdue          │                                                      │                      
+                       │                                          │                                 
+  ■ tasq               │  All tasks  wednesday 6 may              │  no task selected               
+                       │  0 tasks                                 │                                 
+   ⌂ Home              │   + filter            sort · priority ▾  │                                 
+   ◉ Today          0  │                                          │                                 
+   ◷ Upcoming       0  │                                          │                                 
+   ▦ Calendar          │                                          │                                 
+   ✎ Notes             │                                          │                                 
+   ⌕ Search         / ╭ tasq · welcome ──────────────────────────────────────╮                      
+                      │                    ██          ██                    │                      
+  FILTERS             │                    ████  ██  ████                    │                      
+   ⚑ High priority  0 │                    ██████████████                    │                      
+   ★ Starred        0 │                    ████  ██  ████                    │                      
+   ◷ Overdue        0 │                    ██          ██                    │                      
+                      │                                                      │                      
+                      │  no todo.txt in this folder yet                      │                      
+                      │                                                      │                      
                       │   c           create ./todo.txt here                 │                      
                       │   s           open the sample                        │                      
                       │   q / Ctrl-c  quit                                   │                      
@@ -26,11 +26,11 @@ expression: buffer_to_text(&buf)
                       │                                                      │                      
                       │                                                      │                      
                       ╰──────────────────────────────────────────────────────╯                      
-                           │                                        │                               
-                           │                                        │                               
-                           │                                        │                               
- ╭───────────────────────╮ │                                        │                               
- │  Y  you ● file        │ │                                        │                               
- ╰───────────────────────╯ │                                        │                               
-                           │                                        │                               
-   ● welcome     c create ./todo.txt · s open sample · q quit
+                       │                                          │                                 
+                       │                                          │                                 
+ ╭───────────────────╮ │                                          │                                 
+ │  Y  you           │ │                                          │                                 
+ │     ● todo.txt    │ │                                          │                                 
+ ╰───────────────────╯ │                                          │                                 
+                       │                                          │                                 
+  ● welcome                                          c create ./todo.txt   s open sample   q quit

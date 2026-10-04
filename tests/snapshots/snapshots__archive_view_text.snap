@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │ ▶▮◀ done.txt  •  0 tasks  •  sort:compl│                               
-  ▣ tasq                   │                                        │  no task selected             
-                           │   no completed tasks yet               │                               
-   ⌂ Home                  │                                        │                               
-   ▤ Inbox              3  │                                        │                               
-   ◉ Today              1  │                                        │                               
-   ◷ Upcoming           6  │                                        │                               
-   ≡ All tasks         15  │                                        │                               
-   ▦ Calendar              │                                        │                               
-   ✎ Notes                 │                                        │                               
-   ⌕ Search             /  │                                        │                               
-   ⌫ Trash              0  │                                        │                               
-                           │                                        │                               
-  SPACES                   │                                        │                               
-   ● work               4  │                                        │                               
-   ● health             3  │                                        │                               
-   ● finance            2  │                                        │                               
-   ● home               1  │                                        │                               
-   ● learning           1  │                                        │                               
-   ● personal           1  │                                        │                               
-   ● travel             1  │                                        │                               
-                           │                                        │                               
-  FILTERS                  │                                        │                               
-   ⚑ High priority      2  │                                        │                               
-   ★ Starred            0  │                                        │                               
-   ◷ Overdue            7  │                                        │                               
-                           │                                        │                               
- ╭───────────────────────╮ │                                        │                               
- │  Y  you ● file        │ │                                        │                               
- ╰───────────────────────╯ │                                        │                               
-                           │                                        │                               
-   ● archive     n new task · Tab sidebar                                                    ␣ menu
+                       │ ▶▮◀ done.txt  •  0 tasks  •  sort:complet│                                 
+  ■ tasq               │                                          │  no task selected               
+                       │   no completed tasks yet                 │                                 
+   ⌂ Home              │                                          │                                 
+   ▤ Inbox          3  │                                          │                                 
+   ◉ Today          1  │                                          │                                 
+   ◷ Upcoming       6  │                                          │                                 
+   ▦ Calendar          │                                          │                                 
+   ✎ Notes             │                                          │                                 
+   ⌕ Search         /  │                                          │                                 
+                       │                                          │                                 
+  SPACES               │                                          │                                 
+   ● work           4  │                                          │                                 
+   ● health         3  │                                          │                                 
+   ● finance        2  │                                          │                                 
+   ● home           1  │                                          │                                 
+   ● learning       1  │                                          │                                 
+   ● personal       1  │                                          │                                 
+   ● travel         1  │                                          │                                 
+                       │                                          │                                 
+  FILTERS              │                                          │                                 
+   ⚑ High priority  2  │                                          │                                 
+   ★ Starred        0  │                                          │                                 
+   ◷ Overdue        7  │                                          │                                 
+                       │                                          │                                 
+                       │                                          │                                 
+ ╭───────────────────╮ │                                          │                                 
+ │  Y  you           │ │                                          │                                 
+ │     ● todo.txt    │ │                                          │                                 
+ ╰───────────────────╯ │                                          │                                 
+                       │                                          │                                 
+  ● archive   All tasks · 0 tasks                                n new task   Tab sidebar   ␣ more…

@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-  /tmp/tasq-snapshot.txt   wednesday 6 may                                                          
-  15 tasks  ·  sort: priority                                                                       
-  + filter                                                                                          
                                                                                                     
-  PRIORITY A  2  ───────────────────────────────────────────────────────────────────────────────────
-  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due today   ● work  @laptop                                        
-  2  ☐ ⚑ Call dentist to reschedule cleaning  ◷ by fri 8 may   ● health  @phone                     
-  PRIORITY B  3  ───────────────────────────────────────────────────────────────────────────────────
-  3  ☐ ⚑ Review pull requests for auth refactor  ◷ by tomorrow   ● work  @laptop                    
-  4  ☐ ⚑ Renew passport before summer trip  ◷ by wed 20 may   ● travel  @errands                    
-  5  ☐ ⚑ Draft hiring rubric for senior eng  ● work  @laptop                                        
-  PRIORITY C  2  ───────────────────────────────────────────────────────────────────────────────────
-  6  ☐ ⚑ Pay quarterly estimated taxes  ◷ by mon 15 jun   ● finance  @home                          
-  7  ☐ ⚑ Order new running shoes  ● health  @errands                                                
-  NO PRIORITY  8  ──────────────────────────────────────────────────────────────────────────────────
-  8  ☐ Migrate analytics to new pipeline  ◷ by fri 15 may   ● work  @laptop                         
-  9  ☐ Pay rent  ◷ by fri 15 may   ↻ every month   ● finance  @home                                 
- 10  ☐ Pick up dry cleaning @errands                                                                
- 11  ☐ Schedule annual physical  ● health  @phone                                                   
- 12  ☐ Read "Designing Data-Intensive Applications" ch. 4  ● learning  @home                        
- 13  ☐ Send thank-you note to mentor @home                                                          
- 14  ☐ Plan Saturday hike with K.  ● personal  @phone                                               
- 15  ☐ Replace bathroom faucet washer  ● home  @errands                                             
+  All tasks  wednesday 6 may                                                                        
+  15 tasks                                                                                          
+   + filter                                                                      sort · priority ▾  
                                                                                                     
-                                                                                                    
-                                                                                                    
+  PRIORITY A ───────────────────────────────────────────────────────────────────────────────────────
+▎ ☐ ⚑ Finish Q2 board deck  ◷ due today   ● work  @laptop                                           
+  ☐ ⚑ Call dentist to reschedule cleaning  ◷ by fri 8 may   ● health  @phone                        
+  PRIORITY B ───────────────────────────────────────────────────────────────────────────────────────
+  ☐ ⚑ Review pull requests for auth refactor  ◷ by tomorrow   ● work  @laptop                       
+  ☐ ⚑ Renew passport before summer trip  ◷ by wed 20 may   ● travel  @errands                       
+  ☐ ⚑ Draft hiring rubric for senior eng  ● work  @laptop                                           
+  PRIORITY C ───────────────────────────────────────────────────────────────────────────────────────
+  ☐ ⚑ Pay quarterly estimated taxes  ◷ by mon 15 jun   ● finance  @home                             
+  ☐ ⚑ Order new running shoes  ● health  @errands                                                   
+  NO PRIORITY ──────────────────────────────────────────────────────────────────────────────────────
+  ☐ Migrate analytics to new pipeline  ◷ by fri 15 may   ● work  @laptop                            
+  ☐ Pay rent  ◷ by fri 15 may   ↻ every month   ● finance  @home                                    
+  ☐ Pick up dry cleaning @errands                                                                   
+  ☐ Schedule annual physical  ● health  @phone                                                      
+  ☐ Read "Designing Data-Intensive Applications" ch. 4  ● learning  @home                           
+  ☐ Send thank-you note to mentor @home                                                             
+  ☐ Plan Saturday hike with K.  ● personal  @phone                                                  
+  ☐ Replace bathroom faucet washer  ● home  @errands                                                
                                                                                                     
                                                                                                     
                                                                                                     
                                                                                                     
                                                                                                     
-   ● normal     x done · e edit · r reschedule · Tab details                                 ␣ menu
+                                                                                                    
+                                                                                                    
+  ● normal   All tasks · 15 tasks            x done   e edit   r reschedule   Tab details   ␣ more…

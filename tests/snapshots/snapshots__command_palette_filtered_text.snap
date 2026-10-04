@@ -2,20 +2,18 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  /tmp/tasq-snapshot.txt                │                               
-  ▣ tasq                   │  15 tasks  ·  sort: priority           │  ⚑ Finish Q2 board deck       
-                           │  + filter                              │                               
-   ⌂ Home                  │                                        │  due       today              
-   ▤ Inbox              3  │  PRIORITY A  2  ───────────────────────│  space     ● work             
-   ◉ Today              1  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
-   ◷ Upcoming       ╭ tasq · command ──────────────────────────────────────────╮ @laptop            
-   ≡ All tasks      │ > arch█  3 matches                                       │                    
-   ▦ Calendar       │──────────────────────────────────────────────────────────│                    
-   ✎ Notes          │ ▶ archive completed tasks                              A │m                   
-   ⌕ Search         │   toggle archive view                                  a │                    
-   ⌫ Trash          │   fuzzy search                                         / │                    
-                    │                                                          │                    
-  SPACES            │                                                          │                    
+                       │                                          │                                 
+  ■ tasq               │  All tasks  wednesday 6 may              │  Finish Q2 board deck           
+                       │  15 tasks                                │                                 
+   ⌂ Home              │   + filter            sort · priority ▾  │  due      today                 
+   ▤ Inbox          3  │                                          │  space    ● work                
+   ◉ Today          1  │  PRIORITY A ─────────────────────────────│  priority ⚑ high                
+   ◷ Upcoming       ╭ tasq · command ──────────────────────────────────────────╮aptop               
+   ▦ Calendar       │ > arch█  3 matches                                       │                    
+   ✎ Notes          │──────────────────────────────────────────────────────────│                    
+   ⌕ Search         │ ▶ archive completed tasks                              A │                    
+                    │   toggle archive view                                  a │                    
+  SPACES            │   fuzzy search                                         / │                    
    ● work           │                                                          │                    
    ● health         │                                                          │                    
    ● finance        │                                                          │                    
@@ -26,11 +24,13 @@ expression: buffer_to_text(&buf)
                     │                                                          │                    
   FILTERS           │                                                          │                    
    ⚑ High priority  │                                                          │                    
-   ★ Starred        │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
-   ◷ Overdue        ╰──────────────────────────────────────────────────────────╯                    
-                           │                                        │                               
- ╭───────────────────────╮ │                                        │                               
- │  Y  you ● file        │ │                                        │                               
- ╰───────────────────────╯ │                                        │                               
-                           │                                        │                               
-   ● command     type to filter · Enter run · Esc cancel
+   ★ Starred        │                                                          │                    
+   ◷ Overdue        │                                                          │                    
+                    │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
+                    ╰──────────────────────────────────────────────────────────╯                    
+ ╭───────────────────╮ │                                          │                                 
+ │  Y  you           │ │                                          │                                 
+ │     ● todo.txt    │ │                                          │                                 
+ ╰───────────────────╯ │                                          │                                 
+                       │                                          │                                 
+  ● command                                               type to filter   Enter run   Esc cancel

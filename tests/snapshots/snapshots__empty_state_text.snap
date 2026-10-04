@@ -2,9 +2,10 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-  /tmp/tasq-snapshot.txt   wednesday 6 may                                                          
-  0 tasks  ·  sort: priority                                                                        
-  + filter                                                                                          
+                                                                                                    
+  All tasks  wednesday 6 may                                                                        
+  0 tasks                                                                                           
+   + filter                                                                      sort · priority ▾  
                                                                                                     
                                                                                                     
                                                                                                     
@@ -32,5 +33,4 @@ expression: buffer_to_text(&buf)
                                                                                                     
                                                                                                     
                                                                                                     
-                                                                                                    
-   ● normal     n new task · Tab sidebar                                                     ␣ menu
+  ● normal   All tasks · 0 tasks                                 n new task   Tab sidebar   ␣ more…

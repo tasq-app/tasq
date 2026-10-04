@@ -33,4 +33,4 @@ expression: buffer_to_text(&buf)
                              │                                                                      
                              │                                                                      
                              │  ↑↓ sections · → or Enter open · Esc close                           
-   ● settings     Esc back
+  ● settings                                                                             Esc back

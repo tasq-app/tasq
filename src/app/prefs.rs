@@ -18,7 +18,7 @@ impl Default for Layout {
         Self {
             left: true,
             right: true,
-            line_num: true,
+            line_num: false,
             status_bar: true,
         }
     }
@@ -53,8 +53,20 @@ pub struct Prefs {
     pub start_home: bool,
 }
 
+/// The look this build saves its config under.
+const DESIGN: u32 = 5;
+
 impl Prefs {
-    pub fn from_config(cfg: Config) -> Self {
+    pub fn from_config(mut cfg: Config) -> Self {
+        // A config saved before the redesign holds the old defaults, not
+        // choices: move them to the new look once.
+        if cfg.design.unwrap_or(0) < DESIGN {
+            if cfg.theme.as_deref() == Some("Muted Slate") {
+                cfg.theme = None;
+            }
+            cfg.show_line_num = None;
+            cfg.start = None;
+        }
         let theme_idx = cfg
             .theme
             .as_deref()
@@ -68,7 +80,7 @@ impl Prefs {
             layout: Layout {
                 left: cfg.show_left.unwrap_or(true),
                 right: cfg.show_right.unwrap_or(true),
-                line_num: cfg.show_line_num.unwrap_or(true),
+                line_num: cfg.show_line_num.unwrap_or(false),
                 status_bar: cfg.show_status_bar.unwrap_or(true),
             },
             show_done: cfg.show_done.unwrap_or(false),
@@ -78,7 +90,7 @@ impl Prefs {
             recurrence_builder: cfg.recurrence_builder.unwrap_or(true),
             nerd_icons: cfg.icons.as_deref() == Some("nerd"),
             hints: cfg.hints.unwrap_or(true),
-            start_home: cfg.start.as_deref() != Some("list"),
+            start_home: cfg.start.as_deref() == Some("home"),
         }
     }
 
@@ -178,6 +190,7 @@ impl Prefs {
         cfg.recurrence_builder = Some(self.recurrence_builder);
         cfg.icons = Some(if self.nerd_icons { "nerd" } else { "unicode" }.to_string());
         cfg.hints = Some(self.hints);
+        cfg.design = Some(DESIGN);
         cfg.start = Some(if self.start_home { "home" } else { "list" }.to_string());
         cfg.save()
     }

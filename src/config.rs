@@ -64,6 +64,8 @@ pub struct Config {
     /// them). On by default.
     /// What tasq opens on: `home` (the default) or `list`.
     pub start: Option<String>,
+    /// Which look the file was last saved under (5: the redesign).
+    pub design: Option<u32>,
     pub hints: Option<bool>,
 }
 
@@ -190,6 +192,7 @@ fn parse(s: &str) -> Config {
             "icons" => c.icons = Some(v.trim().to_ascii_lowercase()),
             "hints" => c.hints = parse_bool(v),
             "start" => c.start = Some(v.to_string()),
+            "design" => c.design = v.parse().ok(),
             // Saved searches: `filter.<name> = <query>`. The name is the
             // (trimmed) text after the `filter.` prefix; the query is the
             // (unquoted) value, which may itself contain `=`. A repeated
@@ -268,6 +271,9 @@ fn serialize(c: &Config) -> String {
     if let Some(v) = &c.icons {
         let _ = writeln!(out, "icons = {v}");
     }
+    if let Some(v) = c.design {
+        let _ = writeln!(out, "design = {v}");
+    }
     if let Some(v) = &c.start {
         let _ = writeln!(out, "start = \"{v}\"");
     }
@@ -314,6 +320,7 @@ mod tests {
             share_token: Some("a".repeat(64)),
             hints: Some(false),
             start: Some("list".into()),
+            design: Some(5),
             share_port: Some(18080),
             filters: vec![
                 ("weekly".into(), "report".into()),
@@ -478,6 +485,7 @@ mod tests {
             share_token: None,
             hints: None,
             start: None,
+            design: None,
             share_port: None,
             filters: vec![("errand".into(), "@errand".into())],
             notes_dir: Some("/tmp/notes".into()),
