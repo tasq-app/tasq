@@ -148,6 +148,12 @@ impl App {
             .map(|r| r.path)
             .collect();
         let mut det = nl::detect_in(self.draft.text(), today, &self.draft.live.rejected, &spaces);
+        // "in ex" matching several spaces: the one picked with ↑/↓.
+        if let Some(choice) = &self.draft.live.space_choice
+            && det.parsed.space_options.contains(choice)
+        {
+            det.parsed.projects = vec![choice.clone()];
+        }
         let picked = &self.draft.live.picked;
         let p = &mut det.parsed;
         if picked.planned.is_some() {
@@ -181,6 +187,38 @@ impl App {
             p.planned = p.rec.as_deref().and_then(|r| nl::first_rec_day(r, today));
         }
         det
+    }
+
+    /// The spaces "in …" could mean and the one in use, when there's a
+    /// choice to make.
+    pub fn live_space_options(&self) -> Option<(Vec<String>, usize)> {
+        if !self.live_add_active() {
+            return None;
+        }
+        let det = self.live_detection();
+        let opts = det.parsed.space_options;
+        if opts.len() < 2 {
+            return None;
+        }
+        let current = det.parsed.projects.first()?;
+        let i = opts.iter().position(|o| o == current)?;
+        Some((opts, i))
+    }
+
+    /// ↑/↓ while "in …" matches several spaces: pick the previous / next.
+    /// Returns whether there was a choice to move through.
+    pub fn live_space_step(&mut self, forward: bool) -> bool {
+        let Some((opts, i)) = self.live_space_options() else {
+            return false;
+        };
+        let n = opts.len();
+        let next = if forward {
+            (i + 1) % n
+        } else {
+            (i + n - 1) % n
+        };
+        self.draft.live.space_choice = Some(opts[next].clone());
+        true
     }
 
     /// The picked values, in chip order, as pills to draw after the text.
@@ -772,5 +810,33 @@ mod tests {
         let raw = &app.tasks().last().expect("added").raw;
         assert!(raw.contains("rec:+1d times:10"), "{raw}");
         assert!(!raw.contains(" for "), "{raw}");
+    }
+
+    #[test]
+    fn several_matching_spaces_are_a_choice_made_with_the_arrows() {
+        let mut app = build_app("a +Uni/Exams\nb +Uni/Exams\nc +Work/Examples\n");
+        typed(&mut app, "repasar in exa");
+        let (opts, i) = app.live_space_options().expect("a choice");
+        assert_eq!(
+            (opts.clone(), i),
+            (
+                vec!["Uni/Exams".to_string(), "Work/Examples".to_string()],
+                0
+            )
+        );
+        assert!(app.live_space_step(true));
+        assert_eq!(
+            chip(&app, FieldKind::Project).value.as_deref(),
+            Some("Work › Examples")
+        );
+        // Typing on keeps the choice.
+        typed(&mut app, " tomorrow");
+        assert_eq!(app.live_space_options().expect("still a choice").1, 1);
+        assert_eq!(app.live_add(), AddOutcome::Saved);
+        let raw = &app.tasks().last().expect("added").raw;
+        assert!(raw.contains("+Work/Examples"), "{raw}");
+        // A whole name is no choice: "in exams" is Exams.
+        typed(&mut app, "x in exams");
+        assert!(app.live_space_options().is_none());
     }
 }

@@ -934,6 +934,79 @@ pub fn render_autocomplete(frame: &mut Frame, dlg: Rect, screen: Rect, app: &App
     );
 }
 
+/// When "in …" matches several spaces: the choices under the dialog, the
+/// one in use marked, each in its colour, with how to move between them.
+pub fn render_space_choice(frame: &mut Frame, dlg: Rect, screen: Rect, app: &App) {
+    let Some((opts, current)) = app.live_space_options() else {
+        return;
+    };
+    let theme = app.theme();
+    let labels: Vec<String> = opts
+        .iter()
+        .map(|p| crate::core::spaces::display(p))
+        .collect();
+    let hint = "↑↓ choose · Enter save";
+    let longest = labels
+        .iter()
+        .map(|s| s.chars().count() + 4)
+        .chain(std::iter::once(hint.chars().count() + 2))
+        .max()
+        .unwrap_or(16) as u16;
+    let popup_w = longest.max(20).min(screen.width);
+    let popup_h = opts.len() as u16 + 1;
+    let mut x = dlg.x + 4;
+    let mut y = dlg.y + dlg.height;
+    x = x.min(screen.x + screen.width.saturating_sub(popup_w));
+    y = y.min(screen.y + screen.height.saturating_sub(popup_h));
+    let area = Rect {
+        x,
+        y,
+        width: popup_w,
+        height: popup_h,
+    };
+    frame.render_widget(Clear, area);
+    let mut lines: Vec<Line> = opts
+        .iter()
+        .zip(&labels)
+        .enumerate()
+        .map(|(i, (path, label))| {
+            let sel = i == current;
+            let bg = if sel { theme.cursor } else { theme.panel };
+            let color = app.space_color(path);
+            Line::from(vec![
+                Span::styled(
+                    if sel { " ▸ " } else { "   " },
+                    Style::default().fg(theme.accent).bg(bg),
+                ),
+                Span::styled("● ", Style::default().fg(color).bg(bg)),
+                Span::styled(
+                    label.clone(),
+                    Style::default()
+                        .fg(if sel { theme.fg } else { theme.dim })
+                        .bg(bg)
+                        .add_modifier(if sel {
+                            Modifier::BOLD
+                        } else {
+                            Modifier::empty()
+                        }),
+                ),
+            ])
+            .style(Style::default().bg(bg))
+        })
+        .collect();
+    lines.push(
+        Line::from(Span::styled(
+            format!(" {hint}"),
+            Style::default().fg(theme.dim),
+        ))
+        .style(Style::default().bg(theme.panel)),
+    );
+    frame.render_widget(
+        Paragraph::new(lines).style(Style::default().bg(theme.panel)),
+        area,
+    );
+}
+
 /// Anchor a popup `popup_w` × `popup_h` cells just below `dlg`, clamping into
 /// `screen` so it stays visible at the bottom/right edges. Mirrors the
 /// `render_autocomplete` placement code so every overlay floats in the same

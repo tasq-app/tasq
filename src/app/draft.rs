@@ -68,6 +68,8 @@ pub(crate) struct LiveState {
     /// Values set through a picker (or typed as `due:` / `rec:` / `at:` /
     /// `t:` / `(A)` tokens): kept out of the text and shown as pills.
     pub(crate) picked: super::live_add::Picked,
+    /// The space picked with ↑/↓ when "in …" matches several.
+    pub(crate) space_choice: Option<String>,
 }
 
 impl DraftState {

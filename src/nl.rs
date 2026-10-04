@@ -40,6 +40,9 @@ pub struct ParsedNl {
     pub times: Option<u32>,
     pub threshold: Option<String>,
     pub projects: Vec<String>,
+    /// Every space "in …" could mean, most used first, when it matches more
+    /// than one; `projects` holds the first. The add dialog lets you pick.
+    pub space_options: Vec<String>,
     pub contexts: Vec<String>,
     pub priority: Option<char>,
     /// Time of day, `(hour, minute)` in 24h — "at 6pm" → `(18, 0)`. Written
@@ -808,13 +811,22 @@ fn pass_space(scratch: &mut Scratch, p: &mut ParsedNl, spaces: &[String]) {
             continue;
         }
         let leaf = |s: &String| fold(&crate::core::spaces::leaf(s).to_lowercase());
-        let found = spaces
-            .iter()
-            .find(|s| leaf(s) == typed)
-            .or_else(|| spaces.iter().find(|s| leaf(s).starts_with(&typed)));
-        if let Some(space) = found {
+        // Whole names win over prefixes; several of either are a choice.
+        let exact: Vec<&String> = spaces.iter().filter(|s| leaf(s) == typed).collect();
+        let found: Vec<&String> = if exact.is_empty() {
+            spaces
+                .iter()
+                .filter(|s| leaf(s).starts_with(&typed))
+                .collect()
+        } else {
+            exact
+        };
+        if let Some(space) = found.first() {
             scratch.mark(w.0, next.1);
-            p.projects.push(space.clone());
+            p.projects.push((*space).clone());
+            if found.len() > 1 {
+                p.space_options = found.into_iter().cloned().collect();
+            }
             return;
         }
     }
