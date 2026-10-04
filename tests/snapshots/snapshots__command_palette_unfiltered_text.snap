@@ -28,7 +28,7 @@ expression: buffer_to_text(&buf)
    ◷ Overdue        │   undo                                                 u │                    
                     │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
                     ╰──────────────────────────────────────────────────────────╯                    
- ╭───────────────────╮ │                                          │                                 
+ ╭───────────────────╮ │  ☐ Replace bathroom faucet washer  ● home│                                 
  │  Y  you           │ │                                          │                                 
  │     ● todo.txt    │ │                                          │                                 
  ╰───────────────────╯ │                                          │                                 

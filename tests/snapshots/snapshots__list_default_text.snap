@@ -10,25 +10,25 @@ expression: buffer_to_text(&buf)
    ◉ Today          1  │  PRIORITY A ─────────────────────────────│  priority ⚑ high                
    ◷ Upcoming       6  │▎ ☐ ⚑ Finish Q2 board deck  ◷ due today   │  tags     @laptop               
    ▦ Calendar          │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
-   ✎ Notes             │  PRIORITY B ─────────────────────────────│                                 
-   ⌕ Search        ^K  │  ☐ ⚑ Review pull requests for auth refact│                                 
-                       │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
-  SPACES               │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
-   ● work           4  │  PRIORITY C ─────────────────────────────│                                 
-   ● health         3  │  ☐ ⚑ Pay quarterly estimated taxes  ◷ by │                                 
-   ● finance        2  │  ☐ ⚑ Order new running shoes  ● health  @│                                 
-   ● home           1  │  NO PRIORITY ────────────────────────────│                                 
-   ● learning       1  │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
-   ● personal       1  │  ☐ Pay rent  ◷ by fri 15 may   ↻ every mo│                                 
-   ● travel         1  │  ☐ Pick up dry cleaning @errands         │                                 
-                       │  ☐ Schedule annual physical  ● health  @p│                                 
-  FILTERS              │  ☐ Read "Designing Data-Intensive Applica│                                 
-   ⚑ High priority  2  │  ☐ Send thank-you note to mentor @home   │                                 
-   ★ Starred        0  │  ☐ Plan Saturday hike with K.  ● personal│                                 
-   ◷ Overdue        7  │  ☐ Replace bathroom faucet washer  ● home│                                 
-                       │                                          │                                 
-                       │                                          │                                 
- ╭───────────────────╮ │                                          │                                 
+   ✎ Notes             │                                          │                                 
+   ⌕ Search        ^K  │  PRIORITY B ─────────────────────────────│                                 
+                       │  ☐ ⚑ Review pull requests for auth refact│                                 
+  SPACES               │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
+   ● work           4  │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
+   ● health         3  │                                          │                                 
+   ● finance        2  │  PRIORITY C ─────────────────────────────│                                 
+   ● home           1  │  ☐ ⚑ Pay quarterly estimated taxes  ◷ by │                                 
+   ● learning       1  │  ☐ ⚑ Order new running shoes  ● health  @│                                 
+   ● personal       1  │                                          │                                 
+   ● travel         1  │  NO PRIORITY ────────────────────────────│                                 
+                       │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
+  FILTERS              │  ☐ Pay rent  ◷ by fri 15 may   ↻ every mo│                                 
+   ⚑ High priority  2  │  ☐ Pick up dry cleaning @errands         │                                 
+   ★ Starred        0  │  ☐ Schedule annual physical  ● health  @p│                                 
+   ◷ Overdue        7  │  ☐ Read "Designing Data-Intensive Applica│                                 
+                       │  ☐ Send thank-you note to mentor @home   │                                 
+                       │  ☐ Plan Saturday hike with K.  ● personal│                                 
+ ╭───────────────────╮ │  ☐ Replace bathroom faucet washer  ● home│                                 
  │  Y  you           │ │                                          │                                 
  │     ● todo.txt    │ │                                          │                                 
  ╰───────────────────╯ │                                          │                                 

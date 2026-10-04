@@ -9,15 +9,15 @@ expression: buffer_to_text(&buf)
    ▤ Inbox          3  │                                          │  due      tomorrow              
    ◉ Today          1  │  TOMORROW ───────────────────────────────│  space    ● work                
    ◷ Upcoming       6  │▎ ☐ ⚑ Review pull requests for auth refact│  priority ⚑ medium              
-   ▦ Calendar          │  FRI 8 MAY ──────────────────────────────│  tags     @laptop               
-   ✎ Notes             │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
-   ⌕ Search        ^K  │  LATER ──────────────────────────────────│                                 
-                       │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
-  SPACES               │  ☐ Pay rent  ◷ by fri 15 may   ↻ every mo│                                 
-   ● work           4  │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
-   ● health         3  │  ☐ ⚑ Pay quarterly estimated taxes  ◷ by │                                 
-   ● finance        2  │                                          │                                 
-   ● home           1  │                                          │                                 
+   ▦ Calendar          │                                          │  tags     @laptop               
+   ✎ Notes             │  FRI 8 MAY ──────────────────────────────│                                 
+   ⌕ Search        ^K  │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
+                       │                                          │                                 
+  SPACES               │  LATER ──────────────────────────────────│                                 
+   ● work           4  │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
+   ● health         3  │  ☐ Pay rent  ◷ by fri 15 may   ↻ every mo│                                 
+   ● finance        2  │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
+   ● home           1  │  ☐ ⚑ Pay quarterly estimated taxes  ◷ by │                                 
    ● learning       1  │                                          │                                 
    ● personal       1  │                                          │                                 
    ● travel         1  │                                          │                                 

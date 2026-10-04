@@ -9,28 +9,28 @@ expression: buffer_to_text(&buf)
    ▤ Inbox          3  │                                          │  space    ● work                
    ◉ Today          1  │  TODAY ──────────────────────────────────│  priority ⚑ high                
    ◷ Upcoming       6  │▎ ☐ ⚑ Finish Q2 board deck  ◷ due today   │  tags     @laptop               
-   ▦ Calendar          │  THIS WEEK ──────────────────────────────│                                 
-   ✎ Notes             │  ☐ ⚑ Review pull requests for auth refact│                                 
-   ⌕ Search        ^K  │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
-                       │  NEXT WEEK ──────────────────────────────│                                 
-  SPACES               │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
-   ● work           4  │  ☐ Pay rent  ◷ by fri 15 may   ↻ every mo│                                 
-   ● health         3  │  LATER ──────────────────────────────────│                                 
-   ● finance        2  │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
-   ● home           1  │  ☐ ⚑ Pay quarterly estimated taxes  ◷ by │                                 
-   ● learning       1  │  NO DUE DATE ────────────────────────────│                                 
-   ● personal       1  │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
-   ● travel         1  │  ☐ ⚑ Order new running shoes  ● health  @│                                 
-                       │  ☐ Pick up dry cleaning @errands         │                                 
-  FILTERS              │  ☐ Schedule annual physical  ● health  @p│                                 
-   ⚑ High priority  2  │  ☐ Read "Designing Data-Intensive Applica│                                 
-   ★ Starred        0  │  ☐ Send thank-you note to mentor @home   │                                 
-   ◷ Overdue        7  │  ☐ Plan Saturday hike with K.  ● personal│                                 
-                       │  ☐ Replace bathroom faucet washer  ● home│                                 
+   ▦ Calendar          │                                          │                                 
+   ✎ Notes             │  THIS WEEK ──────────────────────────────│                                 
+   ⌕ Search        ^K  │  ☐ ⚑ Review pull requests for auth refact│                                 
+                       │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
+  SPACES               │                                          │                                 
+   ● work           4  │  NEXT WEEK ──────────────────────────────│                                 
+   ● health         3  │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
+   ● finance        2  │  ☐ Pay rent  ◷ by fri 15 may   ↻ every mo│                                 
+   ● home           1  │                                          │                                 
+   ● learning       1  │  LATER ──────────────────────────────────│                                 
+   ● personal       1  │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
+   ● travel         1  │  ☐ ⚑ Pay quarterly estimated taxes  ◷ by │                                 
                        │                                          │                                 
- ╭───────────────────╮ │                                          │                                 
- │  Y  you           │ │                                          │                                 
- │     ● todo.txt    │ │                                          │                                 
+  FILTERS              │  NO DUE DATE ────────────────────────────│                                 
+   ⚑ High priority  2  │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
+   ★ Starred        0  │  ☐ ⚑ Order new running shoes  ● health  @│                                 
+   ◷ Overdue        7  │  ☐ Pick up dry cleaning @errands         │                                 
+                       │  ☐ Schedule annual physical  ● health  @p│                                 
+                       │  ☐ Read "Designing Data-Intensive Applica│                                 
+ ╭───────────────────╮ │  ☐ Send thank-you note to mentor @home   │                                 
+ │  Y  you           │ │  ☐ Plan Saturday hike with K.  ● personal│                                 
+ │     ● todo.txt    │ │  ☐ Replace bathroom faucet washer  ● home│                                 
  ╰───────────────────╯ │                                          │                                 
                        │                                          │                                 
   ● normal   All tasks · 15 tasks            x done   e edit   r reschedule   Tab details   ␣ more…

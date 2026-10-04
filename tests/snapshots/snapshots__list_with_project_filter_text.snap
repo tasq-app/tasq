@@ -9,13 +9,13 @@ expression: buffer_to_text(&buf)
    ▤ Inbox          3  │                                          │  space    ● work                
    ◉ Today          1  │  PRIORITY A ─────────────────────────────│  priority ⚑ high                
    ◷ Upcoming       6  │▎ ☐ ⚑ Finish Q2 board deck  ◷ due today   │  tags     @laptop               
-   ▦ Calendar          │  PRIORITY B ─────────────────────────────│                                 
-   ✎ Notes             │  ☐ ⚑ Review pull requests for auth refact│                                 
-   ⌕ Search        ^K  │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
-                       │  NO PRIORITY ────────────────────────────│                                 
-  SPACES               │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
-   ● work           4  │                                          │                                 
-   ● health         3  │                                          │                                 
+   ▦ Calendar          │                                          │                                 
+   ✎ Notes             │  PRIORITY B ─────────────────────────────│                                 
+   ⌕ Search        ^K  │  ☐ ⚑ Review pull requests for auth refact│                                 
+                       │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
+  SPACES               │                                          │                                 
+   ● work           4  │  NO PRIORITY ────────────────────────────│                                 
+   ● health         3  │  ☐ Migrate analytics to new pipeline  ◷ b│                                 
    ● finance        2  │                                          │                                 
    ● home           1  │                                          │                                 
    ● learning       1  │                                          │                                 

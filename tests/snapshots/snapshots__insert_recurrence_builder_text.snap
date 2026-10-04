@@ -10,10 +10,10 @@ expression: buffer_to_text(&buf)
    ◉ Today          1  │  PRIORITY A ─────────────────────────────│  priority ⚑ high                
    ◷ Upcoming       6  │▎ ☐ ⚑ Finish Q2 board deck  ◷ due today   │  tags     @laptop               
    ▦ Calendar          │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
-   ✎ Notes             │  PRIORITY B ─────────────────────────────│                                 
-   ⌕ Search        ^K  │  ☐ ⚑ Review pull requests for auth refact│                                 
-                       │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
-  SPACES               │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
+   ✎ Notes             │                                          │                                 
+   ⌕ Search        ^K  │  PRIORITY B ─────────────────────────────│                                 
+                       │  ☐ ⚑ Review pull requests for auth refact│                                 
+  SPACES               │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
    ● work ╭──────────────────────────────────────────────────────────────────────────────╮          
    ● healt│                                                                              │          
    ● finan│  > Water the plants  +home ▏                                           ↑     │          

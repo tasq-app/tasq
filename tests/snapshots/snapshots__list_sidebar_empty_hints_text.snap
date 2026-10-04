@@ -9,12 +9,12 @@ expression: buffer_to_text(&buf)
    ▤ Inbox          3  │                                          │                                 
    ◉ Today          0  │  PRIORITY A ─────────────────────────────│                                 
    ◷ Upcoming       0  │▎ ☐ ⚑ Buy milk                            │                                 
-   ▦ Calendar          │  PRIORITY B ─────────────────────────────│                                 
-   ✎ Notes             │  ☐ ⚑ Call mom                            │                                 
-   ⌕ Search        ^K  │  NO PRIORITY ────────────────────────────│                                 
-                       │  ☐ Write up notes                        │                                 
-  FILTERS              │                                          │                                 
-   ⚑ High priority  1  │                                          │                                 
+   ▦ Calendar          │                                          │                                 
+   ✎ Notes             │  PRIORITY B ─────────────────────────────│                                 
+   ⌕ Search        ^K  │  ☐ ⚑ Call mom                            │                                 
+                       │                                          │                                 
+  FILTERS              │  NO PRIORITY ────────────────────────────│                                 
+   ⚑ High priority  1  │  ☐ Write up notes                        │                                 
    ★ Starred        0  │                                          │                                 
    ◷ Overdue        0  │                                          │                                 
                        │                                          │                                 

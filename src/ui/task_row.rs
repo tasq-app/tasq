@@ -27,6 +27,32 @@ pub struct RowOpts<'a> {
     pub in_today: bool,
     /// Chips with round ends (needs a Nerd Font).
     pub pills: bool,
+    /// Chips as coloured words with no fill: compact rows sit on adjacent
+    /// lines, where filled chips would run into the row below.
+    pub flat: bool,
+}
+
+/// How a chip is drawn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ChipLook {
+    /// A filled box.
+    Box,
+    /// A filled box with round ends.
+    Pill,
+    /// Just the coloured words.
+    Flat,
+}
+
+impl RowOpts<'_> {
+    fn look(&self) -> ChipLook {
+        if self.flat {
+            ChipLook::Flat
+        } else if self.pills {
+            ChipLook::Pill
+        } else {
+            ChipLook::Box
+        }
+    }
 }
 
 impl Default for RowOpts<'_> {
@@ -45,6 +71,7 @@ impl Default for RowOpts<'_> {
             checklist: None,
             in_today: false,
             pills: false,
+            flat: false,
         }
     }
 }
@@ -308,17 +335,21 @@ fn push_chip<'a>(
     spans: &mut Vec<Span<'a>>,
     text: String,
     color: Color,
-    pills: bool,
+    look: ChipLook,
     theme: &Theme,
 ) {
     spans.push(Span::raw(" "));
     let mut style = Style::default().fg(color);
     let shade = tint(color, theme.bg, 0.2);
+    if look == ChipLook::Flat {
+        spans.push(Span::styled(format!(" {text} "), style));
+        return;
+    }
     if let Some(bg) = shade {
         style = style.bg(bg);
     }
     // With a Nerd Font, round ends: a pill, not a box.
-    match shade.filter(|_| pills) {
+    match shade.filter(|_| look == ChipLook::Pill) {
         Some(bg) => {
             spans.push(Span::styled("\u{e0b6}", Style::default().fg(bg)));
             spans.push(Span::styled(text, style));
@@ -372,7 +403,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
             spans,
             format!("◷ {}", chip_date(p, opts.today)),
             theme.overdue,
-            opts.pills,
+            opts.look(),
             theme,
         );
     }
@@ -387,7 +418,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
             Some(p) if p <= opts.today => theme.today,
             _ => theme.accent,
         };
-        push_chip(spans, when.join(" · "), color, opts.pills, theme);
+        push_chip(spans, when.join(" · "), color, opts.look(), theme);
     }
     if let Some(d) = task.due.as_deref().filter(|_| shown("due")) {
         let date = chip_date(d, opts.today);
@@ -397,7 +428,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
             DueStatus::Soon => (format!("◷ by {date}"), theme.due),
             DueStatus::Later | DueStatus::None => (format!("◷ by {date}"), theme.dim),
         };
-        push_chip(spans, text, color, opts.pills, theme);
+        push_chip(spans, text, color, opts.look(), theme);
     }
     if let Some(t) = task.threshold.as_deref().filter(|_| shown("t")) {
         let from = crate::threshold::parse_threshold(t)
@@ -412,7 +443,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
             spans,
             format!("shows from {from}"),
             theme.dim,
-            opts.pills,
+            opts.look(),
             theme,
         );
     }
@@ -432,7 +463,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
         if let Some(n) = task.times.as_deref() {
             text.push_str(&format!(" · {n} left"));
         }
-        push_chip(spans, text, theme.pri_other, opts.pills, theme);
+        push_chip(spans, text, theme.pri_other, opts.look(), theme);
     }
     for p in &task.projects {
         let color = (opts.space_color)(p);
@@ -440,7 +471,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
             spans,
             format!("● {}", crate::core::spaces::display(p)),
             color,
-            opts.pills,
+            opts.look(),
             theme,
         );
     }
@@ -653,6 +684,7 @@ mod tests {
             checklist: None,
             in_today: false,
             pills: false,
+            flat: false,
         };
         // Build must not panic; we don't assert on the rendered spans.
         let _ = build_line(&task, opts, &MUTED);
@@ -678,6 +710,7 @@ mod tests {
             checklist: None,
             in_today: false,
             pills: false,
+            flat: false,
         };
         let line = build_line(&task, opts, &MUTED);
         let highlight_bg = MUTED.matched;
@@ -710,6 +743,7 @@ mod tests {
             checklist: None,
             in_today: false,
             pills: false,
+            flat: false,
         };
         let line = build_line(&task, opts, &MUTED);
         line.spans
@@ -782,6 +816,7 @@ mod tests {
             checklist: None,
             in_today: false,
             pills: false,
+            flat: false,
         };
         let line = build_line(&task, opts, &MUTED);
         let url_span = line
@@ -817,6 +852,7 @@ mod tests {
             checklist: None,
             in_today: false,
             pills: false,
+            flat: false,
         };
         let line = build_line(&task, opts, &MUTED);
         let url_span = line

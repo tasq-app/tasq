@@ -103,6 +103,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             checklist: None,
             in_today: false,
             pills: app.prefs.nerd_icons,
+            flat: app.prefs.density == crate::app::Density::Compact,
         };
         if i == app.cursor {
             cursor_line = Some(lines.len());

@@ -9,13 +9,13 @@ expression: buffer_to_text(&buf)
    ▤ Inbox          3  │  │ ╭─────────────────────────────────╮ │ │  space    ● work                
    ◉ Today          1  │  │ │ ⌕ e▏                            │ │─│  priority ⚑ high                
    ◷ Upcoming       6  │▎ │ ╰─────────────────────────────────╯ │ │  tags     @laptop               
-   ▦ Calendar          │  │  SPACES                             │─│                                 
-   ✎ Notes             │  │  ● health                        3  │t│                                 
-   ⌕ Search        ^K  │  │  ● finance                       2  │ │                                 
-                       │  │  ● home                          1  │─│                                 
-  SPACES               │  │  ● learning                      1  │b│                                 
-   ● work           4  │  │  ● personal                      1  │ │                                 
-   ● health         3  │  │  ● travel                        1  │ │                                 
+   ▦ Calendar          │  │  SPACES                             │ │                                 
+   ✎ Notes             │  │  ● health                        3  │─│                                 
+   ⌕ Search        ^K  │  │  ● finance                       2  │t│                                 
+                       │  │  ● home                          1  │ │                                 
+  SPACES               │  │  ● learning                      1  │ │                                 
+   ● work           4  │  │  ● personal                      1  │─│                                 
+   ● health         3  │  │  ● travel                        1  │b│                                 
    ● finance        2  │  │  TAGS                               │ │                                 
    ● home           1  │  │  @ errands                       4  │ │                                 
    ● learning       1  │  │  @ home                          4  │ │                                 

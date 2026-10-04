@@ -65,7 +65,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             if !matches!(gk, GroupKey::None) && last_group != Some(gk) {
                 if !lines.is_empty() {
                     // One line more than between rows, so groups stand apart.
-                    push_blanks(&mut lines, blank + usize::from(blank > 0));
+                    push_blanks(&mut lines, blank + 1);
                 }
                 lines.push(group_header(theme, gk, counts.lookup(gk), app.today()));
                 last_group = Some(gk);
@@ -90,6 +90,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                 checklist: app.task_notes(task).progress(),
                 in_today: app.prefs.scope == crate::app::Scope::Today,
                 pills: app.prefs.nerd_icons,
+                flat: app.prefs.density == crate::app::Density::Compact,
             };
             if i == app.cursor {
                 cursor_line = Some(lines.len());

@@ -10,10 +10,10 @@ expression: buffer_to_text(&buf)
    ◉ Today          1  │  PRIORITY A ─────────────────────────────│  priority ⚑ high                
    ◷ Upcoming       6  │▎ ☐ ⚑ Finish Q2 board deck  ◷ due today   │  tags     @laptop               
    ▦ Calendar          │  ☐ ⚑ Call dentist to reschedule cleaning │                                 
-   ✎ Notes             │  PRIORITY B ─────────────────────────────│                                 
-   ⌕ Search        ^K  │  ☐ ⚑ Review pull requests for auth refact│                                 
-                       │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
-  SPACES               │  ☐ ⚑ Draft hiring rubric for senior eng  │                                 
+   ✎ Notes             │                                          │                                 
+   ⌕ Search        ^K  │  PRIORITY B ─────────────────────────────│                                 
+                       │  ☐ ⚑ Review pull requests for auth refact│                                 
+  SPACES               │  ☐ ⚑ Renew passport before summer trip  ◷│                                 
    ● work ╭──────────────────────────────────────────────────────────────────────────────╮          
    ● healt│                                                                              │          
    ● finan│  > ⚑ (A) Renew passport before summer trip  +travel   @errands ▏       ↑     │          
@@ -21,14 +21,14 @@ expression: buffer_to_text(&buf)
    ● learn│                       + travel     @ errands     ⚑ (A)                       │          
    ● perso│                                                                              │          
    ● trave╰──────────────────────────────────────────────────────────────────────────────╯          
-              ╭ DUE ───────────────────────────────────────────╮@p│                                 
-  FILTERS     │  ‹  May 2026  ›                                │ca│                                 
+              ╭ DUE ───────────────────────────────────────────╮ b│                                 
+  FILTERS     │  ‹  May 2026  ›                                │mo│                                 
    ⚑ High prio│    S   M   T   W   T   F   S                   │  │                                 
-   ★ Starred  │                        1   2                   │al│                                 
-   ◷ Overdue  │    3   4   5   6   7   8   9                   │me│                                 
+   ★ Starred  │                        1   2                   │@p│                                 
+   ◷ Overdue  │    3   4   5   6   7   8   9                   │ca│                                 
               │   10  11  12  13  14  15  16                   │  │                                 
-              │   17  18  19  20  21  22  23                   │  │                                 
- ╭────────────│   24  25  26  27  28  29  30                   │  │                                 
+              │   17  18  19  20  21  22  23                   │al│                                 
+ ╭────────────│   24  25  26  27  28  29  30                   │me│                                 
  │  Y  you    │   31                                           │  │                                 
  │     ● todo.│                                                │  │                                 
  ╰────────────│  Thu May 7                                     │  │                                 
