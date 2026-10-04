@@ -246,6 +246,25 @@ action can be found by looking at the screen**. In practice:
   depends on knowing them.
 - **Mouse.** Clicking a view, a space or a task works too.
 
+### The tasq look (release 5)
+
+tuxedo's screen is a list with sidebars and a status bar packed with
+shortcuts. tasq gets its own identity, decided from mock-ups before any
+code:
+
+- **A main menu** that holds every place: Home, Today, Upcoming, Calendar,
+  Notes, Spaces, Filters, Profile.
+- **Filters that look like part of the app**: chips and popovers, not a
+  list of counters.
+- **No shortcut-packed status bar.** The bottom line shrinks to what you
+  need to know (mode, sync, a message); the keys live in a which-key menu
+  and in the context hints of what's selected.
+- **A profile**: your account, sync and connected calendars, devices,
+  appearance and keys, in one place.
+- Built in: creating a task in a free slot of the day, the repeat editor
+  (every · which days · ends, with a live preview), mouse support, a
+  refreshed README and screenshots.
+
 ## 7. Releases
 
 Each release is usable on its own and worth a short video.
@@ -257,11 +276,13 @@ Each release is usable on its own and worth a short video.
 | 2b | **Notes and the full model** ✅ | Notes in the database (still Markdown, `$EDITOR` through a temporary file); planned date vs deadline, duration and reminders — tags in the todo.txt line (`plan:`, `dur:`, `remind:`), columns in the database. |
 | 3 | **Spaces and views** ✅ | Space tree (`+Uni/Exams`), "in exams" in the add dialog, Today / Upcoming / All with Later dimmed, spaces kept in the database (empty ones too), hiding a space. |
 | 4 | **Routines** ✅ | Full recurrence (weekdays, every N, until a date or N times); the calendar: the day in time blocks, the week in blocks or as an agenda, the month with counts or titles; tasks shown as their title and chips, a colour per space. |
-| 5 | **Calendar, local** | `.ics` feed from your machine, per-space calendars. |
-| 6 | **Accounts and sync** | Optional sign-in, end-to-end encrypted sync — the paid plan. |
-| 7 | **Phone and web** | Offline-capable web app on the same sync. |
-| 8 | **Connected calendars** | Server-side Google / Apple. |
-| — | Any time | MCP server, more capture languages, onboarding and fonts. |
+| 5 | **The tasq look** | The interface redesign: main menu, home screen, panels with focus, filters as chips, a quiet bottom line with a which-key menu, the profile, mouse; the repeat editor and adding in a free slot. Mock-ups first. |
+| 6 | **Capture in Spanish** | The second capture language ("mañana a las 6", "cada lunes", "en exámenes"), as a vocabulary; more follow the same way. |
+| 7 | **Calendar, local** | `.ics` feed from your machine, per-space calendars. |
+| 8 | **Accounts and sync** | Optional sign-in, end-to-end encrypted sync — the paid plan. |
+| 9 | **Phone and web** | Offline-capable web app on the same sync. |
+| 10 | **Connected calendars** | Server-side Google / Apple, set up from the profile. |
+| — | Any time | MCP server, onboarding and fonts, short showcase videos for each release. |
 
 **Parked:** inbox, file-manager view, images in notes, two-way calendar sync.
 
