@@ -593,6 +593,7 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::Welcome => handle_welcome(app, key),
         Mode::Menu => handle_menu(app, key),
         Mode::Filters => handle_filters(app, key),
+        Mode::SearchAll => handle_search_all(app, key),
         Mode::Normal if app.sidebar_focus => handle_sidebar(app, key, keybinds),
         Mode::Normal if app.inspector_focus => handle_inspector(app, key, keybinds),
         Mode::Normal if app.home => handle_home(app, key, keybinds),
@@ -632,6 +633,22 @@ fn handle_inspector(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
             app.inspector_focus = false;
             handle_normal(app, key, keybinds);
         }
+    }
+}
+
+/// Keys in the Search window: type, move, go.
+fn handle_search_all(app: &mut App, key: KeyEvent) {
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+    match key.code {
+        KeyCode::Esc => app.close_search_all(),
+        KeyCode::Enter => app.search_all_go(),
+        KeyCode::Down | KeyCode::Tab => app.search_all_move(true),
+        KeyCode::Up | KeyCode::BackTab => app.search_all_move(false),
+        KeyCode::Char('n' | 'j') if ctrl => app.search_all_move(true),
+        KeyCode::Char('p' | 'k') if ctrl => app.search_all_move(false),
+        KeyCode::Backspace => app.search_all_backspace(),
+        KeyCode::Char(c) if !ctrl => app.search_all_type(c),
+        _ => {}
     }
 }
 
@@ -780,7 +797,7 @@ fn handle_sidebar(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
                 app.sidebar_open(&item);
                 app.sidebar_focus = false;
                 if item == tasq::app::NavItem::Search {
-                    apply_action(app, Action::BeginSearch);
+                    apply_action(app, Action::SearchAll);
                 }
             }
         }
@@ -2027,6 +2044,8 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
             KeyCode::Char('d') => Some(Action::HalfPageDown),
             KeyCode::Char('u') => Some(Action::HalfPageUp),
             KeyCode::Char('p') => Some(Action::OpenCommandPalette),
+            KeyCode::Char('k' | 'f') => Some(Action::SearchAll),
+            KeyCode::Char('x') => Some(Action::PomodoroStop),
             _ => None,
         };
     }
@@ -2311,6 +2330,7 @@ fn apply_action(app: &mut App, action: Action) {
         Action::GoInbox => app.open_inbox(),
         Action::GoNotes => app.open_notes_screen(),
         Action::GoTrash => app.open_trash(),
+        Action::SearchAll => app.open_search_all(),
         Action::Pomodoro => app.pomodoro_toggle(),
         Action::PomodoroBreak => app.pomodoro_break(),
         Action::PomodoroStop => app.pomodoro_stop(),

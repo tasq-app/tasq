@@ -34,6 +34,7 @@ pub enum Mode {
     PickProject,         // j/k cycles through projects to filter by
     PickContext,         // j/k cycles through contexts to filter by
     PickSavedFilter,     // j/k cycles through saved searches to apply
+    SearchAll,           // Search: tasks, notes and spaces at once
     Filters,             // the "+ filter" popover
     PromptChecklist,     // text input → a new item on the task's checklist
     PromptSaveFilter,    // text input → name the current search and save it

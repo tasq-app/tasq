@@ -36,6 +36,7 @@ mod pomodoro;
 mod prefs;
 mod routines;
 mod saved;
+mod search_all;
 mod selection;
 mod settings;
 mod sidebar;
@@ -76,6 +77,7 @@ pub use palette::{CommandPaletteState, NotesEntryAction, PaletteDispatch};
 pub use pomodoro::{BREAK, FOCUS, Phase, Pomodoro};
 pub use prefs::{DETAILS_W, Layout, Prefs};
 pub use routines::{DayMark, Routine};
+pub use search_all::{Found, FoundRow, SearchAll};
 pub use selection::Selection;
 pub use settings::{SECTIONS as SETTINGS_SECTIONS, SetKey, SetRow, SettingsState};
 pub use sidebar::{NavItem, NavRow, SIDEBAR_SLIDE, SIDEBAR_W};
@@ -153,6 +155,8 @@ pub struct App {
     pub home_sel: Option<HomeSel>,
     /// What a click can land on, as last drawn.
     pub hits: Hits,
+    /// The Search window's box and cursor.
+    pub search_all: SearchAll,
     /// The inspector's edge is being dragged.
     pub resizing: bool,
     /// The screen's width, as last drawn.
@@ -338,6 +342,7 @@ impl App {
             home: false,
             home_sel: None,
             hits: Hits::default(),
+            search_all: SearchAll::default(),
             resizing: false,
             screen_w: std::cell::Cell::new(0),
             notes_screen: None,

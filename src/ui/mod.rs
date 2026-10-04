@@ -26,6 +26,7 @@ pub mod note_editor;
 pub mod notes_popup;
 pub mod notes_screen;
 pub mod pomodoro;
+pub mod search_all;
 pub mod settings;
 pub mod share;
 pub mod sidebar;
@@ -224,6 +225,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
         }
         Mode::Menu => menu::render(frame, body_area, app),
         Mode::Filters => filter_pop::render(frame, center_area, app),
+        Mode::SearchAll => search_all::render(frame, area, app),
         Mode::Notes => {
             // Styled like the ADD TASK dialog (same width formula, sized a
             // bit taller to fit a scrollable list).

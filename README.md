@@ -64,7 +64,14 @@ local database, notes, live natural-language capture and more, listed below.
   beside it.
 - **Focus timer** (`P`): 25 minutes on the current task, then a 5-minute
   break, pinned at the top right while it runs (other notices stack under
-  it). `P` pauses and resumes; `␣ t` takes a break or stops it.
+  it). `P` pauses and resumes, `Ctrl-X` stops it, `␣ t b` takes a break.
+- **Search** (`Ctrl-K`, or Search in the sidebar): one box over your
+  tasks, your notes (titles and text, with the line that matched) and
+  your spaces; `Enter` goes there, a note opening with your words lit up.
+  `/` still filters the list as you type.
+- **Home you can drive**: `Tab` steps through the capture bar and the
+  tiles, `Enter` goes into one (`x` ticks a task there); everything can be
+  clicked too (`mouse = false` hands the mouse back to the terminal).
 - **Readable rows**: a task shows its title, then chips: when (`today ·
   16:00 · 2h`), the deadline (`◷ by fri 9 oct`, red when due or late), the
   repeat (`↻ every mon, wed, fri`), its space in the space's colour and its
@@ -609,7 +616,8 @@ The modal keys below apply in Normal mode:
 | --- | --- |
 | `/` | search (a `due:` term filters by date range; see [todo.txt format](#todotxt-format)) |
 | `0` | Home (`Enter` or `Esc` there goes to Today, `i` to the Inbox) |
-| `P` | focus timer: start on the current task, pause, resume (`␣ t` for a break or to stop) |
+| `P` | focus timer: start on the current task, pause, resume; `Ctrl-X` stops it, `␣ t b` takes a break |
+| `Ctrl-K` | Search: tasks (done ones too), notes word for word, and spaces; `Enter` goes there |
 | `N` | Notes screen (`/` search, `n` / `N` next / previous hit, `j` / `k` move, `J` / `K` scroll, `Enter` edit in the built-in editor, `E` in `$EDITOR`, `p` pin, `t` its task, `Esc` back) |
 | `1` / `2` / `3` | Today / Upcoming / All |
 | `4` / `5` / `6` | Calendar: day / week / month (see [Calendar](#calendar)) |
@@ -684,6 +692,7 @@ backspace to drop them. A `/`-search filter seeds nothing.
 | Key | Action |
 | --- | --- |
 | `[` | toggle filter sidebar |
+| `{` / `}` | details pane narrower / wider (or drag its edge) |
 | `]` | toggle detail sidebar |
 | `T` | open theme picker |
 | `D` | cycle density: compact → comfortable → cozy |

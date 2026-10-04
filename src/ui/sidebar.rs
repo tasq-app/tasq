@@ -216,7 +216,7 @@ fn draw_row(
     let label = fit(&row.label, usize::from(label_w));
     put(buf, x + 2, y, &label, label_w, text_style);
     let hint = match row.item {
-        NavItem::Search => Some("/"),
+        NavItem::Search => Some("^K"),
         _ => None,
     };
     if let Some(c) = count.as_deref().or(hint) {

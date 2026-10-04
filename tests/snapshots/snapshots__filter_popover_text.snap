@@ -11,7 +11,7 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming       6  │▎ │ ╰─────────────────────────────────╯ │ │  tags     @laptop               
    ▦ Calendar          │  │  SPACES                             │─│                                 
    ✎ Notes             │  │  ● health                        3  │t│                                 
-   ⌕ Search         /  │  │  ● finance                       2  │ │                                 
+   ⌕ Search        ^K  │  │  ● finance                       2  │ │                                 
                        │  │  ● home                          1  │─│                                 
   SPACES               │  │  ● learning                      1  │b│                                 
    ● work           4  │  │  ● personal                      1  │ │                                 

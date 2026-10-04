@@ -9,12 +9,12 @@ expression: buffer_to_text(&buf)
    ▤ Inbox          3  │                                          │  space    ● work                
    ◉ Today          1  │  PRIORITY A ─────────────────────────────│  priority ⚑ high                
    ◷ Upcoming       ╭ tasq · command ──────────────────────────────────────────╮aptop               
-   ▦ Calendar       │ > arch█  3 matches                                       │                    
+   ▦ Calendar       │ > arch█  4 matches                                       │                    
    ✎ Notes          │──────────────────────────────────────────────────────────│                    
-   ⌕ Search         │ ▶ archive completed tasks                              A │                    
+   ⌕ Search        ^│ ▶ archive completed tasks                              A │                    
                     │   toggle archive view                                  a │                    
   SPACES            │   fuzzy search                                         / │                    
-   ● work           │                                                          │                    
+   ● work           │   search tasks, notes and spaces                  Ctrl-K │                    
    ● health         │                                                          │                    
    ● finance        │                                                          │                    
    ● home           │                                                          │                    
