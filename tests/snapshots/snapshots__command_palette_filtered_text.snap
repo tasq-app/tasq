@@ -2,19 +2,19 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
-  ▣ tasq                   │  15 tasks  ·  sort: priority                                           
-                           │  + filter                               priority  (A)                  
-   ◉ Today              1  │                                         created   2026-05-01           
-   ◷ Upcoming           6  │  PRIORITY A  2  ─────────────────────── due       2026-05-06  today    
-   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod space     work                 
-   ▦ Calendar       ╭ tasq · command ──────────────────────────────────────────╮laptop              
+                           │  /tmp/tasq-snapshot.txt                │                               
+  ▣ tasq                   │  15 tasks  ·  sort: priority           │  ⚑ Finish Q2 board deck       
+                           │  + filter                              │                               
+   ◉ Today              1  │                                        │  due       today              
+   ◷ Upcoming           6  │  PRIORITY A  2  ───────────────────────│  space     ● work             
+   ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
+   ▦ Calendar       ╭ tasq · command ──────────────────────────────────────────╮ @laptop            
    ⌕ Search         │ > arch█  4 matches                                       │                    
                     │──────────────────────────────────────────────────────────│                    
-  SPACES            │ ▶ archive completed tasks                              A │                    
-   ● work           │   toggle archive view                                  a │-01 Finish Q2 board 
-   ● health         │   fuzzy search                                         / │@laptop             
-   ● finance        │   save search as filter                               fs │-06                 
+  SPACES            │ ▶ archive completed tasks                              A │m                   
+   ● work           │   toggle archive view                                  a │                    
+   ● health         │   fuzzy search                                         / │                    
+   ● finance        │   save search as filter                               fs │                    
    ● home           │                                                          │                    
    ● learning       │                                                          │                    
    ● personal       │                                                          │                    
@@ -28,9 +28,9 @@ expression: buffer_to_text(&buf)
                     │                                                          │                    
                     │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
                     ╰──────────────────────────────────────────────────────────╯                    
-                           │                                                                        
- ╭───────────────────────╮ │                                                                        
- │  Y  you ● file        │ │                                                                        
- ╰───────────────────────╯ │                                                                        
-                           │                                                                        
+                           │                                        │                               
+ ╭───────────────────────╮ │                                        │                               
+ │  Y  you ● file        │ │                                        │                               
+ ╰───────────────────────╯ │                                        │                               
+                           │                                        │                               
    ● command     type to filter · Enter run · Esc cancel

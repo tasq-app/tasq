@@ -15,6 +15,7 @@ use crate::todo::Task;
 mod autocomplete;
 mod bulk;
 mod calendar;
+mod checklist;
 mod chord;
 mod draft;
 mod draft_overlay;
@@ -43,6 +44,7 @@ pub use crate::core::History;
 pub use crate::core::filter::{ListDueBucket, ordered_unique};
 pub use autocomplete::{ActiveToken, AutocompleteTarget, TokenKind, active_token};
 pub use calendar::{CalScreen, CalStyle, CalView, month_bounds, week_start};
+pub use checklist::{CHECKLIST_FILE, CheckItem, InspectorRow, NoteCard, NotesCache, TaskNotes};
 pub use chord::Chord;
 pub use draft::{DialogInputMode, DraftCursor, DraftState};
 pub use draft_overlay::{
@@ -127,6 +129,11 @@ pub struct App {
     pub toasts: Toasts,
     /// The sidebar has the keyboard (`Tab`).
     pub sidebar_focus: bool,
+    /// The inspector (right panel) has the keyboard.
+    pub inspector_focus: bool,
+    pub inspector_cursor: usize,
+    /// Checklists and note cards, read at most once per frame.
+    pub notes_cache: NotesCache,
     /// The page of the shortcut menu while it's open.
     pub menu_page: MenuPage,
     /// The sidebar row the keyboard is on.
@@ -291,6 +298,9 @@ impl App {
             flash_state: Flash::default(),
             toasts: Toasts::default(),
             sidebar_focus: false,
+            inspector_focus: false,
+            inspector_cursor: 0,
+            notes_cache: NotesCache::default(),
             menu_page: MenuPage::Root,
             sidebar_cursor: 0,
             sidebar_anim: None,

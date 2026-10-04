@@ -34,6 +34,7 @@ pub enum Mode {
     PickProject,         // j/k cycles through projects to filter by
     PickContext,         // j/k cycles through contexts to filter by
     PickSavedFilter,     // j/k cycles through saved searches to apply
+    PromptChecklist,     // text input → a new item on the task's checklist
     PromptSaveFilter,    // text input → name the current search and save it
     CommandPalette,
     /// QR + URL overlay for the in-TUI capture server. Any key

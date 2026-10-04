@@ -33,4 +33,4 @@ expression: buffer_to_styled(&buf)
 {fg=#c8ccd4 bg=#1a1d23}                                                                                                    {/}
 {fg=#c8ccd4 bg=#1a1d23}                                                                                                    {/}
 {fg=#c8ccd4 bg=#1a1d23}                                                                                                    {/}
-{bg=#1a1d23} {/}{fg=#1a1d23 bg=#8aa9c9 mod=bold}  ● normal  {/}{fg=#6b7280 bg=#1a1d23}   x done · e edit · r reschedule · Tab sidebar{/}{bg=#1a1d23}                                 {/}{fg=#c8ccd4 bg=#1a1d23 mod=bold}␣{/}{fg=#6b7280 bg=#1a1d23} menu {/}
+{bg=#1a1d23} {/}{fg=#1a1d23 bg=#8aa9c9 mod=bold}  ● normal  {/}{fg=#6b7280 bg=#1a1d23}   x done · e edit · r reschedule · Tab details{/}{bg=#1a1d23}                                 {/}{fg=#c8ccd4 bg=#1a1d23 mod=bold}␣{/}{fg=#6b7280 bg=#1a1d23} menu {/}

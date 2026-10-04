@@ -2,35 +2,35 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
-  ▣ tasq                   │  3 tasks  ·  sort: priority                                            
-                           │  + filter                               priority  (A)                  
-   ◉ Today              0  │                                         created   —                    
-   ◷ Upcoming           0  │  PRIORITY A  1  ─────────────────────── space                          
-   ≡ All tasks          3  │  1 ▎☐ ⚑ Buy milk                        tags                           
-   ▦ Calendar              │  PRIORITY B  1  ───────────────────────                                
-   ⌕ Search             /  │  2  ☐ ⚑ Call mom                        RAW                            
-                           │  NO PRIORITY  1  ──────────────────────                                
-  FILTERS                  │  3  ☐ Write up notes                    (A) Buy milk                   
-   ⚑ High priority      1  │                                                                        
-   ★ Starred            0  │                                                                        
-   ◷ Overdue            0  │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
-                           │                                                                        
- ╭───────────────────────╮ │                                                                        
- │  Y  you ● file        │ │                                                                        
- ╰───────────────────────╯ │                                                                        
-                           │                                                                        
-   ● normal     x done · e edit · r reschedule · Tab sidebar                                 ␣ menu
+                           │  /tmp/tasq-snapshot.txt                │                               
+  ▣ tasq                   │  3 tasks  ·  sort: priority            │  ⚑ Buy milk                   
+                           │  + filter                              │                               
+   ◉ Today              0  │                                        │  priority  ⚑ high             
+   ◷ Upcoming           0  │  PRIORITY A  1  ───────────────────────│                               
+   ≡ All tasks          3  │  1 ▎☐ ⚑ Buy milk                       │  CHECKLIST                    
+   ▦ Calendar              │  PRIORITY B  1  ───────────────────────│  + add item                   
+   ⌕ Search             /  │  2  ☐ ⚑ Call mom                       │                               
+                           │  NO PRIORITY  1  ──────────────────────│                               
+  FILTERS                  │  3  ☐ Write up notes                   │                               
+   ⚑ High priority      1  │                                        │                               
+   ★ Starred            0  │                                        │                               
+   ◷ Overdue            0  │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+                           │                                        │                               
+ ╭───────────────────────╮ │                                        │                               
+ │  Y  you ● file        │ │                                        │                               
+ ╰───────────────────────╯ │                                        │                               
+                           │                                        │                               
+   ● normal     x done · e edit · r reschedule · Tab details                                 ␣ menu

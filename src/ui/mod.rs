@@ -35,7 +35,7 @@ pub mod welcome;
 // Pane and overlay sizing. Promoted out of inline literals so the three
 // `MIN_BODY_W` references below stay in sync, and so tweaking a sidebar
 // width is a one-line change.
-const RIGHT_PANE_W: u16 = 34;
+const RIGHT_PANE_W: u16 = 36;
 const MIN_BODY_W: u16 = 40;
 
 const DIALOG_H: u16 = 8;
@@ -170,6 +170,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
         Mode::PromptProject
         | Mode::PromptContext
         | Mode::PromptSaveFilter
+        | Mode::PromptChecklist
         | Mode::PromptRenameProject
         | Mode::PromptRenameContext => {
             let w: u16 = PROMPT_MAX_W.min(area.width.saturating_sub(4));

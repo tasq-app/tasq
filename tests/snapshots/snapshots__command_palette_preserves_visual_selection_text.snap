@@ -2,19 +2,19 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                           │  /tmp/tasq-snapshot.txt                 DETAIL                         
-  ▣ tasq                   │  15 tasks  ·  sort: priority                                           
-                           │  + filter                               priority  (A)                  
-   ◉ Today              1  │                                         created   2026-05-01           
-   ◷ Upcoming           6  │  PRIORITY A  2  ─────────────────────── due       2026-05-06  today    
-   ≡ All tasks         15  │  1 [x] ▎☐ ⚑ Finish Q2 board deck  ◷ due space     work                 
-   ▦ Calendar       ╭ tasq · command ──────────────────────────────────────────╮laptop              
+                           │  /tmp/tasq-snapshot.txt                │                               
+  ▣ tasq                   │  15 tasks  ·  sort: priority           │  ⚑ Finish Q2 board deck       
+                           │  + filter                              │                               
+   ◉ Today              1  │                                        │  due       today              
+   ◷ Upcoming           6  │  PRIORITY A  2  ───────────────────────│  space     ● work             
+   ≡ All tasks         15  │  1 [x] ▎☐ ⚑ Finish Q2 board deck  ◷ due│  priority  ⚑ high             
+   ▦ Calendar       ╭ tasq · command ──────────────────────────────────────────╮ @laptop            
    ⌕ Search         │ > █                                                      │                    
                     │──────────────────────────────────────────────────────────│                    
-  SPACES            │ ▶ new task                                             n │                    
-   ● work           │   edit current task (normal mode)                      e │-01 Finish Q2 board 
-   ● health         │   edit current task (insert mode)                      i │@laptop             
-   ● finance        │   toggle complete                                      x │-06                 
+  SPACES            │ ▶ new task                                             n │m                   
+   ● work           │   edit current task (normal mode)                      e │                    
+   ● health         │   edit current task (insert mode)                      i │                    
+   ● finance        │   toggle complete                                      x │                    
    ● home           │   delete task                                         dd │                    
    ● learning       │   cycle priority                                       p │                    
    ● personal       │   star / unstar task (top of its priority)             * │                    
@@ -28,9 +28,9 @@ expression: buffer_to_text(&buf)
                     │   undo                                                 u │                    
                     │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
                     ╰──────────────────────────────────────────────────────────╯                    
-                           │                                                                        
- ╭───────────────────────╮ │                                                                        
- │  Y  you ● file        │ │                                                                        
- ╰───────────────────────╯ │                                                                        
-                           │                                                                        
+                           │                                        │                               
+ ╭───────────────────────╮ │                                        │                               
+ │  Y  you ● file        │ │                                        │                               
+ ╰───────────────────────╯ │                                        │                               
+                           │                                        │                               
    ● command    2 selected   type to filter · Enter run · Esc cancel
