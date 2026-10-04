@@ -11,6 +11,7 @@ pub mod command_palette;
 pub mod detail;
 pub mod dialog;
 pub mod empty;
+pub mod filter_pop;
 pub mod filters;
 pub mod header;
 pub mod help;
@@ -197,6 +198,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
             share::render(frame, r, app);
         }
         Mode::Menu => menu::render(frame, body_area, app),
+        Mode::Filters => filter_pop::render(frame, center_area, app),
         Mode::Notes => {
             // Styled like the ADD TASK dialog (same width formula, sized a
             // bit taller to fit a scrollable list).

@@ -99,12 +99,11 @@ impl App {
             rows.push(row(NavItem::Preset(p), p.label(), Some(n)));
         }
         for (i, f) in self.saved_filters().iter().enumerate() {
-            let needle = filter::resolve_needle(&f.query, today);
+            let view = Filter::from_query(&f.query);
+            let needle = filter::resolve_needle(&view.search, today);
             let n = tasks
                 .iter()
-                .filter(|t| {
-                    !t.done && filter::passes_user_filter(t, &Filter::default(), Some(&needle))
-                })
+                .filter(|t| !t.done && filter::passes_user_filter(t, &view, Some(&needle)))
                 .count();
             rows.push(row(NavItem::Saved(i), &f.name, Some(n)));
         }
@@ -116,6 +115,14 @@ impl App {
         if self.calendar.is_some() {
             return Some(NavItem::Calendar);
         }
+        if let Some(i) = self
+            .saved_filters()
+            .iter()
+            .position(|f| Filter::from_query(&f.query).same_as(&self.filter))
+            .filter(|_| self.filter.has_any())
+        {
+            return Some(NavItem::Saved(i));
+        }
         if let Some(p) = self.filter.preset {
             return Some(NavItem::Preset(p));
         }
@@ -123,12 +130,7 @@ impl App {
             return Some(NavItem::Space(p.clone()));
         }
         if !self.filter.search.is_empty() {
-            return self
-                .saved_filters()
-                .iter()
-                .position(|f| f.query == self.filter.search)
-                .map(NavItem::Saved)
-                .or(Some(NavItem::Search));
+            return Some(NavItem::Search);
         }
         Some(match self.prefs.scope {
             Scope::Today => NavItem::Today,
@@ -208,9 +210,7 @@ impl App {
             }
             NavItem::Saved(i) => {
                 if let Some(q) = self.saved_filters().get(*i).map(|f| f.query.clone()) {
-                    self.filter.project = None;
-                    self.filter.preset = None;
-                    self.filter.search = q;
+                    self.filter = Filter::from_query(&q);
                     self.set_scope(Scope::All);
                 }
             }

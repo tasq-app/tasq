@@ -28,9 +28,9 @@ impl App {
         // Trim so the stored value equals what survives the config
         // round-trip (`parse` does `value.trim()`); a whitespace-only
         // search trims to empty and is rejected like a blank one.
-        let query = self.filter.search.trim().to_string();
+        let query = self.filter.to_query();
         if query.is_empty() {
-            return Err("no active search to save".into());
+            return Err("no filter to save".into());
         }
         match self.saved_filters.iter_mut().find(|f| f.name == name) {
             Some(existing) => existing.query = query,

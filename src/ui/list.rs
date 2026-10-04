@@ -316,7 +316,17 @@ fn title_block(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
         ));
         chips.push(Span::raw(" "));
     }
-    chips.push(Span::styled("+ filter", dim));
+    // The way to add one, lit while its popover is open.
+    if app.mode == Mode::Filters {
+        chips.push(Span::styled(
+            " + filter ",
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        ));
+    } else {
+        chips.push(Span::styled("+ filter", dim));
+    }
 
     let lines = vec![Line::from(name), Line::from(info), Line::from(chips)];
     frame.render_widget(

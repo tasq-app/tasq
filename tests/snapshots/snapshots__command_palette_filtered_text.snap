@@ -9,12 +9,12 @@ expression: buffer_to_text(&buf)
    ◷ Upcoming           6  │  PRIORITY A  2  ───────────────────────│  space     ● work             
    ≡ All tasks         15  │  1 ▎☐ ⚑ Finish Q2 board deck  ◷ due tod│  priority  ⚑ high             
    ▦ Calendar       ╭ tasq · command ──────────────────────────────────────────╮ @laptop            
-   ⌕ Search         │ > arch█  4 matches                                       │                    
+   ⌕ Search         │ > arch█  3 matches                                       │                    
                     │──────────────────────────────────────────────────────────│                    
   SPACES            │ ▶ archive completed tasks                              A │m                   
    ● work           │   toggle archive view                                  a │                    
    ● health         │   fuzzy search                                         / │                    
-   ● finance        │   save search as filter                               fs │                    
+   ● finance        │                                                          │                    
    ● home           │                                                          │                    
    ● learning       │                                                          │                    
    ● personal       │                                                          │                    

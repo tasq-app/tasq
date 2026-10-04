@@ -522,6 +522,7 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::Notes => handle_notes(app, key),
         Mode::Welcome => handle_welcome(app, key),
         Mode::Menu => handle_menu(app, key),
+        Mode::Filters => handle_filters(app, key),
         Mode::Normal if app.sidebar_focus => handle_sidebar(app, key, keybinds),
         Mode::Normal if app.inspector_focus => handle_inspector(app, key, keybinds),
         Mode::Normal if app.calendar.is_some() => handle_calendar(app, key, keybinds),
@@ -561,6 +562,22 @@ fn handle_inspector(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     }
 }
 
+/// Keys in the "+ filter" popover: type to search, move, pick, close.
+fn handle_filters(app: &mut App, key: KeyEvent) {
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+    match key.code {
+        KeyCode::Esc => app.close_filters(),
+        KeyCode::Enter => app.filter_pop_pick(),
+        KeyCode::Down | KeyCode::Tab => app.filter_pop_move(true),
+        KeyCode::Up | KeyCode::BackTab => app.filter_pop_move(false),
+        KeyCode::Char('n' | 'j') if ctrl => app.filter_pop_move(true),
+        KeyCode::Char('p' | 'k') if ctrl => app.filter_pop_move(false),
+        KeyCode::Backspace => app.filter_pop_backspace(),
+        KeyCode::Char(c) if !ctrl => app.filter_pop_type(c),
+        _ => {}
+    }
+}
+
 /// Keys in the shortcut menu: an entry's key does it, Esc (or space again)
 /// closes, Backspace goes back a page.
 fn handle_menu(app: &mut App, key: KeyEvent) {
@@ -593,6 +610,25 @@ fn handle_sidebar(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         }
         KeyCode::Tab | KeyCode::Esc | KeyCode::Char('h') | KeyCode::Left => {
             app.sidebar_focus = false;
+        }
+        // On a space: colour, hide, rename, delete — what the space picker
+        // did, where the spaces are.
+        KeyCode::Char(k @ ('c' | 'C' | 'H' | 'r' | 'd'))
+            if matches!(app.sidebar_current(), Some(tasq::app::NavItem::Space(_))) =>
+        {
+            if let Some(item) = app.sidebar_current() {
+                app.sidebar_open(&item);
+            }
+            match k {
+                'c' => app.cycle_current_space_color(false),
+                'C' => app.cycle_current_space_color(true),
+                'H' => app.toggle_current_space_hidden(),
+                'r' => app.begin_rename_project(),
+                _ => app.delete_current_space(),
+            }
+            // A deleted space leaves the cursor past the end.
+            let last = app.sidebar_rows().len().saturating_sub(1);
+            app.sidebar_cursor = app.sidebar_cursor.min(last);
         }
         _ => {
             app.sidebar_focus = false;
@@ -1847,13 +1883,13 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('v') => Action::ToggleVisual,
         KeyCode::Char(' ') => Action::ToggleSelected,
         KeyCode::Char('A') => Action::ArchiveCompleted,
-        // First 'f' arms the leader; a second 'f' (`ff`) opens the saved-
-        // search picker. Mirrors the `fp`/`fc` pattern below.
+        // `f` opens the "+ filter" popover. (`ff`, `fp`, `fc` and `fs`
+        // still work after a remapped `arm_f` key.)
         KeyCode::Char('f') => {
             if app.chord.consume('f') {
                 Action::PickSavedFilter
             } else {
-                Action::ArmF
+                Action::OpenFilters
             }
         }
         KeyCode::Char('s') => {
@@ -2065,12 +2101,13 @@ fn apply_action(app: &mut App, action: Action) {
             }
         }
         Action::ArmF => app.chord.arm('f'),
+        Action::OpenFilters => app.open_filters(),
         Action::PickProject => app.enter_pick_project(),
         Action::PickContext => app.enter_pick_context(),
         Action::PickSavedFilter => app.enter_pick_saved(),
         Action::SaveCurrentFilter => {
-            if app.filter().search.is_empty() {
-                app.flash("no active search to save");
+            if !app.filter().has_any() {
+                app.flash("no filter to save");
             } else {
                 app.mode = Mode::PromptSaveFilter;
                 app.draft_clear();
@@ -2530,8 +2567,8 @@ mod tests {
     #[test]
     fn fp_chord_routes_to_pick_project() {
         let mut app = build_app();
-        // 'f' arms the leader.
-        assert_eq!(resolve(&mut app, key('f')), Some(Action::ArmF));
+        // 'f' opens the filter popover; the leader is still there to arm.
+        assert_eq!(resolve(&mut app, key('f')), Some(Action::OpenFilters));
         apply_action(&mut app, Action::ArmF);
         // 'p' after armed 'f' picks project, not cycles priority.
         assert_eq!(resolve(&mut app, key('p')), Some(Action::PickProject));

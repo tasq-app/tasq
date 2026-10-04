@@ -174,12 +174,12 @@ old `tuxedo-w-notes` binary can be deleted.
 - **TUI and CLI in one binary.** Run `tasq` for the interactive UI, or `tasq <command>` for a [todo.txt-cli](https://github.com/todotxt/todo.txt-cli)-compatible command line (`add`, `ls`, `do`, `pri`, `archive`, …) — scriptable, with `--json` output and `$TODO_DIR` / `$TODO_FILE` / `$DONE_FILE` support.
 - **Natural-language add.** Type prose into the add prompt — `Pay rent monthly on the first, show 3 days before due, project home` — and each recognised phrase lights up as you type, with chips showing what was understood; one Enter saves it as canonical todo.txt. Local, offline, no AI service.
 - **Phone capture.** Press `s` for a QR pointing at a tiny PWA on your machine's LAN — type tasks from your phone and they appear in the list. Captures land in a sibling `inbox.txt` first, so any tool that can append a line (shell, iOS Shortcuts, cron) is also a capture source.
-- **Vim keys, no surprises.** `j` / `k` to move, `dd` to delete, `gg` / `G` to jump, `u` to undo (50 levels), chord prompts (`gg`, `dd`, `fp`, `fc`) with a 600 ms window.
+- **Vim keys, no surprises.** `j` / `k` to move, `dd` to delete, `gg` / `G` to jump, `u` to undo (50 levels), chord prompts (`gg`, `dd`, `yy`) with a 600 ms window.
 - **Command palette.** `:` or `Ctrl-P` opens a fuzzy palette over every action — type a few letters, hit Enter. Same matcher as `/` search, ranked so start-of-label hits beat word-boundary hits beat mid-word hits.
 - **Safe writes, live reload.** Every change is saved at once, in a transaction. If another process — the CLI, the phone capture, a second window — changes your tasks, tasq reloads on the next keypress (or within ~250 ms while idle) and flashes a notice.
 - **Archive.** `A` moves completed tasks to the archive; `a` browses it.
-- **Filter, sort, multi-select.** Cycle by `+project` or `@context`, sort by priority / due / file order, and bulk-complete or bulk-delete in visual mode.
-- **Saved searches.** Name the active `/`-search with `fs`, then recall it any time by cycling saved filters with `ff`. Stored as plain `filter.<name>` lines in the config — hand-editable like everything else.
+- **Filter, sort, multi-select.** `f` opens a filter popover with a search box — spaces, tags, deadlines, priority — and each pick becomes a chip over the list; sort by priority / due / file order, and bulk-complete or bulk-delete in visual mode.
+- **Saved views.** Save a combination of filters as a named view from the popover; it shows up in the sidebar. Stored as plain `filter.<name>` lines in the config — hand-editable like everything else.
 - **Five themes, three densities.** Cycle with `T` and `D`. Choices persist across runs and hot-reload when you edit `config.toml` externally.
 - **No daemon, no database, no cloud.** One file in, one file out.
 
@@ -190,7 +190,7 @@ old `tuxedo-w-notes` binary can be deleted.
 | **Empty state** • cell-bowtie mark and quick-start when the file has no tasks | ![empty](docs/screenshots/empty.svg) |
 | **List** • list of todos, optionally grouped | ![empty](docs/screenshots/list.svg) |
 | **Archive** • completed tasks grouped by completion date | ![archive](docs/screenshots/archive.svg) |
-| **Filter sidebar active** • `fp` cycles projects with j/k, `fc` cycles contexts; saved searches list under a **SAVED** heading with live match counts | ![filter](docs/screenshots/filter.svg) |
+| **Filter sidebar active** • spaces, built-in filters and saved views, each with a live count | ![filter](docs/screenshots/filter.svg) |
 | **Command palette** • `:` or `Ctrl-P` opens a fuzzy palette over every action | ![command palette](docs/screenshots/command-palette.svg) |
 | **Help** • `?` opens the full keybindings overlay | ![help](docs/screenshots/help.svg) |
 
@@ -458,11 +458,10 @@ undo                 = "u"
 
 # Filtering, sort, view
 begin_search        = "/"
-arm_f               = "f"        # leader for the fp / fc / ff / fs chords
-pick_project        = "fp"
-pick_context        = "fc"
-pick_saved_filter   = "ff"
-save_current_filter = "fs"
+open_filters        = "f"        # the filter popover
+# pick_project, pick_context, pick_saved_filter and save_current_filter
+# have no key by default (the popover does all four); bind them if you
+# want them back, e.g. pick_project = "P".
 cycle_sort          = "S"
 toggle_visual       = "v"
 toggle_selected     = "space"
@@ -583,10 +582,9 @@ The modal keys below apply in Normal mode:
 | `/` | search (a `due:` term filters by date range; see [todo.txt format](#todotxt-format)) |
 | `1` / `2` / `3` | Today / Upcoming / All |
 | `4` / `5` / `6` | Calendar: day / week / month (see [Calendar](#calendar)) |
-| `fp` | filter by space, sub-spaces included (`j` / `k` cycles, `c` / `C` next colour / automatic colour, `h` hides / shows it, `r` renames, `d` deletes an empty one, `Esc` clears) |
-| `fc` | filter by tag (`j` / `k` cycles, `Esc` clears) |
-| `ff` | pick a saved search (`j` / `k` cycles, `Enter` keeps, `Esc` reverts) |
-| `fs` | save the active `/`-search as a named filter |
+| `f` | filter popover: type to search spaces (sub-spaces included), tags, deadlines and priority; `↑` / `↓` move, `Enter` adds the filter (or removes it, if it's on), `⌫` with nothing typed drops the last chip, `Esc` closes. With filters on, it can save them as a view or clear them all |
+| `Tab` | list → details → sidebar; `Shift-Tab` goes straight to the sidebar |
+| `c` / `C` / `H` / `r` / `d` (sidebar, on a space) | next colour / automatic colour, hide / show, rename, delete an empty one |
 | `S` | cycle sort: priority → due → file order |
 | `v` | enter visual / multi-select; `space` toggles a row |
 | `x` / `dd` (in visual) | bulk-complete / bulk-delete the selection |
@@ -634,16 +632,17 @@ name — ignoring case and accents, whole or by its first letters — matches;
 the chip shows `Uni › Exams`.
 The database keeps each space once a task has used it, so a space whose
 last task is done or deleted stays in the sidebar (with a count of 0) until
-you delete it from the space picker (`fp`, then `d`). Renaming a space
-(`fp`, then `r`) takes its sub-spaces along: `Uni` → `School` moves
-`Uni/Exams` to `School/Exams`.
+you delete it from the sidebar (`Tab` to it, then `d` on the space).
+Renaming a space (`r` on it in the sidebar) takes its sub-spaces along:
+`Uni` → `School` moves `Uni/Exams` to `School/Exams`.
 Each space has a colour from the theme's palette, picked from its name
-until you choose one (`fp`, pick it, `c` for the next colour, `C` back to
-automatic). A sub-space without a colour of its own takes its parent's.
+until you choose one (`c` on it in the sidebar for the next colour, `C`
+back to automatic). A sub-space without a colour of its own takes its
+parent's.
 To keep a part of your life out of Today, Upcoming and All, hide its space
-(`fp`, pick it, `h`). Its sub-spaces go with it, and a single sub-space can
-be hidden on its own. A hidden space stays dimmed in the sidebar, and opening
-it (`fp`) still shows its tasks.
+(`H` on it in the sidebar). Its sub-spaces go with it, and a single
+sub-space can be hidden on its own. A hidden space stays dimmed in the
+sidebar, and opening it still shows its tasks.
 
 While a space or `@tag` filter is active, `n` seeds the add prompt
 with the matching tags so a task added under a filter stays in view —
@@ -669,8 +668,8 @@ backspace to drop them. A `/`-search filter seeds nothing.
 | `,` | settings overlay |
 | `q` | quit |
 
-Two-key chord prompts (`gg`, `dd`, `yy`, `yb`, `fp`, `fc`, `ff`, `fs`) show
-a `g…` / `d…` / `y…` / `f…` indicator in the status-bar mode chip while the
+Two-key chord prompts (`gg`, `dd`, `yy`, `yb`) show
+a `g…` / `d…` / `y…` indicator in the status-bar mode chip while the
 leader is armed; the window is 600 ms.
 
 Copy uses the OSC 52 terminal escape, so it works locally and over SSH on
@@ -842,8 +841,10 @@ as a secret — anyone who has the value and LAN reach can append to your
 inbox. Delete the key from `config.toml` to rotate it on the next `s`
 press.
 
-Saved searches (created with `fs`) are written one per line as
-`filter.<name> = <query>`, where `<query>` is the `/`-search needle. They
+Saved views (saved from the `f` popover) are written one per line as
+`filter.<name> = <query>`, where `<query>` reads `+space @tag is:starred`
+followed by any `/`-search needle (`is:` takes `high`, `starred` or
+`overdue`). They
 round-trip as plain text, so you can add, rename, or delete them by editing
 `config.toml` directly; a repeated `filter.<name>` keeps the last value, and
 `<name>` may not contain `=`.

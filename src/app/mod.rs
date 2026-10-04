@@ -19,6 +19,7 @@ mod checklist;
 mod chord;
 mod draft;
 mod draft_overlay;
+mod filter_pop;
 mod flash;
 mod live_add;
 mod menu;
@@ -52,6 +53,7 @@ pub use draft_overlay::{
     REC_UNIT_ORDER, RecurrenceBuilderState, SLASH_ENTRIES, SlashEntry, SlashKind, SlashMenuState,
     format_rec_value, recurrence_next_preview,
 };
+pub use filter_pop::{DUE_TERMS, FilterPop, PopPick, PopRow};
 pub use flash::Flash;
 pub use live_add::{CHIP_ORDER, Chip, describe_rec};
 pub use menu::{MenuDo, MenuEntry, entries as menu_entries};
@@ -131,6 +133,8 @@ pub struct App {
     pub sidebar_focus: bool,
     /// The inspector (right panel) has the keyboard.
     pub inspector_focus: bool,
+    /// The "+ filter" popover's search and cursor.
+    pub filter_pop: FilterPop,
     pub inspector_cursor: usize,
     /// Checklists and note cards, read at most once per frame.
     pub notes_cache: NotesCache,
@@ -175,7 +179,7 @@ pub struct App {
     /// The search string that was active when the `ff` picker opened, so
     /// cancelling (`Esc`) restores it instead of leaving the previewed
     /// filter applied. `None` outside `Mode::PickSavedFilter`.
-    saved_pick_restore: Option<String>,
+    saved_pick_restore: Option<Filter>,
     /// Index into `saved_filters` of the row the `ff` picker currently
     /// previews. Tracked explicitly rather than re-derived from
     /// `filter.search` so duplicate queries don't strand j/k. Only
@@ -299,6 +303,7 @@ impl App {
             toasts: Toasts::default(),
             sidebar_focus: false,
             inspector_focus: false,
+            filter_pop: FilterPop::default(),
             inspector_cursor: 0,
             notes_cache: NotesCache::default(),
             menu_page: MenuPage::Root,

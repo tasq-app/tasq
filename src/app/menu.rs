@@ -3,7 +3,7 @@
 //! Entries ending in `…` open a page of their own.
 
 use super::App;
-use super::types::{MenuPage, Mode, Preset};
+use super::types::{MenuPage, Mode};
 use crate::action::Action;
 
 /// What a menu key does.
@@ -11,9 +11,6 @@ use crate::action::Action;
 pub enum MenuDo {
     Act(Action),
     Page(MenuPage),
-    Preset(Preset),
-    /// Drop every filter.
-    ClearFilters,
     /// Give the keyboard to the sidebar.
     FocusSidebar,
 }
@@ -53,7 +50,7 @@ pub fn entries(p: MenuPage) -> Vec<MenuEntry> {
             act('p', "priority", Action::CyclePriority),
             act('*', "star", Action::ToggleStar),
             page('g', "go to…", MenuPage::Go),
-            page('f', "filter…", MenuPage::Filter),
+            act('f', "filter…", Action::OpenFilters),
             act('o', "notes", Action::OpenNotes),
             act('/', "search", Action::BeginSearch),
             act(':', "commands", Action::OpenCommandPalette),
@@ -76,32 +73,6 @@ pub fn entries(p: MenuPage) -> Vec<MenuEntry> {
                 label: "sidebar",
                 does: MenuDo::FocusSidebar,
             },
-        ],
-        MenuPage::Filter => vec![
-            act('s', "space…", Action::PickProject),
-            act('t', "tag…", Action::PickContext),
-            act('v', "saved view…", Action::PickSavedFilter),
-            MenuEntry {
-                key: 'h',
-                label: "high priority",
-                does: MenuDo::Preset(Preset::HighPriority),
-            },
-            MenuEntry {
-                key: '*',
-                label: "starred",
-                does: MenuDo::Preset(Preset::Starred),
-            },
-            MenuEntry {
-                key: 'o',
-                label: "overdue",
-                does: MenuDo::Preset(Preset::Overdue),
-            },
-            MenuEntry {
-                key: 'c',
-                label: "clear filters",
-                does: MenuDo::ClearFilters,
-            },
-            act('S', "save this view", Action::SaveCurrentFilter),
         ],
     }
 }
@@ -130,18 +101,6 @@ impl App {
                 self.close_menu();
                 Some(a)
             }
-            MenuDo::Preset(p) => {
-                self.close_menu();
-                self.sidebar_open(&super::NavItem::Preset(p));
-                None
-            }
-            MenuDo::ClearFilters => {
-                self.close_menu();
-                self.filter.clear();
-                self.recompute_visible();
-                self.flash("filters cleared");
-                None
-            }
             MenuDo::FocusSidebar => {
                 self.close_menu();
                 self.sidebar_toggle_focus();
@@ -165,11 +124,9 @@ mod tests {
         assert_eq!(app.menu_key('w'), Some(Action::CalendarWeek));
         assert_eq!(app.mode, Mode::Normal);
         app.open_menu();
-        app.menu_key('f');
-        app.menu_key('h');
-        assert_eq!(app.filter.preset, Some(Preset::HighPriority));
+        assert_eq!(app.menu_key('f'), Some(Action::OpenFilters));
         // Every key is unique on its page.
-        for p in [MenuPage::Root, MenuPage::Go, MenuPage::Filter] {
+        for p in [MenuPage::Root, MenuPage::Go] {
             let keys: Vec<char> = entries(p).iter().map(|e| e.key).collect();
             let mut dedup = keys.clone();
             dedup.sort_unstable();

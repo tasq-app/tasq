@@ -1,5 +1,5 @@
 use super::App;
-use super::types::Mode;
+use super::types::{Filter, Mode};
 use crate::core::filter::unique_values;
 
 impl App {
@@ -81,15 +81,15 @@ impl App {
             self.flash("no saved filters");
             return;
         }
-        self.saved_pick_restore = Some(self.filter.search.clone());
+        self.saved_pick_restore = Some(self.filter.clone());
         // Highlight the saved filter matching the active search, else the
         // first; track the index so duplicate queries stay distinguishable.
         self.saved_pick_idx = self
             .saved_filters
             .iter()
-            .position(|f| f.query == self.filter.search)
+            .position(|f| Filter::from_query(&f.query).same_as(&self.filter))
             .unwrap_or(0);
-        self.filter.search = self.saved_filters[self.saved_pick_idx].query.clone();
+        self.filter = Filter::from_query(&self.saved_filters[self.saved_pick_idx].query);
         self.cursor = 0;
         self.mode = Mode::PickSavedFilter;
         self.recompute_visible();
@@ -115,7 +115,7 @@ impl App {
             Mode::PickProject => self.filter.project = None,
             Mode::PickContext => self.filter.context = None,
             Mode::PickSavedFilter => {
-                self.filter.search = self.saved_pick_restore.take().unwrap_or_default();
+                self.filter = self.saved_pick_restore.take().unwrap_or_default();
             }
             _ => {}
         }
@@ -157,7 +157,7 @@ impl App {
                 } else {
                     (self.saved_pick_idx + len - 1) % len
                 };
-                self.filter.search = self.saved_filters[self.saved_pick_idx].query.clone();
+                self.filter = Filter::from_query(&self.saved_filters[self.saved_pick_idx].query);
                 self.cursor = 0;
                 self.recompute_visible();
                 self.flash_pick_saved();

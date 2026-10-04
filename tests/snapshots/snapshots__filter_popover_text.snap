@@ -1,0 +1,36 @@
+---
+source: tests/snapshots.rs
+expression: buffer_to_text(&buf)
+---
+                           │  ● work                                │                               
+  ▣ tasq                   │  4 tasks  ·  sort: priority            │  ⚑ Finish Q2 board deck       
+                           │   ● work ×   + filter                  │                               
+   ◉ Today              1  │  ╭───────────────────────────────────╮ │  due       today              
+   ◷ Upcoming           6  │  │ ╭───────────────────────────────╮ │─│  space     ● work             
+   ≡ All tasks         15  │  │ │ ⌕ e▏                          │ │d│  priority  ⚑ high             
+   ▦ Calendar              │  │ ╰───────────────────────────────╯ │─│  tags      @laptop            
+   ⌕ Search             /  │  │  SPACES                           │r│                               
+                           │  │  ● health                      3  │ │  CHECKLIST                    
+  SPACES                   │  │  ● finance                     2  │─│  + add item                   
+   ● work               4  │  │  ● home                        1  │e│                               
+   ● health             3  │  │  ● learning                    1  │ │                               
+   ● finance            2  │  │  ● personal                    1  │ │                               
+   ● home               1  │  │  ● travel                      1  │ │                               
+   ● learning           1  │  │  TAGS                             │ │                               
+   ● personal           1  │  │  @ errands                     4  │ │                               
+   ● travel             1  │  │  @ home                        4  │ │                               
+                           │  │  @ phone                       3  │ │                               
+  FILTERS                  │  │  WHEN                             │ │                               
+   ⚑ High priority      2  │  │  ◷ due today                   1  │ │                               
+   ★ Starred            0  │  │  ◷ due within a week           3  │ │                               
+   ◷ Overdue            7  │  │  ◷ due within a month          6  │ │                               
+                           │  │  ◷ overdue                     7  │ │                               
+                           │  │  PRIORITY                         │ │                               
+                           │  │  ★ starred                     0  │ │                               
+                           │  │  SAVE                             │ │                               
+                           │  │  + Save "work" as a view…         │ │                               
+ ╭───────────────────────╮ │  │  × Clear all filters              │ │                               
+ │  Y  you ● file        │ │  ╰───────────────────────────────────╯ │                               
+ ╰───────────────────────╯ │                                        │                               
+                           │                                        │                               
+   ● filter     type to search · ↑↓ move · Enter add/remove · ⌫ drop last · Esc close
