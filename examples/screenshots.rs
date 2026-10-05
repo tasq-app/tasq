@@ -16,7 +16,7 @@ use ratatui::backend::TestBackend;
 use ratatui::buffer::Buffer;
 use ratatui::style::{Color, Modifier};
 
-use tasq::app::{App, Density, EditorKey, Mode, NoteEditorMode, NoteEditorState, View};
+use tasq::app::{App, CalView, Density, EditorKey, Mode, NoteEditorMode, NoteEditorState, Scope};
 use tasq::config::Config;
 use tasq::sample;
 use tasq::theme;
@@ -62,14 +62,18 @@ fn main() -> std::io::Result<()> {
     let note_path = note_dir.join("deck.md");
     fs::write(&note_path, NOTE)?;
 
-    // Render every scene at Compact density so the screenshots stay
-    // consistent and pack the most content per frame.
+    // Every task (the sample's dates are spread over weeks, so Today would
+    // show only one), at Compact density so each frame packs the most in.
+    let all_tasks = || Config {
+        view: Some(Scope::All),
+        ..Config::default()
+    };
     let make = || {
         let mut app = App::new(
             PathBuf::from("/tmp/tasq-screenshots.txt"),
             sample::TODO_RAW.to_string(),
             "2026-05-06".to_string(),
-            Config::default(),
+            all_tasks(),
         );
         app.prefs.density = Density::Compact;
         app
@@ -78,10 +82,22 @@ fn main() -> std::io::Result<()> {
     // 1. Default list view, fresh sample data, cursor on first task.
     save(&make(), &out.join("list.svg"))?;
 
-    // 2. Archive view — completed tasks grouped by completion date.
+    // 2. Home: today, the week, routines, spaces, notes and the inbox.
     let mut app = make();
-    app.set_view(View::Archive);
-    save(&app, &out.join("archive.svg"))?;
+    app.open_home();
+    save(&app, &out.join("home.svg"))?;
+
+    // 2b. The week in the calendar.
+    let mut app = make();
+    app.open_cal(CalView::Week);
+    save(&app, &out.join("calendar-week.svg"))?;
+
+    // 2c. Settings, on Appearance.
+    let mut app = make();
+    app.open_settings();
+    app.settings_move(true);
+    app.settings_enter_rows();
+    save(&app, &out.join("settings.svg"))?;
 
     // 3. Help overlay.
     let mut app = make();
@@ -145,7 +161,7 @@ fn main() -> std::io::Result<()> {
             PathBuf::from("/tmp/tasq-screenshots.txt"),
             raw,
             "2026-05-06".to_string(),
-            Config::default(),
+            all_tasks(),
         );
         app.prefs.density = Density::Compact;
         app
@@ -189,19 +205,19 @@ fn main() -> std::io::Result<()> {
     app.mode = Mode::Help;
     save(&app, &out.join("help-notes.svg"))?;
 
-    // 11. A custom theme from docs/themes (Catppuccin Macchiato): the note
-    // in the editor with a linewise Visual selection over the task list,
-    // in the theme's own mauve.
+    // 11. A custom theme from docs/themes (TokyoNight Moon): the note in
+    // the editor with a linewise Visual selection over the task list, in
+    // the theme's own colours.
     let mut app = starred();
     if let Some(i) = theme::all()
         .iter()
-        .position(|t| t.name == "Catppuccin Macchiato")
+        .position(|t| t.name == "TokyoNight Moon")
     {
         app.prefs.set_theme_idx(i);
     }
     let note = pin(&mut app, &keys("7GVjj"));
     app.pinned_notes.push(note);
-    save(&app, &out.join("theme-catppuccin-macchiato.svg"))?;
+    save(&app, &out.join("theme-custom.svg"))?;
 
     println!("wrote screenshots to {}", out.display());
     Ok(())

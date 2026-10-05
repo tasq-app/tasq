@@ -37,11 +37,10 @@ local database, notes, live natural-language capture and more, listed below.
   planned or due today, and anything late), **Upcoming** (`2`, the next
   days, then later) and **All** (`3`). Hide a space to keep it out of the
   views.
-- **Home**: tasq opens on your day at a glance — today's tasks and
-  progress, the week ahead as a heatmap, what's next, your routines with
-  their streaks, your spaces, the notes you touched last and the inbox
-  (`0` comes back to it; `start = "list"` in the config opens the list
-  instead).
+- **Home** (`0`): your day at a glance — today's tasks and progress, the
+  week ahead as a heatmap, what's next, your routines with their streaks,
+  your spaces, the notes you touched last and the inbox. tasq opens on
+  Today; `start = "home"` in the config opens on Home instead.
 - **Inbox**: what you capture without a space or a date (from the phone,
   the CLI, or a quick `n`) waits in the Inbox until you sort it in: `+`
   gives it a space, `r` a date.
@@ -127,7 +126,7 @@ local database, notes, live natural-language capture and more, listed below.
   the top of its own priority group — a starred (B) task sits above the other
   (B) tasks, never above an (A).
 
-![notes demo](docs/demo-notes.gif)
+![notes demo](docs/videos/07-notes.gif)
 
 | | |
 | --- | --- |
@@ -135,7 +134,7 @@ local database, notes, live natural-language capture and more, listed below.
 | **Note editor** • a note pinned next to the list, in Insert mode: Enter continued the task list, long lines soft-wrap under their item, the border and chip show the mode. ★ marks starred tasks | ![note editor](docs/screenshots/notes-editor.svg) |
 | **Preview** • `M` renders the same note: headings, checkboxes, nested items, quotes, tables | ![note preview](docs/screenshots/notes-preview.svg) |
 | **Help, notes page** • `?` then `Tab` (or `?` from the notes list) | ![notes help](docs/screenshots/help-notes.svg) |
-| **Custom theme** • [Catppuccin Macchiato](docs/themes/catppuccin-macchiato.toml), a linewise Visual selection in the theme's own mauve — mode colors are picked from whatever theme is active | ![catppuccin macchiato](docs/screenshots/theme-catppuccin-macchiato.svg) |
+| **Custom theme** • [TokyoNight Moon](docs/themes/tokyonight-moon.toml), a linewise Visual selection in the theme's own colours — mode colors are picked from whatever theme is active | ![tokyonight moon](docs/screenshots/theme-custom.svg) |
 
 ### Using the notes feature
 
@@ -215,8 +214,8 @@ old `tuxedo-w-notes` binary can be deleted.
 - **Archive.** `A` moves completed tasks to the archive; `a` browses it.
 - **Filter, sort, multi-select.** `f` opens a filter popover with a search box — spaces, tags, deadlines, priority — and each pick becomes a chip over the list; sort by priority / due / file order, and bulk-complete or bulk-delete in visual mode.
 - **Saved views.** Save a combination of filters as a named view from the popover; it shows up in the sidebar. Stored as plain `filter.<name>` lines in the config — hand-editable like everything else.
-- **Five themes, three densities.** Cycle with `T` and `D`. Choices persist across runs and hot-reload when you edit `config.toml` externally.
-- **No daemon, no database, no cloud.** One file in, one file out.
+- **Six themes, three densities.** Cycle with `T` and `D`. Choices persist across runs and hot-reload when you edit `config.toml` externally.
+- **No daemon, no cloud.** A local database on your machine, or a todo.txt you open directly.
 
 ## See it
 
@@ -280,41 +279,42 @@ Each of these is a few seconds long and shows one thing.
 
 | | |
 | --- | --- |
-| **Empty state** • cell-bowtie mark and quick-start when the file has no tasks | ![empty](docs/screenshots/empty.svg) |
-| **List** • list of todos, optionally grouped | ![empty](docs/screenshots/list.svg) |
-| **Archive** • completed tasks grouped by completion date | ![archive](docs/screenshots/archive.svg) |
-| **Filter sidebar active** • spaces, built-in filters and saved views, each with a live count | ![filter](docs/screenshots/filter.svg) |
+| **Home** • today, the week, routines, spaces, recent notes and the inbox | ![home](docs/screenshots/home.svg) |
+| **All tasks** • grouped by priority, each task as its title and chips, its details on the right | ![list](docs/screenshots/list.svg) |
+| **A space** • a filter as a chip over the list, the space lit in the sidebar | ![filter](docs/screenshots/filter.svg) |
+| **The week** • the calendar's week view (`5`); `4` is the day, `6` the month | ![calendar week](docs/screenshots/calendar-week.svg) |
+| **Settings** • `,` opens them, a card per section | ![settings](docs/screenshots/settings.svg) |
+| **Empty state** • the bowtie and a quick start when there are no tasks yet | ![empty](docs/screenshots/empty.svg) |
 | **Command palette** • `:` or `Ctrl-P` opens a fuzzy palette over every action | ![command palette](docs/screenshots/command-palette.svg) |
 | **Help** • `?` opens the full keybindings overlay | ![help](docs/screenshots/help.svg) |
 
 <details>
     <summary>How to generate the screenshots and demo</summary>
-    <p>The screenshots in the table above are checked-in SVGs. Regenerate them with:</p>
+    <p>The screenshots in the table above are checked-in SVGs, drawn by the app itself on its sample list. Regenerate them with:</p>
     <pre>mise run screenshots</pre>
-    <p>The hero GIF at the top is recorded with <a href="https://github.com/charmbracelet/vhs">vhs</a> from <code>docs/demo.tape</code>. Regenerate it with:</p>
-    <pre>mise run demo</pre>
-    <p>The notes demo GIF comes from <code>docs/demo-notes.tape</code> (Catppuccin Macchiato, isolated config and sample data under <code>/tmp</code>):</p>
-    <pre>mise run demo_notes</pre>
+    <p>The tour at the top is one of the showcase videos (see "How to record them" above).</p>
 </details>
 
 ## Themes
 
-`T` opens a picker over five built-in themes, including Terminal, which respects your terminal palette.
+`T` opens a picker over six built-in themes, including Terminal, which respects your terminal palette.
 
-| Muted Slate (default) | Dawn |
+| Catppuccin Macchiato (default) | Muted Slate |
 | --- | --- |
-| ![muted slate](docs/screenshots/theme-muted-slate.svg) | ![dawn](docs/screenshots/theme-dawn.svg) |
-| **Nord** | **Matrix** |
-| ![nord](docs/screenshots/theme-nord.svg) | ![matrix](docs/screenshots/theme-matrix.svg) |
+| ![catppuccin macchiato](docs/screenshots/theme-catppuccin-macchiato.svg) | ![muted slate](docs/screenshots/theme-muted-slate.svg) |
+| **Dawn** | **Nord** |
+| ![dawn](docs/screenshots/theme-dawn.svg) | ![nord](docs/screenshots/theme-nord.svg) |
+| **Matrix** | |
+| ![matrix](docs/screenshots/theme-matrix.svg) | |
 
 ### Custom themes
 
 Beyond the built-ins, tasq loads any `*.toml` file you drop in
 `${XDG_CONFIG_HOME:-$HOME/.config}/tasq/themes/`. Each one joins the `T`
 picker in sorted filename order. Ready-made themes live in
-[`docs/themes/`](docs/themes) — copy one in and press `T`:
+[`docs/themes/`](docs/themes) — copy one in and press `T` (here TokyoNight Moon):
 
-![catppuccin macchiato](docs/screenshots/theme-catppuccin-macchiato.svg)
+![tokyonight moon](docs/screenshots/theme-custom.svg)
 
 ```sh
 mkdir -p ~/.config/tasq/themes
@@ -363,6 +363,7 @@ another theme is skipped with a warning at startup.
 | `done` | completed tasks |
 | `selected` | selected-row background (visual mode) and the active filter |
 | `matched` | search-match highlight |
+| `ok` | optional: ticked checklist items and done marks (default: `pri_c`) |
 | `palette` | optional: up to 8 comma-separated colours spaces are painted in (default: made from the colours above) |
 
 </details>
@@ -948,11 +949,11 @@ round-trip as plain text, so you can add, rename, or delete them by editing
 `config.toml` directly; a repeated `filter.<name>` keeps the last value, and
 `<name>` may not contain `=`.
 
-Task-note actions resolve relative `note:<path>` tokens under `notes_dir`.
-If `notes_dir` is not set, tasq falls back to `$NOTES_DIR` and then
-`~/notes`. `O` creates missing notes under `projects/tasq-tasks/` using a
-small Markdown template and appends the generated `note:<path>` token to the
-task; `o` only opens an existing linked note.
+A task's notes are linked by a `notes:<id>/` token on its line. With the
+database they're kept in it; with a todo.txt opened directly they're
+Markdown files under `notes_dir/tasks/<id>/`. If `notes_dir` is not set,
+tasq falls back to `$NOTES_DIR` and then `~/notes`. `o` opens a task's notes
+(creating the first one), `N` the Notes screen with all of them.
 
 ```toml
 notes_dir = ~/notes
@@ -968,10 +969,10 @@ in another terminal, switch to its icons:
 icons = nerd
 ```
 
-tasq opens on Home; to open on the list instead:
+tasq opens on Today; to open on Home instead:
 
 ```toml
-start = "list"
+start = "home"
 ```
 
 Ticking the last box of a task's checklist marks the task done; to keep
