@@ -13,6 +13,7 @@ pub mod duration;
 pub mod inbox;
 pub mod keybinds;
 pub mod nl;
+pub mod nl_es;
 pub mod note;
 pub mod note_store;
 pub mod recurrence;

@@ -128,14 +128,23 @@ pub fn detect_in(
     rejected: &[Rejection],
     spaces: &[String],
 ) -> Detection {
-    let mut blocked = vec![false; text.len()];
+    // Spanish (and English) read into the English the passes know; what
+    // they find is mapped back onto what was typed.
+    let sh = crate::nl_es::shadow(text);
+    let identity = sh.is_identity(text);
+    let to_typed = |s: usize, e: usize| {
+        if identity { (s, e) } else { sh.to_typed(s, e) }
+    };
+    let mut blocked = vec![false; sh.text.len()];
+    let mut settled = None;
     // A rejected phrase can, once blocked, let a shorter phrase inside it be
     // detected instead; a few rounds settle that.
     for _ in 0..4 {
-        let detection = detect_once(text, today, &blocked, spaces);
+        let d = detect_once(&sh.text, today, &blocked, spaces);
         let mut changed = false;
-        for span in &detection.spans {
-            let phrase = text[span.start..span.end].to_lowercase();
+        for span in &d.spans {
+            let (s, e) = to_typed(span.start, span.end);
+            let phrase = text[s..e].to_lowercase();
             if rejected
                 .iter()
                 .any(|(kind, p)| *kind == span.kind && *p == phrase)
@@ -147,10 +156,19 @@ pub fn detect_in(
             }
         }
         if !changed {
-            return detection;
+            settled = Some(d);
+            break;
         }
     }
-    detect_once(text, today, &blocked, spaces)
+    let mut d = settled.unwrap_or_else(|| detect_once(&sh.text, today, &blocked, spaces));
+    if !identity {
+        for span in &mut d.spans {
+            (span.start, span.end) = sh.to_typed(span.start, span.end);
+        }
+        let ranges: Vec<(usize, usize)> = d.spans.iter().map(|s| (s.start, s.end)).collect();
+        d.parsed.body = crate::nl_es::body(text, &ranges);
+    }
+    d
 }
 
 fn detect_once(text: &str, today: NaiveDate, blocked: &[bool], spaces: &[String]) -> Detection {
@@ -222,6 +240,13 @@ pub fn looks_like_natural_language(text: &str) -> bool {
 /// of the month"). Returns `None` when the parser couldn't extract anything
 /// structured — the caller then falls through to the plain save path.
 pub fn try_parse(text: &str, today: NaiveDate) -> Option<ParsedNl> {
+    let sh = crate::nl_es::shadow(text);
+    if !sh.is_identity(text) {
+        // Read in Spanish: the live detection, which maps back what it
+        // finds; nothing found is no parse, like below.
+        let d = detect_in(text, today, &[], &[]);
+        return (!d.spans.is_empty()).then_some(d.parsed);
+    }
     let mut scratch = Scratch::new(text);
     let mut parsed = ParsedNl::default();
 
@@ -2600,6 +2625,99 @@ mod tests {
                 .planned
                 .is_none()
         );
+    }
+
+    #[test]
+    fn spanish_is_understood_and_the_title_stays_as_typed() {
+        // 2026-10-07 is a wednesday.
+        let today = d("2026-10-07");
+        let det = |t: &str| detect(t, today, &[]).parsed;
+
+        let p = det("Comprar pan mañana a las 6 de la tarde");
+        assert_eq!(p.body, "Comprar pan");
+        assert_eq!(p.planned, Some(d("2026-10-08")));
+        assert_eq!(p.time, Some((18, 0)));
+
+        let p = det("Llamar a mamá el viernes a las 10:30");
+        assert_eq!(p.body, "Llamar a mamá");
+        assert_eq!(p.planned, Some(d("2026-10-09")));
+        assert_eq!(p.time, Some((10, 30)));
+
+        let p = det("Gimnasio cada lunes, miércoles y viernes a las 7");
+        assert_eq!(p.body, "Gimnasio");
+        assert_eq!(p.rec.as_deref(), Some("+1w:mon,wed,fri"));
+
+        let p = det("Pagar alquiler cada mes hasta el 20 de diciembre");
+        assert_eq!(p.body, "Pagar alquiler");
+        assert_eq!(p.rec.as_deref(), Some("+1m"));
+        assert_eq!(p.until, Some(d("2026-12-20")));
+
+        let p = det("Examen de álgebra el 15 de noviembre prioridad alta");
+        assert_eq!(p.body, "Examen de álgebra");
+        assert_eq!(p.planned, Some(d("2026-11-15")));
+        assert_eq!(p.priority, Some('A'));
+
+        let p = det("Entregar informe para el viernes");
+        assert_eq!(p.body, "Entregar informe");
+        assert_eq!(p.due, Some(d("2026-10-09")));
+
+        let p = det("Viaje a Lisboa evento del 16 al 17 de nov");
+        assert_eq!(p.body, "Viaje a Lisboa");
+        assert!(p.event);
+        assert_eq!(
+            (p.planned, p.end),
+            (Some(d("2026-11-16")), Some(d("2026-11-17")))
+        );
+
+        let p = det("Limpiar garaje este finde");
+        assert_eq!(p.body, "Limpiar garaje");
+        assert_eq!(
+            (p.planned, p.end),
+            (Some(d("2026-10-10")), Some(d("2026-10-11")))
+        );
+
+        let p = det("Terminar memoria la semana que viene");
+        assert_eq!(p.body, "Terminar memoria");
+        assert_eq!(
+            (p.planned, p.end),
+            (Some(d("2026-10-12")), Some(d("2026-10-18")))
+        );
+
+        let p = det("Repasar temas durante 2 horas recuérdame 15 min antes");
+        assert_eq!(p.body, "Repasar temas");
+        assert_eq!(p.duration, Some(120));
+        assert_eq!(p.reminders, [15]);
+
+        let p = det("Leer dentro de 3 días");
+        assert_eq!(p.planned, Some(d("2026-10-10")));
+
+        let p = det("Estudiar mañana por la mañana");
+        assert_eq!(p.planned, Some(d("2026-10-08")));
+
+        // Spanish and English together.
+        let p = det("Dentist tomorrow a las 5 de la tarde");
+        assert_eq!((p.body.as_str(), p.time), ("Dentist", Some((17, 0))));
+
+        // In a space by its Spanish name.
+        let spaces = vec!["Uni/Exámenes".to_string()];
+        let p = detect_in("repasar tema 3 en exámenes", today, &[], &spaces).parsed;
+        assert_eq!(p.projects, ["Uni/Exámenes"]);
+        assert_eq!(p.body, "repasar tema 3");
+    }
+
+    #[test]
+    fn spanish_phrases_light_up_in_what_was_typed() {
+        let today = d("2026-10-07");
+        let text = "Comprar pan mañana a las 6 de la tarde";
+        let det = detect(text, today, &[]);
+        let lit: Vec<&str> = det.spans.iter().map(|s| &text[s.start..s.end]).collect();
+        assert!(lit.contains(&"mañana"), "{lit:?}");
+        assert!(lit.contains(&"a las 6 de la tarde"), "{lit:?}");
+        // Rejected (x on its chip): left as words.
+        let rejected = [(FieldKind::Date, "mañana".to_string())];
+        let p = detect(text, today, &rejected).parsed;
+        assert_eq!(p.planned, None);
+        assert_eq!(p.body, "Comprar pan mañana");
     }
 
     #[test]
