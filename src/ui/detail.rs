@@ -782,7 +782,7 @@ pub fn render_series_ask(frame: &mut Frame, screen: Rect, app: &App, ask: &crate
         .map(|t| crate::todo::body_only(&t.raw))
         .unwrap_or_default();
     let verb = match ask.op {
-        SeriesOp::Edit => "Edit",
+        SeriesOp::Edit(_) => "Edit",
         SeriesOp::Delete => "Delete",
         SeriesOp::Resize(_) => "Change the length of",
         _ => "Move",

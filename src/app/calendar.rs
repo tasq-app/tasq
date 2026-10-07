@@ -52,7 +52,8 @@ pub struct CalScreen {
 /// A change made to one occurrence in the calendar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SeriesOp {
-    Edit,
+    /// Open the edit dialog (`true`: in Insert mode).
+    Edit(bool),
     Delete,
     /// Days later (negative: earlier).
     ShiftDay(i64),
@@ -297,7 +298,14 @@ impl App {
             return;
         }
         if let Some(occ) = self.cal_selected() {
-            self.cal_apply(occ, SeriesOp::Edit);
+            self.cal_apply(occ, SeriesOp::Edit(false));
+        }
+    }
+
+    /// `i`: edit the selected task in Insert mode (a repeat asks which).
+    pub fn cal_edit_insert(&mut self) {
+        if let Some(occ) = self.cal_selected() {
+            self.cal_apply(occ, SeriesOp::Edit(true));
         }
     }
 
@@ -429,8 +437,8 @@ impl App {
             }
         };
         match op {
-            SeriesOp::Edit => {
-                self.begin_live_edit(abs, false);
+            SeriesOp::Edit(insert) => {
+                self.begin_live_edit(abs, insert);
                 self.mode = Mode::Insert;
             }
             SeriesOp::Delete => {
