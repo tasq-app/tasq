@@ -824,8 +824,22 @@ fn pass_space(scratch: &mut Scratch, p: &mut ParsedNl, spaces: &[String]) {
         if let Some(space) = found.first() {
             scratch.mark(w.0, next.1);
             p.projects.push((*space).clone());
-            if found.len() > 1 {
-                p.space_options = found.into_iter().cloned().collect();
+            // The spaces inside each match are choices too: "in uni" and
+            // ↓ for Uni/Exams.
+            let mut options: Vec<String> = Vec::new();
+            for f in &found {
+                for s in std::iter::once(*f).chain(
+                    spaces
+                        .iter()
+                        .filter(|s| crate::core::spaces::is_within(s, f)),
+                ) {
+                    if !options.contains(s) {
+                        options.push(s.clone());
+                    }
+                }
+            }
+            if options.len() > 1 {
+                p.space_options = options;
             }
             return;
         }
@@ -2050,6 +2064,13 @@ mod tests {
             assert_eq!(p.body, "study topic 3", "{text}");
         }
         assert_eq!(space("pay tuition in uni").projects, ["Uni"]);
+        // The spaces inside it are there to pick with ↑/↓.
+        let uni = space("pay tuition in uni");
+        assert_eq!(uni.space_options.first().map(String::as_str), Some("Uni"));
+        assert!(
+            uni.space_options.iter().any(|o| o == "Uni/Exámenes"),
+            "{uni:?}"
+        );
         assert_eq!(
             space("pack boxes into moving").projects,
             ["Personal/Moving"]

@@ -410,7 +410,7 @@ impl App {
                     FieldKind::Project => (!p.projects.is_empty()).then(|| {
                         p.projects
                             .iter()
-                            .map(|s| crate::core::spaces::display(s))
+                            .map(|s| crate::core::spaces::leaf(s))
                             .collect::<Vec<_>>()
                             .join(", ")
                     }),
@@ -1023,7 +1023,7 @@ mod tests {
         typed(&mut app, "study topic 3 in exams");
         assert_eq!(
             chip(&app, FieldKind::Project).value.as_deref(),
-            Some("Uni › Exams")
+            Some("Exams")
         );
         assert_eq!(app.live_add(), AddOutcome::Saved);
         let raw = &app.tasks().last().expect("added").raw;
@@ -1070,7 +1070,7 @@ mod tests {
         assert!(app.live_space_step(true));
         assert_eq!(
             chip(&app, FieldKind::Project).value.as_deref(),
-            Some("Work › Examples")
+            Some("Examples")
         );
         // Typing on keeps the choice.
         typed(&mut app, " tomorrow");

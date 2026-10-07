@@ -27,6 +27,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         Mode::PickContext => "PICK @CONTEXT".into(),
         Mode::PromptRenameProject => "RENAME +PROJECT".into(),
         Mode::PromptRenameContext => "RENAME @CONTEXT".into(),
+        Mode::PromptNewSpace => "NEW SPACE".into(),
         Mode::PickSavedFilter => "PICK FILTER".into(),
         Mode::PromptSaveFilter => "SAVE FILTER".into(),
         Mode::PromptChecklist => "CHECKLIST".into(),
@@ -115,6 +116,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             Mode::PickContext => "j/k or ↑↓ cycle contexts · r rename · Enter keep · Esc clear",
             Mode::PickSavedFilter => "j/k or ↑↓ cycle filters · Enter keep · Esc revert",
             Mode::PromptSaveFilter => "type a filter name · Enter save · Esc cancel",
+            Mode::PromptNewSpace => "Parent/Name makes it inside Parent · Enter create · Esc cancel",
             Mode::PromptChecklist => "Enter add · Esc done",
             Mode::CommandPalette => "type to filter · Enter run · Esc cancel",
             Mode::Share => "scan the QR · any key dismisses",
@@ -225,7 +227,8 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         hint = if !app.prefs.hints {
             "".into()
         } else if matches!(app.sidebar_current(), Some(crate::app::NavItem::Space(_))) {
-            "Enter open · c colour · H hide · r rename · d delete · Tab back".into()
+            "Enter open · a space inside · c colour · H hide · r rename · d delete · Tab back"
+                .into()
         } else {
             "↑↓ move · Enter open · Tab back".into()
         };

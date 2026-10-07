@@ -33,6 +33,8 @@ pub enum Hit {
     AddFilter,
     /// An active filter's chip: a click takes it off.
     ClearFilter(FilterPart),
+    /// A colour in a space's colour picker.
+    Swatch(usize),
 }
 
 /// Which of the active filters a chip is.
@@ -98,6 +100,14 @@ impl App {
     /// A left click at `(x, y)`: what it hit, done. Some clicks are actions
     /// the caller applies.
     pub fn click(&mut self, x: u16, y: u16) -> Option<Action> {
+        // The colour picker is on top: a swatch picks, anywhere else closes.
+        if self.color_pick.is_some() {
+            match self.hits.at(x, y) {
+                Some(Hit::Swatch(i)) => self.color_pick_click(i),
+                _ => self.color_pick = None,
+            }
+            return None;
+        }
         let hit = self.hits.at(x, y)?;
         self.sidebar_focus = false;
         match hit {
@@ -142,6 +152,7 @@ impl App {
             Hit::DetailsEdge => self.resizing = true,
             Hit::AddFilter => return Some(Action::OpenFilters),
             Hit::ClearFilter(part) => self.clear_filter_part(part),
+            Hit::Swatch(i) => self.color_pick_click(i),
         }
         None
     }

@@ -126,6 +126,13 @@ impl App {
                 seen.insert(s.as_str());
             }
         }
+        // Spaces kept with no task in them yet, so `+Uni/` lists every
+        // space inside Uni.
+        if target.kind == TokenKind::Project {
+            for s in self.store.known_spaces() {
+                seen.insert(s.path.as_str());
+            }
+        }
         let mut prefix_hits: Vec<&str> = Vec::new();
         let mut contains_hits: Vec<&str> = Vec::new();
         for s in seen {

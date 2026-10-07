@@ -449,7 +449,7 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
         let color = (opts.space_color)(p);
         push_chip(
             spans,
-            format!("● {}", crate::core::spaces::display(p)),
+            format!("● {}", crate::core::spaces::leaf(p)),
             color,
             opts.pills,
             theme,
@@ -875,7 +875,7 @@ mod tests {
             .collect();
         assert_eq!(
             text.trim_end(),
-            "  ☐ ⚑ ★ Trabajo TIS  today · 16:00 · 2h   ◷ by fri 8 may   ↻ every week until tue 30 jun   ● Uni › Exams  @laptop"
+            "  ☐ ⚑ ★ Trabajo TIS  today · 16:00 · 2h   ◷ by fri 8 may   ↻ every week until tue 30 jun   ● Exams  @laptop"
         );
         assert_eq!(chip_date("2026-05-07", "2026-05-06"), "tomorrow");
         assert_eq!(chip_date("2027-01-02", "2026-05-06"), "2 jan 2027");

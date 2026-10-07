@@ -186,7 +186,7 @@ fn oklab(color: Color) -> Lab {
 
 /// Approximate RGB for any ratatui color: exact for `Rgb`, the common xterm
 /// defaults for named/indexed ones (themes may use the terminal's palette).
-fn rgb(color: Color) -> (u8, u8, u8) {
+pub(crate) fn rgb(color: Color) -> (u8, u8, u8) {
     match color {
         Color::Rgb(r, g, b) => (r, g, b),
         Color::Black => (0, 0, 0),

@@ -418,6 +418,23 @@ impl Store {
         SpaceSettingOutcome::Done
     }
 
+    /// Keep a new space (and the ones above it), empty for now. Only a
+    /// database keeps it; elsewhere a space lives on its tasks.
+    pub fn create_space(&mut self, path: &str) -> SpaceSettingOutcome {
+        match self.reconcile() {
+            Reconcile::Unchanged => {}
+            other => return SpaceSettingOutcome::Aborted(other),
+        }
+        let Some(db) = self.db.as_mut() else {
+            return SpaceSettingOutcome::NotKept;
+        };
+        if let Err(e) = db.create_space(path) {
+            return SpaceSettingOutcome::Error(StoreError::Write(e));
+        }
+        self.refresh_spaces();
+        SpaceSettingOutcome::Done
+    }
+
     /// Set a space's colour (`None`: back to the automatic one). Only a
     /// database keeps the setting.
     pub fn set_space_color(

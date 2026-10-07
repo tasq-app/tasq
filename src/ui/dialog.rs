@@ -559,68 +559,143 @@ fn pill(frame: &mut Frame, x: u16, y: u16, label: Span<'static>, bg: Color, app:
     w
 }
 
-/// The chip row: one filled, rounded pill per field — tinted in the field's
-/// colour when set, neutral when empty, brighter when focused with `Tab`.
-fn render_chips(frame: &mut Frame, area: Rect, app: &App) {
+/// One chip ready to draw: label, style, background, width, and whether
+/// it's an empty hint (dropped first when even two rows are too few).
+struct ChipCell {
+    label: String,
+    style: Style,
+    bg: Color,
+    w: u16,
+    hint: bool,
+}
+
+fn chip_cells(app: &App) -> Vec<ChipCell> {
     let theme = app.theme();
     let focus = app.live_chip_focus();
     let nerd = app.prefs.nerd_icons;
     let width = |s: &str| unicode_width::UnicodeWidthStr::width(s) as u16;
-    let chips = app.live_chips();
-    // When they don't all fit, the empty ones (hints) go first; the
-    // focused one always stays.
-    let label_w = |c: &crate::app::Chip| -> u16 {
-        let icon = field_icon(c.kind, nerd);
-        let label = match &c.value {
-            Some(v) => format!(" {}{v} ", icon_gap(icon, nerd)),
-            None => icon_alone(icon, nerd),
-        };
-        width(&label) + 3
-    };
-    let total: u16 = chips.iter().map(label_w).sum();
-    let compact = total > area.width;
-    // Lay the chips out first, then centre the row.
-    let mut row: Vec<(String, Style, ratatui::style::Color, u16)> = Vec::new();
-    let mut used: u16 = 0;
-    for (i, chip) in chips.into_iter().enumerate() {
-        if compact && chip.value.is_none() && focus != Some(i) {
-            continue;
-        }
-        let color = match (chip.kind, chip.value.as_deref()) {
-            (FieldKind::Priority, Some(v)) => v
-                .chars()
-                .nth(1)
-                .map_or(theme.pri_a, |c| theme.priority_color(c)),
-            _ => field_color(chip.kind, theme),
-        };
-        let icon = field_icon(chip.kind, nerd);
-        let label = match &chip.value {
-            Some(v) => format!(" {}{v} ", icon_gap(icon, nerd)),
-            None => icon_alone(icon, nerd),
-        };
-        let w = width(&label) + 2;
-        let gap = if row.is_empty() { 0 } else { 1 };
-        if used + gap + w > area.width {
+    app.live_chips()
+        .into_iter()
+        .enumerate()
+        .map(|(i, chip)| {
+            let color = match (chip.kind, chip.value.as_deref()) {
+                (FieldKind::Priority, Some(v)) => v
+                    .chars()
+                    .nth(1)
+                    .map_or(theme.pri_a, |c| theme.priority_color(c)),
+                _ => field_color(chip.kind, theme),
+            };
+            let icon = field_icon(chip.kind, nerd);
+            let label = match &chip.value {
+                Some(v) => format!(" {}{v} ", icon_gap(icon, nerd)),
+                None => icon_alone(icon, nerd),
+            };
+            let focused = focus == Some(i);
+            let (fg, bg) = match (focused, chip.value.is_some()) {
+                (true, true) => (color, tint(theme, color, 0.42)),
+                (true, false) => (theme.fg, tint(theme, theme.fg, 0.28)),
+                (false, true) => (color, tint(theme, color, 0.22)),
+                (false, false) => (theme.dim, tint(theme, theme.fg, 0.09)),
+            };
+            let mut style = Style::default().fg(fg).bg(bg);
+            if focused {
+                style = style.add_modifier(Modifier::BOLD);
+            }
+            ChipCell {
+                w: width(&label) + 2,
+                label,
+                style,
+                bg,
+                hint: chip.value.is_none() && !focused,
+            }
+        })
+        .collect()
+}
+
+/// Width of `cells` laid out in a row, one column between each.
+fn row_width(cells: &[&ChipCell]) -> u16 {
+    let n = cells.len() as u16;
+    cells.iter().map(|c| c.w).sum::<u16>() + n.saturating_sub(1)
+}
+
+/// `items` in two rows as even as they go, if both fit `width`.
+fn split_in_two(items: Vec<&ChipCell>, width: u16) -> Option<Vec<Vec<&ChipCell>>> {
+    let cut = (1..items.len())
+        .filter(|&i| row_width(&items[..i]) <= width && row_width(&items[i..]) <= width)
+        .min_by_key(|&i| row_width(&items[..i]).abs_diff(row_width(&items[i..])))?;
+    let (a, b) = items.split_at(cut);
+    Some(vec![a.to_vec(), b.to_vec()])
+}
+
+/// The chips in rows that fit `width`: one row when they all fit, or when
+/// they do without the empty hints; else two rows, split near the middle,
+/// hints and all, or without them; else as many as fit on one row.
+fn chip_layout(cells: &[ChipCell], width: u16, max_rows: u16) -> Vec<Vec<&ChipCell>> {
+    let all: Vec<&ChipCell> = cells.iter().collect();
+    if row_width(&all) <= width {
+        return vec![all];
+    }
+    let set: Vec<&ChipCell> = cells.iter().filter(|c| !c.hint).collect();
+    if row_width(&set) <= width {
+        return vec![set];
+    }
+    if max_rows >= 2
+        && let Some(rows) = split_in_two(all, width)
+    {
+        return rows;
+    }
+    if max_rows >= 2
+        && let Some(rows) = split_in_two(set.clone(), width)
+    {
+        return rows;
+    }
+    // Still too many: as many as fit on one row.
+    let mut row = Vec::new();
+    let mut used = 0u16;
+    for c in set {
+        let gap = u16::from(!row.is_empty());
+        if used + gap + c.w > width {
             break;
         }
-        let focused = focus == Some(i);
-        let (fg, bg) = match (focused, chip.value.is_some()) {
-            (true, true) => (color, tint(theme, color, 0.42)),
-            (true, false) => (theme.fg, tint(theme, theme.fg, 0.28)),
-            (false, true) => (color, tint(theme, color, 0.22)),
-            (false, false) => (theme.dim, tint(theme, theme.fg, 0.09)),
-        };
-        let mut style = Style::default().fg(fg).bg(bg);
-        if focused {
-            style = style.add_modifier(Modifier::BOLD);
-        }
-        used += gap + w;
-        row.push((label, style, bg, w));
+        used += gap + c.w;
+        row.push(c);
     }
-    let mut x = area.x + area.width.saturating_sub(used) / 2;
-    for (label, style, bg, w) in row {
-        pill(frame, x, area.y, Span::styled(label, style), bg, app);
-        x += w + 1;
+    vec![row]
+}
+
+/// How many lines the chips of the live dialog take at `width` (the
+/// dialog's inner width): 1, or 3 for two rows with a line between.
+pub fn live_chip_rows(app: &App, inner_width: u16) -> u16 {
+    let cells = chip_cells(app);
+    match chip_layout(&cells, inner_width.saturating_sub(3), 2).len() {
+        0 | 1 => 1,
+        _ => 3,
+    }
+}
+
+/// The chip rows: one filled, rounded pill per field — tinted in the
+/// field's colour when set, neutral when empty, brighter when focused with
+/// `Tab` — each row centred.
+fn render_chips(frame: &mut Frame, area: Rect, app: &App) {
+    let cells = chip_cells(app);
+    let max_rows = if area.height >= 3 { 2 } else { 1 };
+    for (r, row) in chip_layout(&cells, area.width, max_rows)
+        .into_iter()
+        .enumerate()
+    {
+        let y = area.y + 2 * r as u16;
+        let mut x = area.x + area.width.saturating_sub(row_width(&row)) / 2;
+        for c in row {
+            pill(
+                frame,
+                x,
+                y,
+                Span::styled(c.label.clone(), c.style),
+                c.bg,
+                app,
+            );
+            x += c.w + 1;
+        }
     }
 }
 
@@ -629,11 +704,12 @@ fn render_chips(frame: &mut Frame, area: Rect, app: &App) {
 fn render_live(frame: &mut Frame, inner: Rect, app: &App) {
     let theme = app.theme();
     let nerd = app.prefs.nerd_icons;
+    let chip_rows = live_chip_rows(app, inner.width);
     let [top_area, input_area, _gap, chips_area, _pad] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Length(1),
         Constraint::Length(1),
-        Constraint::Length(1),
+        Constraint::Length(chip_rows),
         Constraint::Length(1),
     ])
     .areas(inner);
@@ -800,6 +876,7 @@ pub fn render_prompt(frame: &mut Frame, area: Rect, app: &App) {
         Mode::PromptChecklist => ("☐", " ADD TO CHECKLIST "),
         Mode::PromptRenameProject => ("✦", " RENAME PROJECT "),
         Mode::PromptRenameContext => ("✦", " RENAME CONTEXT "),
+        Mode::PromptNewSpace => ("+", " NEW SPACE "),
         _ => return,
     };
     let block = Block::default()
@@ -1908,6 +1985,33 @@ mod tests {
     }
 
     #[test]
+    fn chips_that_dont_fit_go_on_two_rows() {
+        use super::{ChipCell, Color, Style, chip_layout};
+        let cell = |w: u16, hint: bool| ChipCell {
+            label: String::new(),
+            style: Style::default(),
+            bg: Color::Reset,
+            w,
+            hint,
+        };
+        // Everything fits: one row.
+        let few = [cell(10, false), cell(10, true)];
+        assert_eq!(chip_layout(&few, 40, 2).len(), 1);
+        // Fits once the empty hints go: still one row, without them.
+        let hints = [cell(10, false), cell(30, true)];
+        let rows = chip_layout(&hints, 25, 2);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].len(), 1);
+        // Filled chips too wide for one row: two, every one of them kept.
+        let many: Vec<ChipCell> = (0..6).map(|_| cell(10, false)).collect();
+        let rows = chip_layout(&many, 40, 2);
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows.iter().map(Vec::len).sum::<usize>(), 6);
+        // With room for one row only, as many as fit.
+        assert_eq!(chip_layout(&many, 40, 1)[0].len(), 3);
+    }
+
+    #[test]
     fn input_row_scrolls_to_keep_cursor_visible_for_long_draft() {
         // A draft longer than the dialog's content area must scroll
         // horizontally so the tail (where the cursor sits) stays visible —
@@ -1920,17 +2024,15 @@ mod tests {
         let mut terminal = Terminal::new(backend).unwrap();
         terminal.draw(|f| crate::ui::draw(f, &app)).unwrap();
         let buf = terminal.backend().buffer();
-        // The live dialog is 7 rows tall, centered in a 30-row area; input
-        // lives on the second inner row (top border + toast row + input).
-        let dlg_y = (30u16 - 7) / 2;
-        let input_y = dlg_y + 2;
-        let mut row = String::new();
-        for x in 0..80 {
-            row.push_str(buf[(x, input_y)].symbol());
-        }
+        // The input row, wherever the dialog sits (its height follows the
+        // chip rows).
+        let rows: Vec<String> = (0..30)
+            .map(|y| (0..80).map(|x| buf[(x, y)].symbol()).collect())
+            .collect();
         assert!(
-            row.contains(tail),
-            "input row should scroll so the cursor end ({tail}) stays visible:\n{row}"
+            rows.iter().any(|r| r.contains(tail)),
+            "input row should scroll so the cursor end ({tail}) stays visible:\n{}",
+            rows.join("\n")
         );
     }
 

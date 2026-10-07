@@ -64,6 +64,59 @@ impl App {
         self.mode = Mode::PromptRenameContext;
     }
 
+    /// `a` on a space: name a new space inside it (`Uni/` typed already;
+    /// clear it for one at the top).
+    pub fn begin_new_space(&mut self) {
+        let parent = self.filter.project.clone().unwrap_or_default();
+        self.draft_set_insert(if parent.is_empty() {
+            String::new()
+        } else {
+            format!("{parent}/")
+        });
+        self.mode = Mode::PromptNewSpace;
+    }
+
+    /// Enter on the new space's name: kept in the database and opened;
+    /// with a todo.txt (where spaces live only on tasks) the add dialog
+    /// opens in it, for its first task.
+    pub fn create_space(&mut self, name: &str) {
+        let path: String = name
+            .trim()
+            .trim_start_matches('+')
+            .split('/')
+            .map(|p| p.split_whitespace().collect::<Vec<_>>().join("-"))
+            .filter(|p| !p.is_empty())
+            .collect::<Vec<_>>()
+            .join("/");
+        if path.is_empty() {
+            return;
+        }
+        match self.store.create_space(&path) {
+            crate::core::SpaceSettingOutcome::Done => {
+                self.filter.project = Some(path.clone());
+                self.cursor = 0;
+                self.recompute_visible();
+                self.flash(format!(
+                    "new space {} · n adds a task to it",
+                    crate::core::spaces::display(&path)
+                ));
+            }
+            crate::core::SpaceSettingOutcome::NotKept => {
+                self.filter.project = Some(path);
+                self.cursor = 0;
+                self.recompute_visible();
+                self.mode = Mode::Insert;
+                let seed = self.filter().tag_seed();
+                self.draft_set_insert(seed);
+                self.selection.exit_edit();
+            }
+            crate::core::SpaceSettingOutcome::Aborted(r) => self.handle_reconcile_abort(r),
+            crate::core::SpaceSettingOutcome::Error(e) => {
+                self.flash(format!("couldn't make the space: {e}"));
+            }
+        }
+    }
+
     pub fn begin_rename_project(&mut self) {
         let Some(name) = self.filter.project.clone() else {
             return;

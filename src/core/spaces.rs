@@ -49,7 +49,11 @@ pub struct Space {
 }
 
 /// Number of colours in a theme's palette (see `Theme::palette`).
-pub const PALETTE_SLOTS: usize = 8;
+pub const PALETTE_SLOTS: usize = 16;
+
+/// How many of them a space with no colour of its own is given one of:
+/// the theme's own eight, so a bigger palette doesn't repaint old spaces.
+pub const AUTO_SLOTS: usize = 8;
 
 /// A space's colour, independent of the theme: one of the theme's palette
 /// slots, or an exact RGB the user wrote.
@@ -104,7 +108,7 @@ fn auto_slot(path: &str) -> usize {
         h ^= u32::from(b);
         h = h.wrapping_mul(0x0100_0193);
     }
-    h as usize % PALETTE_SLOTS
+    h as usize % AUTO_SLOTS
 }
 
 /// A path and every space above it: `Uni/Exams` → `Uni`, `Uni/Exams`.
@@ -360,7 +364,7 @@ mod tests {
         // Without a choice, a stable slot from the name.
         assert_eq!(color_of("Personal", &known), color_of("Personal", &[]));
         assert!(matches!(color_of("Personal", &[]), SpaceColor::Slot(n) if n < PALETTE_SLOTS));
-        assert_eq!(SpaceColor::parse("8"), None);
+        assert_eq!(SpaceColor::parse("16"), None);
         assert_eq!(SpaceColor::parse("#12345"), None);
         assert_eq!(SpaceColor::Rgb(1, 2, 255).to_value(), "#0102ff");
     }

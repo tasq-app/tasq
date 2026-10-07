@@ -31,6 +31,7 @@ pub enum Mode {
     PromptContext,       // text input → add/remove context on current task
     PromptRenameProject, // text input → rename all project occurrences on current project in project list
     PromptRenameContext, // text input → rename all context occurrences on current context in context list
+    PromptNewSpace,      // text input → a new space (`a` on a space in the sidebar: one inside it)
     PickProject,         // j/k cycles through projects to filter by
     PickContext,         // j/k cycles through contexts to filter by
     PickSavedFilter,     // j/k cycles through saved searches to apply
