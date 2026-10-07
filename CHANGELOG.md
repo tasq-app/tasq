@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.2.0](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.9...v0.2.0) (2026-10-07)
+
+
+### Features
+
+* a click moves the keyboard to its panel, and the search screen, the filter popover and the notes screen answer clicks ([317196a](https://github.com/tasq-app/tasq/commit/317196ade9368bab348e482cc9b9d1e8b077ba2d))
+* **calendar:** click all-day items, bars and month days to select them, again to open them ([317196a](https://github.com/tasq-app/tasq/commit/317196ade9368bab348e482cc9b9d1e8b077ba2d))
+* **calendar:** events, multi-day bars, only-this-one for repeats, drag and drop ([#58](https://github.com/tasq-app/tasq/issues/58)) ([317196a](https://github.com/tasq-app/tasq/commit/317196ade9368bab348e482cc9b9d1e8b077ba2d))
+* **capture:** "event" in the add dialog, day ranges typed loosely and stretches of time in words ([317196a](https://github.com/tasq-app/tasq/commit/317196ade9368bab348e482cc9b9d1e8b077ba2d))
+* **inbox:** every open task without a day is in the inbox ([317196a](https://github.com/tasq-app/tasq/commit/317196ade9368bab348e482cc9b9d1e8b077ba2d))
+* **notes:** task notes screen, full-screen reading, main note ([#56](https://github.com/tasq-app/tasq/issues/56)) ([9541060](https://github.com/tasq-app/tasq/commit/954106043db276426d05d09f00b2724960a7465c))
+* **spaces:** colour picker, bigger palette, easy sub-spaces, two chip rows ([#57](https://github.com/tasq-app/tasq/issues/57)) ([bd4c2aa](https://github.com/tasq-app/tasq/commit/bd4c2aad6230944e248bdda5ceb8823df72f50d2))
+
+
+### Bug Fixes
+
+* **calendar:** task keys act on the task selected in the calendar ([317196a](https://github.com/tasq-app/tasq/commit/317196ade9368bab348e482cc9b9d1e8b077ba2d))
+* the time chip, calendar reschedule, back-to-back blocks, the archive, asking before completing ([#55](https://github.com/tasq-app/tasq/issues/55)) ([d05346a](https://github.com/tasq-app/tasq/commit/d05346a8b7ba0c53c16330a9f0dd4df701ef2294))
+
+
+### Chores
+
+* **release:** 0.x versions bumped by the commits instead of alpha pre-releases ([#60](https://github.com/tasq-app/tasq/issues/60)) ([e36bbd1](https://github.com/tasq-app/tasq/commit/e36bbd1cbd9c5059f7d47adb0414147782af90d8))
+
 ## [0.1.0-alpha.9](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.8...v0.1.0-alpha.9) (2026-10-07)
 
 
