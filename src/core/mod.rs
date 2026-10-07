@@ -17,6 +17,7 @@ mod trash;
 pub mod calendar;
 pub mod filter;
 pub mod outcome;
+pub mod series;
 pub mod spaces;
 pub use trash::{KEEP_DAYS, TrashItem};
 

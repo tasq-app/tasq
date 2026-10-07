@@ -74,6 +74,10 @@ pub struct Task {
     /// Starred with a `star:1` tag (see [`STAR_KEY`]): floats to the top of
     /// its priority/due group in the list, above unstarred tasks.
     pub starred: bool,
+    /// An event (`event:1`): not ticked off, never overdue.
+    pub event: bool,
+    /// The last day of something lasting several days (`end:`).
+    pub end: Option<String>,
 }
 
 /// Tag keys of the planned date, duration and reminders.
@@ -88,6 +92,15 @@ impl Task {
     /// The date the task is shown on: when it's planned, else its deadline.
     pub fn date(&self) -> Option<&str> {
         self.planned.as_deref().or(self.due.as_deref())
+    }
+
+    /// Its last day: the `end:` of one lasting several, else its date. It's
+    /// late only once that has gone.
+    pub fn last_day(&self) -> Option<&str> {
+        match (self.end.as_deref(), self.date()) {
+            (Some(e), Some(d)) if e > d => Some(e),
+            (_, d) => d,
+        }
     }
 }
 
@@ -144,6 +157,8 @@ pub fn parse_line(raw: &str) -> Result<Task, ParseError> {
     let threshold = find_kv(rest, "t");
     let notes = find_quoted_kv(rest, "note");
     let starred = find_kv(rest, STAR_KEY).is_some_and(|v| v != "0");
+    let event = find_kv(rest, crate::core::series::EVENT_KEY).is_some_and(|v| v != "0");
+    let end = find_kv(rest, crate::core::series::END_KEY);
     let clean_raw = body_after_quoted_kv(line);
 
     Ok(Task {
@@ -166,6 +181,8 @@ pub fn parse_line(raw: &str) -> Result<Task, ParseError> {
         threshold,
         notes,
         starred,
+        event,
+        end,
     })
 }
 

@@ -449,4 +449,17 @@ mod tests {
         assert!(!app.home);
         assert_eq!(app.visible_indices().len(), 1);
     }
+
+    #[test]
+    fn the_inbox_holds_every_task_without_a_day() {
+        let app = build_app(concat!(
+            "(A) call the bank\n",
+            "read paper +Uni @library star:1\n",
+            "gym plan:2026-05-06\n",
+            "rent due:2026-06-01\n",
+            "water plants rec:+1d\n",
+            "x 2026-05-05 old thing\n",
+        ));
+        assert_eq!(app.inbox(), vec![0, 1]);
+    }
 }

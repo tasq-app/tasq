@@ -455,7 +455,7 @@ fn handle_mouse(app: &mut App, m: crossterm::event::MouseEvent) -> bool {
     if in_editor {
         return true;
     }
-    if !matches!(app.mode, Mode::Normal) {
+    if !matches!(app.mode, Mode::Normal | Mode::SearchAll | Mode::Filters) {
         return false;
     }
     app.notes_cache.clear();
@@ -463,6 +463,14 @@ fn handle_mouse(app: &mut App, m: crossterm::event::MouseEvent) -> bool {
         MouseEventKind::Down(MouseButton::Left) => app.click(m.column, m.row),
         MouseEventKind::Drag(MouseButton::Left) if app.resizing => {
             app.drag_details_to(m.column);
+            None
+        }
+        MouseEventKind::Drag(MouseButton::Left) if app.cal_drag.is_some() => {
+            app.cal_drag_to(m.column, m.row);
+            None
+        }
+        MouseEventKind::Up(MouseButton::Left) if app.cal_drag.is_some() => {
+            app.cal_drop();
             None
         }
         MouseEventKind::Up(MouseButton::Left) => {
@@ -571,6 +579,15 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     // A space's colour picker takes every key while it's open.
     if app.color_pick.is_some() {
         handle_color_pick(app, key);
+        return;
+    }
+    // "Only this one, or this and the ones after?" takes the next key.
+    if app.series_ask.is_some() {
+        match key.code {
+            KeyCode::Char('o' | '1') => app.series_answer(true),
+            KeyCode::Char('f' | 'a' | '2') => app.series_answer(false),
+            _ => app.series_ask = None,
+        }
         return;
     }
     // "All its steps are done — is the task?" takes the next key.
@@ -1053,7 +1070,14 @@ fn handle_calendar(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Char('<') | KeyCode::PageUp => app.cal_page(false),
         KeyCode::Char('>') | KeyCode::PageDown => app.cal_page(true),
         KeyCode::Enter | KeyCode::Char('e') => app.cal_edit(),
+        KeyCode::Char('i') => app.cal_edit_insert(),
         KeyCode::Char('x') => app.cal_complete(),
+        KeyCode::Char('D') | KeyCode::Delete | KeyCode::Backspace => app.cal_delete(),
+        KeyCode::Char('E') => {
+            if let Some(abs) = app.calendar_or_list_abs() {
+                app.toggle_event(abs);
+            }
+        }
         KeyCode::Char('r') => app.cal_reschedule(),
         KeyCode::Char('n') => app.cal_new(),
         KeyCode::Char('J') => app.cal_shift_time(30),
@@ -2378,6 +2402,7 @@ fn apply_action(app: &mut App, action: Action) {
             | Action::BeginEditInsert
             | Action::CyclePriority
             | Action::ToggleStar
+            | Action::ToggleEvent
             | Action::MoveTaskDown
             | Action::MoveTaskUp
             | Action::ToggleVisual
@@ -2430,6 +2455,17 @@ fn apply_action(app: &mut App, action: Action) {
         }
         // Editing opens the same live dialog as adding: the title as text,
         // the rest as chips.
+        // In the calendar, every task action is about the task selected
+        // there, not the one under the list's cursor.
+        Action::BeginEdit | Action::BeginEditInsert if app.calendar.is_some() => {
+            if action == Action::BeginEditInsert {
+                app.cal_edit_insert();
+            } else if let Some(occ) = app.cal_selected() {
+                app.cal_apply(occ, tasq::app::SeriesOp::Edit(false));
+            }
+        }
+        Action::ToggleComplete if app.calendar.is_some() => app.cal_complete(),
+        Action::Delete if app.calendar.is_some() => app.cal_delete(),
         Action::BeginEdit | Action::BeginEditInsert => {
             if let Some(abs) = app.cur_abs() {
                 app.begin_live_edit(abs, action == Action::BeginEditInsert);
@@ -2451,13 +2487,18 @@ fn apply_action(app: &mut App, action: Action) {
             }
         }
         Action::CyclePriority => {
-            if let Some(abs) = app.cur_abs() {
+            if let Some(abs) = app.calendar_or_list_abs() {
                 app.cycle_priority(abs);
             }
         }
         Action::ToggleStar => {
-            if let Some(abs) = app.cur_abs() {
+            if let Some(abs) = app.calendar_or_list_abs() {
                 app.toggle_star(abs);
+            }
+        }
+        Action::ToggleEvent => {
+            if let Some(abs) = app.calendar_or_list_abs() {
+                app.toggle_event(abs);
             }
         }
         Action::MoveTaskDown => app.move_tasks(true),
@@ -2580,8 +2621,8 @@ fn apply_action(app: &mut App, action: Action) {
         Action::CopyBody => copy_current_task(app, true),
         // `o`: the task's notes, on the Notes screen.
         Action::OpenNotes => {
-            if let Some(abs) = app.cur_abs()
-                && app.view() == View::List
+            if let Some(abs) = app.calendar_or_list_abs()
+                && (app.view() == View::List || app.calendar.is_some())
             {
                 app.open_notes_for_task(abs);
             } else {
@@ -2628,7 +2669,7 @@ fn apply_action(app: &mut App, action: Action) {
         // It moves the planned date — or the deadline, for a task that only has one — starting
         // on that date (today when there is none). Enter/escape goes back to insert mode on the task.
         Action::Reschedule => {
-            if let Some(abs) = app.cur_abs() {
+            if let Some(abs) = app.calendar_or_list_abs() {
                 app.reschedule(abs);
             }
         }
@@ -3660,6 +3701,48 @@ mod tests {
         // `O` used to be CreateOrOpenNote; it is freed and now resolves to
         // nothing built-in.
         assert_eq!(resolve(&mut app, key('O')), None);
+    }
+
+    #[test]
+    fn e_and_i_in_the_calendar_edit_the_task_selected_there() {
+        for k in ['e', 'i'] {
+            let raw = "Other task\nAlgebra event:1 plan:2026-05-06 at:11:00\nClass plan:2026-05-06 at:09:00 rec:+1w\n";
+            let path = std::env::temp_dir().join(format!(
+                "tasq-cal-edit-{}-{:?}-{k}.txt",
+                std::process::id(),
+                std::thread::current().id()
+            ));
+            std::fs::write(&path, raw).expect("seed");
+            let mut app = App::new(path, raw.to_string(), "2026-05-06".into(), test_cfg());
+            app.cursor = 0; // the list is on "Other task"
+            app.open_cal(tasq::app::CalView::Day);
+            // The day: Class at 09:00, then Algebra at 11:00.
+            app.cal_select(true);
+            assert_eq!(app.cal_selected().expect("selected").abs, 1);
+            handle_key(&mut app, key(k), &KeyBindings::default());
+            assert_eq!(app.selection.editing(), Some(1), "{k}");
+            assert!(
+                app.draft.text().contains("Algebra"),
+                "{k}: {}",
+                app.draft.text()
+            );
+
+            // A repeating one asks first, then edits that one.
+            app.draft_clear();
+            app.mode = Mode::Normal;
+            app.selection.exit_edit();
+            app.cal_select(false);
+            assert_eq!(app.cal_selected().expect("selected").abs, 2);
+            handle_key(&mut app, key(k), &KeyBindings::default());
+            assert!(app.series_ask.is_some(), "{k}");
+            handle_key(&mut app, key('f'), &KeyBindings::default());
+            assert_eq!(app.selection.editing(), Some(2), "{k}");
+            assert!(
+                app.draft.text().contains("Class"),
+                "{k}: {}",
+                app.draft.text()
+            );
+        }
     }
 
     #[test]

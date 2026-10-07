@@ -142,7 +142,8 @@ impl App {
             .tasks()
             .iter()
             .enumerate()
-            .filter(|(_, t)| !t.done)
+            // An event (a class) repeats but isn't a habit to keep up.
+            .filter(|(_, t)| !t.done && !t.event)
             .filter_map(|(abs, t)| {
                 let spec = recurrence::parse_rec_spec(t.rec.as_deref()?)?;
                 let k = key(t)?;

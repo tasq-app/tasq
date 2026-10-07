@@ -114,6 +114,15 @@ pub fn render(frame: &mut Frame, screen: Rect, app: &App) {
         };
         let row = &rows[*i];
         let here = *i == app.search_all.cursor;
+        app.hits.add(
+            Rect {
+                x: r.x + 2,
+                y,
+                width: r.width.saturating_sub(4),
+                height: 1,
+            },
+            crate::app::Hit::SearchRow(*i),
+        );
         let rbg = if here { theme.cursor } else { theme.panel };
         let base = Style::default().bg(rbg);
         for x in r.x + 2..r.right() - 2 {

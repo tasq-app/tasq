@@ -8,7 +8,6 @@
 
 use chrono::NaiveDate;
 
-use crate::recurrence;
 use crate::todo::{self, Task};
 
 /// How long a block is drawn when the task has a time but no duration.
@@ -33,6 +32,12 @@ pub struct Occurrence {
     pub projected: bool,
     /// Planned or due before today and still open; shown on today.
     pub late: bool,
+    /// The day this occurrence of the task starts (its own date for a
+    /// repeat; the first day of one lasting several days).
+    pub origin: NaiveDate,
+    /// How many days it lasts (1 for most), and which of them this is.
+    pub span: u16,
+    pub day: u16,
 }
 
 impl Occurrence {
@@ -79,65 +84,77 @@ pub fn occurrences(
             continue;
         };
         let deadline_only = planned.is_none() && due.is_some();
-        let occ = |date: NaiveDate, deadline: bool, projected: bool| Occurrence {
-            abs,
-            date,
-            start: if deadline && !deadline_only {
-                None
-            } else {
-                start
-            },
-            minutes,
-            deadline,
-            projected,
-            late: false,
-        };
+        let span = crate::core::series::span_days(t).clamp(0, 366) as u16 + 1;
+        let occ =
+            |date: NaiveDate, origin: NaiveDate, day: u16, deadline: bool, projected: bool| {
+                Occurrence {
+                    abs,
+                    date,
+                    // Several days long: all-day, every day of it.
+                    start: if (deadline && !deadline_only) || span > 1 {
+                        None
+                    } else {
+                        start
+                    },
+                    minutes,
+                    deadline,
+                    projected,
+                    late: false,
+                    origin,
+                    span,
+                    day,
+                }
+            };
         let in_range = |d: NaiveDate| d >= from && d <= to;
+        // Every day of the occurrence starting on `first` that's in range.
+        let push_span = |out: &mut Vec<Occurrence>, first: NaiveDate, projected: bool| {
+            for k in 0..span {
+                let Some(d) = first.checked_add_days(chrono::Days::new(u64::from(k))) else {
+                    break;
+                };
+                if in_range(d) {
+                    out.push(occ(d, first, k, deadline_only, projected));
+                }
+            }
+        };
 
-        if in_range(main) {
-            out.push(occ(main, deadline_only, false));
-        }
+        push_span(&mut out, main, false);
         if let (Some(p), Some(d)) = (planned, due)
             && d != p
             && in_range(d)
         {
-            out.push(occ(d, true, false));
+            out.push(Occurrence {
+                span: 1,
+                ..occ(d, main, 0, true, false)
+            });
         }
-        if !t.done && main < today && in_range(today) && (planned.is_some() || due.is_some()) {
+        // An event is never late: it's over, not missed.
+        let last = main + chrono::Days::new(u64::from(span - 1));
+        if !t.done
+            && !t.event
+            && last < today
+            && in_range(today)
+            && (planned.is_some() || due.is_some())
+        {
             out.push(Occurrence {
                 late: true,
                 start: None,
-                ..occ(today, deadline_only, false)
+                span: 1,
+                ..occ(today, main, 0, deadline_only, false)
             });
         }
 
         // Future repeats.
-        let Some(spec) = t.rec.as_deref().and_then(recurrence::parse_rec_spec) else {
-            continue;
-        };
         if t.done {
             continue;
         }
-        let until = t.until.as_deref().and_then(date);
-        let mut left = t.times.as_deref().and_then(|v| v.parse::<u32>().ok());
-        let mut cur = main;
-        for _ in 0..MAX_PROJECTED {
-            if let Some(n) = left.as_mut() {
-                if *n <= 1 {
-                    break;
-                }
-                *n -= 1;
-            }
-            let Some(next) = recurrence::advance(cur, &spec) else {
-                break;
-            };
-            if next > to || until.is_some_and(|u| next > u) {
+        for next in crate::core::series::repeats_from(t, main, MAX_PROJECTED) {
+            if next > to {
                 break;
             }
-            if next >= from {
-                out.push(occ(next, deadline_only, true));
+            if next + chrono::Days::new(u64::from(span - 1)) >= from {
+                push_span(&mut out, next, true);
             }
-            cur = next;
         }
     }
     out.sort_by(|a, b| {
@@ -310,6 +327,9 @@ mod tests {
             deadline: false,
             projected: false,
             late: false,
+            origin: d("2026-10-06"),
+            span: 1,
+            day: 0,
         };
         let a = mk(9 * 60, 120);
         let b = mk(10 * 60, 60);

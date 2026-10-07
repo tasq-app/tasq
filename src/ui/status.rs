@@ -80,7 +80,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     {
         match cal.view {
             crate::app::CalView::Day => {
-                "↑↓ task · ←→ day · Enter edit · x done · n new · J/K move · Esc list"
+                "↑↓ task · ←→ day · Enter edit · x done · D delete · n new · J/K move · Esc list"
             }
             crate::app::CalView::Week => {
                 "←→ day · ↑↓ task · < > week · v blocks/agenda · Enter edit · n new · Esc list"
@@ -153,7 +153,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         hint = if !app.prefs.hints {
             "".into()
         } else if app.cur_abs().is_some() && app.filter.preset == Some(crate::app::Preset::Inbox) {
-            "+ space · r date · x done · e edit".into()
+            "r give it a day · x done · e edit".into()
         } else if app.cur_abs().is_some() {
             "x done · e edit · r reschedule · Tab details".into()
         } else {

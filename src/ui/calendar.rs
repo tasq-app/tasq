@@ -32,6 +32,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let Some(cal) = &app.calendar else {
         return;
     };
+    app.cal_cols.borrow_mut().clear();
     if area.height < 4 || area.width < 30 {
         return;
     }
@@ -146,6 +147,215 @@ fn title(app: &App, abs: usize) -> String {
         })
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+/// An occurrence's title: a diamond for an event, and which day it is of
+/// one lasting several.
+fn occ_title(app: &App, o: &Occurrence) -> String {
+    let mut t = title(app, o.abs);
+    if app.tasks().get(o.abs).is_some_and(|t| t.event) {
+        t = format!("◆ {t}");
+    }
+    if o.span > 1 {
+        t.push_str(&format!(" · {}/{}", o.day + 1, o.span));
+    }
+    t
+}
+
+/// An all-day item across a run of day columns: one day, or the visible
+/// part of something lasting several (`more_before` / `more_after` when it
+/// goes on past the columns).
+struct Band<'a> {
+    occ: &'a Occurrence,
+    c0: usize,
+    c1: usize,
+    more_before: bool,
+    more_after: bool,
+    row: usize,
+}
+
+/// The all-day items of `days` as bands, each on the first row free across
+/// its days: the ones lasting several days first, longest first, so they
+/// run straight across.
+fn all_day_bands<'a>(occs: &[&'a Occurrence], days: &[chrono::NaiveDate]) -> Vec<Band<'a>> {
+    let col = |d: chrono::NaiveDate| days.iter().position(|x| *x == d);
+    let mut bands: Vec<Band> = Vec::new();
+    let mut seen: Vec<(usize, chrono::NaiveDate, bool)> = Vec::new();
+    for o in occs.iter().copied().filter(|o| o.start.is_none()) {
+        let Some(c) = col(o.date) else {
+            continue;
+        };
+        if o.span > 1 {
+            let key = (o.abs, o.origin, o.projected);
+            if seen.contains(&key) {
+                continue;
+            }
+            seen.push(key);
+            let parts: Vec<&Occurrence> = occs
+                .iter()
+                .copied()
+                .filter(|p| (p.abs, p.origin, p.projected) == key && p.start.is_none())
+                .collect();
+            let c0 = parts.iter().filter_map(|p| col(p.date)).min().unwrap_or(c);
+            let c1 = parts.iter().filter_map(|p| col(p.date)).max().unwrap_or(c);
+            let first = parts.iter().map(|p| p.day).min().unwrap_or(0);
+            let last = parts.iter().map(|p| p.day).max().unwrap_or(0);
+            // The band stands for its first visible day.
+            let occ = parts
+                .iter()
+                .copied()
+                .find(|p| col(p.date) == Some(c0))
+                .unwrap_or(o);
+            bands.push(Band {
+                occ,
+                c0,
+                c1,
+                more_before: first > 0,
+                more_after: last + 1 < o.span,
+                row: 0,
+            });
+        } else {
+            bands.push(Band {
+                occ: o,
+                c0: c,
+                c1: c,
+                more_before: false,
+                more_after: false,
+                row: 0,
+            });
+        }
+    }
+    let mut order: Vec<usize> = (0..bands.len()).collect();
+    order.sort_by_key(|&i| {
+        let b = &bands[i];
+        (b.c0 == b.c1, b.c0, std::cmp::Reverse(b.c1 - b.c0))
+    });
+    let mut taken: Vec<Vec<bool>> = Vec::new();
+    for i in order {
+        let (c0, c1) = (bands[i].c0, bands[i].c1);
+        let row = (0..)
+            .find(|&r| {
+                taken
+                    .get(r)
+                    .is_none_or(|cols: &Vec<bool>| !cols[c0..=c1].iter().any(|x| *x))
+            })
+            .unwrap_or(0);
+        while taken.len() <= row {
+            taken.push(vec![false; days.len()]);
+        }
+        for x in &mut taken[row][c0..=c1] {
+            *x = true;
+        }
+        bands[i].row = row;
+    }
+    bands
+}
+
+/// Draw `bands` in `rows` rows from `y`, column `c` at `x_of(c)` and
+/// `w_of(c)` wide; a column with more than fits says how many more in its
+/// last row.
+#[allow(clippy::too_many_arguments)]
+fn draw_bands(
+    buf: &mut Buffer,
+    app: &App,
+    theme: &Theme,
+    bands: &[Band],
+    y: u16,
+    rows: usize,
+    x_of: &dyn Fn(usize) -> u16,
+    w_of: &dyn Fn(usize) -> u16,
+    selected: Option<&Occurrence>,
+    cols: usize,
+) {
+    if rows == 0 {
+        return;
+    }
+    let hidden = |c: usize| {
+        bands
+            .iter()
+            .filter(|b| b.c0 <= c && c <= b.c1 && b.row >= rows)
+            .count()
+    };
+    for b in bands {
+        if b.row >= rows {
+            continue;
+        }
+        // The last row of a column with more hidden says "+n more".
+        let lose_last = (b.c0..=b.c1).any(|c| hidden(c) > 0) && b.row + 1 == rows;
+        if lose_last && b.c0 == b.c1 {
+            continue;
+        }
+        let x = x_of(b.c0) + 1;
+        let right = x_of(b.c1) + 1 + w_of(b.c1);
+        let w = right.saturating_sub(x);
+        let color = occ_color(app, theme, b.occ);
+        let sel = selected.is_some_and(|s| {
+            s.abs == b.occ.abs && s.origin == b.occ.origin && s.projected == b.occ.projected
+        });
+        let mut style = Style::default().fg(color);
+        if let Some(bg) = tint(color, theme.bg, if sel { 0.42 } else { 0.22 }) {
+            style = style.bg(bg);
+        }
+        if sel {
+            style = style.add_modifier(Modifier::BOLD);
+        }
+        let o = b.occ;
+        let prefix = if o.late {
+            "late "
+        } else if o.deadline {
+            "◷ "
+        } else if o.projected && o.span == 1 {
+            "↻ "
+        } else {
+            ""
+        };
+        let name = if o.span > 1 {
+            let t = title(app, o.abs);
+            if app.tasks().get(o.abs).is_some_and(|t| t.event) {
+                format!("◆ {t}")
+            } else {
+                t
+            }
+        } else {
+            occ_title(app, o)
+        };
+        let left = if b.more_before { "◂ " } else { " " };
+        let tail = if b.more_after { "▸" } else { "" };
+        let inner = usize::from(w).saturating_sub(tail.chars().count());
+        let text = fit(&format!("{left}{prefix}{name}"), inner);
+        let text = format!("{text:<inner$}{tail}");
+        put(buf, x, y + b.row as u16, &text, w, style);
+        app.hits.add(
+            Rect {
+                x,
+                y: y + b.row as u16,
+                width: w,
+                height: 1,
+            },
+            crate::app::Hit::CalItem(Box::new(o.clone())),
+        );
+    }
+    for c in 0..cols {
+        let n = hidden(c);
+        if n == 0 {
+            continue;
+        }
+        // The ones in the last row are hidden too.
+        let n = n + bands
+            .iter()
+            .filter(|b| b.c0 == b.c1 && b.c0 == c && b.row + 1 == rows)
+            .count();
+        let x = x_of(c) + 1;
+        let w = w_of(c).saturating_sub(1);
+        put(
+            buf,
+            x,
+            y + rows as u16 - 1,
+            &format!("{:<w$}", format!("+{n} more"), w = usize::from(w)),
+            w,
+            Style::default().fg(theme.dim),
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -301,7 +511,7 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
             } else {
                 (task_color(app, o.abs), if o.projected { "↻ " } else { "" })
             };
-            let text = format!(" {prefix}{} ", title(app, o.abs));
+            let text = format!(" {prefix}{} ", occ_title(app, o));
             let w = (text.chars().count() as u16).min(grid_r.width.saturating_sub(GUTTER_W + 1));
             if x + w > grid_r.right() && x > grid_r.x + GUTTER_W {
                 y += 1;
@@ -322,6 +532,15 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
                     .add_modifier(Modifier::CROSSED_OUT);
             }
             put(buf, x, y, &fit(&text, usize::from(w)), w, style);
+            app.hits.add(
+                Rect {
+                    x,
+                    y,
+                    width: w,
+                    height: 1,
+                },
+                crate::app::Hit::CalItem(Box::new(o.clone())),
+            );
             x += w + 1;
         }
         y += 1;
@@ -384,6 +603,16 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     // Grid lines and hour labels.
     let gx = grid.x + GUTTER_W;
     let gw = grid.width.saturating_sub(GUTTER_W);
+    let col = crate::app::CalCol {
+        x: gx,
+        w: gw,
+        date: cal.date,
+        y: grid.y,
+        h: grid.height,
+        top: top * 60,
+        scale,
+    };
+    app.cal_cols.borrow_mut().push(col);
     for h in top..last {
         let row = row_of(h * 60);
         if row < 0 || row >= i64::from(grid.height) {
@@ -433,7 +662,9 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
         };
         let sel = selected.as_ref().is_some_and(|x| x == *o);
         draw_block(buf, block, app, theme, o, sel);
+        block_hits(app, block, o);
     }
+    draw_ghost(buf, app, theme, &col, gx, gw);
 
     // Now: a red line across the free part of the grid.
     if let Some(now) = now
@@ -532,7 +763,7 @@ fn draw_block(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme, o: &Occurrenc
     if let Some(p) = app.tasks().get(o.abs).and_then(|t| t.priority) {
         head.push_str(&format!("({p}) "));
     }
-    head.push_str(&title(app, o.abs));
+    head.push_str(&occ_title(app, o));
     let title_style = if done {
         Style::default()
             .fg(theme.done)
@@ -638,7 +869,7 @@ fn side_panel(
                 buf,
                 &mut y,
                 "task",
-                &title(app, o.abs),
+                &occ_title(app, o),
                 val.add_modifier(Modifier::BOLD),
             );
             let mut when = chip_date(&o.date.format("%Y-%m-%d").to_string(), &today);
@@ -781,65 +1012,25 @@ fn week_blocks(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     }
     y += 1;
 
-    // All-day: two rows a day, the second says how many more.
-    let all_rows = 2u16;
-    let mut any_all_day = false;
-    for (i, d) in days.iter().enumerate() {
-        let w = col_width(i).saturating_sub(1);
-        let day_all: Vec<&Occurrence> = occs
-            .iter()
-            .filter(|o| o.date == *d && o.start.is_none())
-            .collect();
-        any_all_day |= !day_all.is_empty();
-        for (k, o) in day_all.iter().enumerate() {
-            let row = k as u16;
-            if row >= all_rows {
-                break;
-            }
-            if row == all_rows - 1 && day_all.len() > all_rows as usize {
-                let more = format!("+{} more", day_all.len() - row as usize);
-                put(
-                    buf,
-                    col_x(i) + 1,
-                    y + row,
-                    &more,
-                    w,
-                    Style::default().fg(theme.dim),
-                );
-                break;
-            }
-            let color = occ_color(app, theme, o);
-            let sel = selected.as_ref().is_some_and(|s| s == *o);
-            let mut style = Style::default().fg(color);
-            if let Some(bg) = tint(color, theme.bg, if sel { 0.42 } else { 0.22 }) {
-                style = style.bg(bg);
-            }
-            if sel {
-                style = style.add_modifier(Modifier::BOLD);
-            }
-            let prefix = if o.late {
-                "late "
-            } else if o.deadline {
-                "◷ "
-            } else if o.projected {
-                "↻ "
-            } else {
-                ""
-            };
-            let text = fit(&format!(" {prefix}{}", title(app, o.abs)), usize::from(w));
-            put(
-                buf,
-                col_x(i) + 1,
-                y + row,
-                &format!("{text:<width$}", width = usize::from(w)),
-                w,
-                style,
-            );
-        }
-    }
-    if any_all_day {
-        y += all_rows;
-    }
+    // All-day: bands across the days (several-day ones run straight
+    // across), up to three rows; a crowded day says how many more.
+    let occ_refs: Vec<&Occurrence> = occs.iter().collect();
+    let bands = all_day_bands(&occ_refs, &days);
+    let used = bands.iter().map(|b| b.row + 1).max().unwrap_or(0);
+    let all_rows = used.min(3);
+    draw_bands(
+        buf,
+        app,
+        theme,
+        &bands,
+        y,
+        all_rows,
+        &|i| col_x(i),
+        &|i| col_width(i).saturating_sub(1),
+        selected.as_ref(),
+        7,
+    );
+    y += all_rows as u16;
     for x in r.x..r.right() {
         if let Some(c) = buf.cell_mut((x, y)) {
             c.set_symbol("┄");
@@ -922,6 +1113,15 @@ fn week_blocks(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
         let lanes = calendar::lanes(&day_timed);
         let inner_x = col_x(i) + 1;
         let inner_w = col_width(i).saturating_sub(1);
+        app.cal_cols.borrow_mut().push(crate::app::CalCol {
+            x: col_x(i),
+            w: col_width(i),
+            date: *d,
+            y: grid.y,
+            h: grid.height,
+            top: top * 60,
+            scale,
+        });
         for (o, (lane, n)) in day_timed.iter().zip(lanes) {
             let (Some(s), Some(e)) = (o.start, o.end()) else {
                 continue;
@@ -953,6 +1153,7 @@ fn week_blocks(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
             };
             let sel = selected.as_ref().is_some_and(|x| x == *o);
             draw_mini_block(buf, rect, app, theme, o, sel);
+            block_hits(app, rect, o);
         }
         // Now, on today's column.
         if *d == today
@@ -972,6 +1173,86 @@ fn week_blocks(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
             }
         }
     }
+    // The block being dragged, where it would land.
+    let cols: Vec<crate::app::CalCol> = app.cal_cols.borrow().clone();
+    for c in &cols {
+        draw_ghost(buf, app, theme, c, c.x + 1, c.w.saturating_sub(1));
+    }
+}
+
+/// Where a click on block `r` lands: the block, and its bottom row to
+/// drag its length (when it has more than one).
+fn block_hits(app: &App, r: Rect, o: &Occurrence) {
+    if o.projected && app.tasks().get(o.abs).is_none_or(|t| t.rec.is_none()) {
+        return;
+    }
+    app.hits
+        .add(r, crate::app::Hit::CalBlock(Box::new(o.clone()), false));
+    if r.height >= 2 {
+        app.hits.add(
+            Rect {
+                y: r.bottom() - 1,
+                height: 1,
+                ..r
+            },
+            crate::app::Hit::CalBlock(Box::new(o.clone()), true),
+        );
+    }
+}
+
+/// The dragged block's ghost in column `col` (drawn `x`, `w`), when it
+/// would land there: a dashed outline with the time it would take.
+fn draw_ghost(
+    buf: &mut Buffer,
+    app: &App,
+    theme: &Theme,
+    col: &crate::app::CalCol,
+    x: u16,
+    w: u16,
+) {
+    let Some(drag) = app.cal_drag.as_ref() else {
+        return;
+    };
+    let Some((date, start, minutes)) = drag.target else {
+        return;
+    };
+    if date != col.date || w < 3 {
+        return;
+    }
+    let r0 = col.row_of(start).max(0);
+    let r1 = col
+        .row_of(start + minutes)
+        .max(r0 + 1)
+        .min(i64::from(col.h));
+    if r0 >= r1 {
+        return;
+    }
+    let color = task_color(app, drag.occ.abs);
+    let mut style = Style::default().fg(color).add_modifier(Modifier::BOLD);
+    if let Some(bg) = tint(color, theme.bg, 0.12) {
+        style = style.bg(bg);
+    }
+    let (top, bottom) = (col.y + r0 as u16, col.y + r1 as u16 - 1);
+    for y in top..=bottom {
+        for xx in x..x + w {
+            let edge_y = y == top || y == bottom;
+            let edge_x = xx == x || xx == x + w - 1;
+            if let Some(c) = buf.cell_mut((xx, y)) {
+                if edge_y {
+                    c.set_symbol("╌");
+                    c.set_style(style);
+                } else if edge_x {
+                    c.set_symbol("╎");
+                    c.set_style(style);
+                } else {
+                    c.set_symbol(" ");
+                    c.set_style(style);
+                }
+            }
+        }
+    }
+    let label = format!(" {}–{} ", hhmm(start), hhmm((start + minutes).min(24 * 60)));
+    put(buf, x + 1, top, &label, w.saturating_sub(2), style);
 }
 
 /// A block in a week column: title, then its hours when there's a row.
@@ -1007,7 +1288,7 @@ fn draw_mini_block(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme, o: &Occu
         head.push('↻');
         head.push(' ');
     }
-    head.push_str(&title(app, o.abs));
+    head.push_str(&occ_title(app, o));
     let style = if done {
         Style::default()
             .fg(theme.done)
@@ -1164,7 +1445,7 @@ fn agenda(
                 put(buf, x, y, mark, 1, base.fg(mark_color));
                 let time = o.start.map_or("  —  ".to_string(), hhmm);
                 put(buf, x + 2, y, &time, 5, base.fg(theme.dim));
-                let mut text = title(app, o.abs);
+                let mut text = occ_title(app, o);
                 if o.start.is_some() && o.minutes != calendar::DEFAULT_MINUTES {
                     text.push_str(&format!(" · {}", minutes_label(o.minutes)));
                 }
@@ -1247,6 +1528,8 @@ fn month(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     let rule = Style::default().fg(theme.border);
     hline(buf, r.x, r.y + 1, r.width, rule);
 
+    // Each week's title bands, drawn over the rules at the end.
+    let mut week_bands: Vec<(u16, Vec<Band>)> = Vec::new();
     for week in 0..weeks {
         let y0 = r.y + 2 + week * cell_h;
         for i in 0..7u16 {
@@ -1260,6 +1543,7 @@ fn month(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
             if cell.bottom() > r.bottom() {
                 continue;
             }
+            app.hits.add(cell, crate::app::Hit::CalDay(d));
             let in_month = d.month() == first.month();
             let sel = d == cal.date;
             if sel && let Some(bg) = tint(theme.accent, theme.bg, 0.10) {
@@ -1305,47 +1589,7 @@ fn month(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
                 continue;
             }
             if titles {
-                let w = cell.width.saturating_sub(2);
-                let rows = cell.height.saturating_sub(1);
-                for (k, o) in day.iter().enumerate() {
-                    let k = k as u16;
-                    if k >= rows {
-                        break;
-                    }
-                    if k + 1 == rows && day.len() > rows as usize {
-                        let more = format!("+{} more", day.len() - k as usize);
-                        put(
-                            buf,
-                            cell.x + 1,
-                            cell.y + 1 + k,
-                            &more,
-                            w,
-                            bg(Style::default().fg(theme.dim)),
-                        );
-                        break;
-                    }
-                    let color = occ_color(app, theme, o);
-                    let mut style = Style::default().fg(color);
-                    if let Some(t) = tint(color, theme.bg, 0.22) {
-                        style = style.bg(t);
-                    }
-                    let mark = if o.deadline {
-                        "◷ "
-                    } else if o.projected {
-                        "↻ "
-                    } else {
-                        ""
-                    };
-                    let text = fit(&format!("{mark}{}", title(app, o.abs)), usize::from(w));
-                    put(
-                        buf,
-                        cell.x + 1,
-                        cell.y + 1 + k,
-                        &format!("{text:<width$}", width = usize::from(w)),
-                        w,
-                        style,
-                    );
-                }
+                // Drawn for the whole week below.
             } else if cell.height >= 2 {
                 // How many, then a dot per task in its colour.
                 let n = format!("{} ", day.len());
@@ -1365,6 +1609,39 @@ fn month(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
                 }
             }
         }
+        // Titles: bands across the week (several-day ones run straight
+        // across the days).
+        if titles && y0 + cell_h - 1 <= r.bottom() {
+            let days: Vec<chrono::NaiveDate> = (0..7u16)
+                .map(|i| grid_from + chrono::Days::new(u64::from(week * 7 + i)))
+                .collect();
+            let refs: Vec<&Occurrence> = occs.iter().collect();
+            let bands = all_day_bands(&refs, &days);
+            let timed: Vec<&Occurrence> =
+                refs.iter().copied().filter(|o| o.start.is_some()).collect();
+            // Timed ones are days' items too, after the bands.
+            let mut all = bands;
+            let mut next_free = [0usize; 7];
+            for b in &all {
+                for free in &mut next_free[b.c0..=b.c1] {
+                    *free = (*free).max(b.row + 1);
+                }
+            }
+            for o in timed {
+                if let Some(c) = days.iter().position(|d| *d == o.date) {
+                    all.push(Band {
+                        occ: o,
+                        c0: c,
+                        c1: c,
+                        more_before: false,
+                        more_after: false,
+                        row: next_free[c],
+                    });
+                    next_free[c] += 1;
+                }
+            }
+            week_bands.push((y0 + 1, all));
+        }
         // Rules under each week and between the days.
         let ry = y0 + cell_h - 1;
         if ry < r.bottom() {
@@ -1382,6 +1659,21 @@ fn month(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
                 c.set_style(rule);
             }
         }
+    }
+
+    for (y, bands) in &week_bands {
+        draw_bands(
+            buf,
+            app,
+            theme,
+            bands,
+            *y,
+            usize::from(cell_h.saturating_sub(2)),
+            &|i| col_x(i as u16),
+            &|i| col_w(i as u16).saturating_sub(2),
+            None,
+            7,
+        );
     }
 
     // The selected day, below the grid.

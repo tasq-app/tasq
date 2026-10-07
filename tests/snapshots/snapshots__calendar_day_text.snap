@@ -6,7 +6,7 @@ expression: buffer_to_text(&buf)
   ■ tasq               │────────────────────────────────────────────────────────────────────────────
                        │all day  ◷ Finish Q2 board deck   Plan the week                             
    ⌂ Home              │┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄
-   ▤ Inbox          3  │07:00   ▎ Gym · 07:00                                                       
+   ▤ Inbox          9  │07:00   ▎ Gym · 07:00                                                       
    ◉ Today          6  │08:00   ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
    ◷ Upcoming       6  │                                                                            
    ▦ Calendar          │09:00   ▎ Teoria AII                                                        
@@ -33,4 +33,4 @@ expression: buffer_to_text(&buf)
  │     ● todo.txt    │ │                                                                            
  ╰───────────────────╯ │21:00   ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
                        │                                                                            
-  ● day              ↑↓ task   ←→ day   Enter edit   x done   n new   J/K move   Esc list   ␣ more…
+  ● day   ↑↓ task   ←→ day   Enter edit   x done   D delete   n new   J/K move   Esc list   ␣ more…

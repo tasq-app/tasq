@@ -14,6 +14,7 @@ use crate::todo::Task;
 
 mod autocomplete;
 mod bulk;
+mod cal_drag;
 mod calendar;
 mod checklist;
 mod chord;
@@ -53,7 +54,8 @@ pub use crate::core::Archive;
 pub use crate::core::History;
 pub use crate::core::filter::{ListDueBucket, ordered_unique};
 pub use autocomplete::{ActiveToken, AutocompleteTarget, TokenKind, active_token};
-pub use calendar::{CalScreen, CalStyle, CalView, month_bounds, week_start};
+pub use cal_drag::{CalCol, CalDrag};
+pub use calendar::{CalScreen, CalStyle, CalView, SeriesAsk, SeriesOp, month_bounds, week_start};
 pub use checklist::{CHECKLIST_FILE, CheckItem, InspectorRow, NoteCard, NotesCache, TaskNotes};
 pub use chord::Chord;
 pub use color_pick::{ColorPick, PICK_COLS};
@@ -175,6 +177,12 @@ pub struct App {
     pub notes_screen: Option<NotesScreen>,
     /// A space's colour picker (`c` on a space).
     pub color_pick: Option<ColorPick>,
+    /// A change to a repeating task asking "only this one?".
+    pub series_ask: Option<SeriesAsk>,
+    /// The calendar's day columns as last drawn, for the mouse.
+    pub cal_cols: std::cell::RefCell<Vec<CalCol>>,
+    /// A block being dragged in the calendar.
+    pub cal_drag: Option<CalDrag>,
     /// The Trash screen, when it's up.
     pub trash_screen: Option<TrashScreen>,
     /// Where the cursor is on the settings screen.
@@ -364,6 +372,9 @@ impl App {
             home_bar: std::cell::Cell::new(None),
             notes_screen: None,
             color_pick: None,
+            series_ask: None,
+            cal_cols: std::cell::RefCell::new(Vec::new()),
+            cal_drag: None,
             trash_screen: None,
             settings: SettingsState::default(),
             pomodoro: None,

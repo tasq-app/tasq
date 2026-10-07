@@ -278,6 +278,9 @@ pub fn draw(frame: &mut Frame, app: &App) {
         detail::render_confirm_done(frame, area, app, abs);
     }
     color_pick::render(frame, area, app);
+    if let Some(ask) = &app.series_ask {
+        detail::render_series_ask(frame, area, app, ask);
+    }
     let pinned = pomodoro::render(frame, area, app, 1);
     toast::render(frame, area, app, 1 + pinned);
     // OSC 8 hyperlinks are applied post-draw by the caller (see

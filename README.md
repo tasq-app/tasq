@@ -41,9 +41,9 @@ local database, notes, live natural-language capture and more, listed below.
   week ahead as a heatmap, what's next, your routines with their streaks,
   your spaces, the notes you touched last and the inbox. tasq opens on
   Today; `start = "home"` in the config opens on Home instead.
-- **Inbox**: what you capture without a space or a date (from the phone,
-  the CLI, or a quick `n`) waits in the Inbox until you sort it in: `+`
-  gives it a space, `r` a date.
+- **Inbox**: every open task without a day (from the phone, the CLI, or a
+  quick `n`), whatever space, priority or tags it has, waits in the Inbox:
+  what's left to put in the calendar. `r` gives it a day and it moves on.
 - **Routines and streaks**: a repeating task counts how many times in a
   row you've done it, and the done notice says so the moment you tick it
   (`Gym · 13 in a row`).
@@ -76,6 +76,10 @@ local database, notes, live natural-language capture and more, listed below.
 - **Home you can drive**: `Tab` steps through the capture bar and the
   tiles, `Enter` goes into one (`x` ticks a task there); everything can be
   clicked too (`mouse = false` hands the mouse back to the terminal).
+  A click also moves the keyboard there: click a space in the sidebar and
+  `c`, `a`, `r` act on it. The Search screen, the filter popover and the
+  Notes screen (its search box and its notes; a second click reads one)
+  take clicks as well.
 - **Readable rows**: a task shows its title, then chips: when (`today ·
   16:00 · 2h`), the deadline (`◷ by fri 9 oct`, red when due or late), the
   repeat (`↻ every mon, wed, fri`), its space in the space's colour and its
@@ -736,12 +740,47 @@ tinted in its space's colour; tasks with a date but no time sit in the
 selected task and the free gaps of the day. Future repeats show too, with
 a dashed edge and ↻. The tabs on top switch views (`d` / `w` / `m`); in
 the day view `←` / `→` change day, `↑` / `↓` select, `Enter` edits, `x`
-completes, `n` adds a task on that day, `J` / `K` move the selected block
-half an hour later / earlier and `H` / `L` a day back / forward, `t` goes
-to today and `Esc` back to the list.
+completes, `D` (or Delete) deletes, `n` adds a task on that day, `J` / `K`
+move the selected block half an hour later / earlier and `H` / `L` a day
+back / forward, `E` makes it an event (or a task again), `t` goes to today
+and `Esc` back to the list.
+
+With the mouse, a click selects anything in the calendar — a block, an
+all-day task or event, a bar across days, a day of the month — so the
+keys (`e`, `D`, `E`, `x`…) act on it, and a second click opens it. Drag a
+block to another time (or, in the week, another day): a dashed ghost
+shows where it would land and at what time, and letting go moves it
+there. Drag its bottom edge to make it longer or
+shorter. Times snap to a quarter of an hour.
+
+Changing one occurrence of a repeating task (editing, moving, deleting,
+dragging) asks first: `o` only this one, which becomes a task of its own
+while the series skips that day (`skip:`), or `f` this one and the ones
+after, which ends the series the day before (`until:`) and starts a new
+one from there.
+
+**Events.** A class, a holiday, an exam week: an event (`event:1`, a ◆
+instead of the box) isn't ticked off, never shows as overdue and doesn't
+count as a routine; once it's over it moves on to its next date, or out
+of the way when it doesn't repeat. Make one from any task (or turn a
+class routine into one) with `E` in the calendar, or *event / task* in
+the menu (`space`) and the command palette, or type the word *event* in
+the add dialog: "Bank holiday event on oct 12".
+
+**Several days.** Any task can span days, an event or not: it's planned
+on the first and isn't late until the last has gone, and the calendar
+draws it as one bar across the days. The add dialog reads the days
+however they're typed: "from 16 to 17 nov", "from 16-17 nov", "16 - 17nov",
+"nov 16-17", "from dec 30 to jan 2", "between mon and wed", "mon-fri"
+(bare numbers like "22-25" need "from" or "event"). And stretches said in
+words: "this weekend", "next weekend", "this week", "next week" (Monday
+to Sunday), "in / for / during / within the next week" (the coming seven
+days), "the next 3 days", "the next 2 weeks", "this month", "next month",
+"the rest of the week".
 
 `5` shows the week: seven columns of the same blocks, today's column lit,
-an all-day row on top. `←` / `→` move the selected day, `<` / `>` the
+the all-day rows on top (something lasting several days is one bar across
+them). `←` / `→` move the selected day, `<` / `>` the
 week, and `v` switches to an agenda (each day a heading with its tasks
 below), which is also what narrow terminals get.
 
@@ -749,7 +788,7 @@ below), which is also what narrow terminals get.
 task in its colour (red for deadlines), and the selected day's tasks
 below the grid. `←` / `→` move a day, `↑` / `↓` a week, `<` / `>` the
 month, `Enter` opens the day, and `v` switches to the titles of each
-day's tasks inside the cells.
+day's tasks inside the cells, several-day events as bars across the week.
 
 **Spaces.** A task's `+project` is its space, and `/` nests it:
 `+Uni/Exams`. Filtering by `Uni` shows Uni's and its sub-spaces' tasks; the

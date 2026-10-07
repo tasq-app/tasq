@@ -6,7 +6,7 @@ expression: buffer_to_text(&buf)
   ■ tasq               │  ● work                                  │  Finish Q2 board deck           
                        │  4 tasks                                 │                                 
    ⌂ Home              │  ╭─────────────────────────────────────╮ │  due      today                 
-   ▤ Inbox          3  │  │ ╭─────────────────────────────────╮ │ │  space    ● work                
+   ▤ Inbox          9  │  │ ╭─────────────────────────────────╮ │ │  space    ● work                
    ◉ Today          1  │  │ │ ⌕ e▏                            │ │─│  priority ⚑ high                
    ◷ Upcoming       6  │▎ │ ╰─────────────────────────────────╯ │ │  tags     @laptop               
    ▦ Calendar          │  │  SPACES                             │─│                                 

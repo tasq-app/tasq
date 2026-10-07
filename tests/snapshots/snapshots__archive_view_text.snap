@@ -6,7 +6,7 @@ expression: buffer_to_text(&buf)
   ■ tasq               │  0 done tasks · x brings one back · dd de│  no task selected               
                        │                                          │                                 
    ⌂ Home              │   no completed tasks yet                 │                                 
-   ▤ Inbox          3  │                                          │                                 
+   ▤ Inbox          9  │                                          │                                 
    ◉ Today          1  │                                          │                                 
    ◷ Upcoming       6  │                                          │                                 
    ▦ Calendar          │                                          │                                 

@@ -6,7 +6,7 @@ expression: buffer_to_text(&buf)
   ■ tasq               │  All tasks  wednesday 6 may              │  Finish Q2 board deck           
                        │  15 tasks                                │                                 
    ⌂ Home              │   + filter            sort · priority ▾  │  due      today                 
-   ▤ Inbox          3  │                                          │  space    ● work                
+   ▤ Inbox          9  │                                          │  space    ● work                
    ◉ Today          1  │  PRIORITY A ─────────────────────────────│  priority ⚑ high                
    ◷ Upcoming       ╭ tasq · command ──────────────────────────────────────────╮aptop               
    ▦ Calendar       │ > █                                                      │                    
@@ -18,14 +18,14 @@ expression: buffer_to_text(&buf)
    ● health         │   delete task                                         dd │                    
    ● finance        │   cycle priority                                       p │                    
    ● home           │   star / unstar task (top of its priority)             * │                    
-   ● learning       │   move task down                                       J │                    
-   ● personal       │   move task up                                         K │                    
-   ● travel         │   add project to current task                          + │                    
-                    │   add or remove context on current task                c │                    
-  FILTERS           │   copy line to clipboard                              yy │                    
-   ⚑ High priority  │   copy body to clipboard                              yb │                    
-   ★ Starred        │   open task notes                                      o │                    
-   ◷ Overdue        │   undo                                                 u │                    
+   ● learning       │   event / task (an event isn't ticked off)               │                    
+   ● personal       │   move task down                                       J │                    
+   ● travel         │   move task up                                         K │                    
+                    │   add project to current task                          + │                    
+  FILTERS           │   add or remove context on current task                c │                    
+   ⚑ High priority  │   copy line to clipboard                              yy │                    
+   ★ Starred        │   copy body to clipboard                              yb │                    
+   ◷ Overdue        │   open task notes                                      o │                    
                     │  ↑↓ / Ctrl-N/P navigate · Enter run · Esc cancel         │                    
                     ╰──────────────────────────────────────────────────────────╯                    
  ╭───────────────────╮ │                                          │                                 

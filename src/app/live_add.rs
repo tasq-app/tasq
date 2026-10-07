@@ -24,8 +24,9 @@ use super::types::AddOutcome;
 use crate::core::AddOutcome as CoreAdd;
 use crate::nl::{self, DetectedSpan, Detection, FieldKind};
 
-/// The chip row, in display order. `ShowFrom` only appears once detected.
-pub const CHIP_ORDER: [FieldKind; 10] = [
+/// The chip row, in display order. `ShowFrom` and `Event` only appear
+/// once detected.
+pub const CHIP_ORDER: [FieldKind; 11] = [
     FieldKind::Date,
     FieldKind::Time,
     FieldKind::Duration,
@@ -36,6 +37,7 @@ pub const CHIP_ORDER: [FieldKind; 10] = [
     FieldKind::Context,
     FieldKind::Priority,
     FieldKind::ShowFrom,
+    FieldKind::Event,
 ];
 
 /// One chip: its field and, when set, the value to show and where it came
@@ -53,6 +55,8 @@ pub struct Chip {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Picked {
     pub planned: Option<NaiveDate>,
+    /// The last day, when the picked date started a span of several.
+    pub end: Option<NaiveDate>,
     pub due: Option<NaiveDate>,
     pub duration: Option<u32>,
     pub reminders: Option<Vec<u32>>,
@@ -76,13 +80,16 @@ impl Picked {
             FieldKind::Repeat => self.rec.is_some(),
             FieldKind::Time => self.time.is_some(),
             FieldKind::Priority => self.priority.is_some(),
-            FieldKind::Project | FieldKind::Context => false,
+            FieldKind::Project | FieldKind::Context | FieldKind::Event => false,
         }
     }
 
     fn clear(&mut self, kind: FieldKind) {
         match kind {
-            FieldKind::Date => self.planned = None,
+            FieldKind::Date => {
+                self.planned = None;
+                self.end = None;
+            }
             FieldKind::Deadline => self.due = None,
             FieldKind::Duration => self.duration = None,
             FieldKind::Reminder => self.reminders = None,
@@ -94,14 +101,17 @@ impl Picked {
             }
             FieldKind::Time => self.time = None,
             FieldKind::Priority => self.priority = None,
-            FieldKind::Project | FieldKind::Context => {}
+            FieldKind::Project | FieldKind::Context | FieldKind::Event => {}
         }
     }
 
     /// Copy the field `kind` from a parse result.
     fn take_from(&mut self, kind: FieldKind, p: &nl::ParsedNl) {
         match kind {
-            FieldKind::Date => self.planned = p.planned,
+            FieldKind::Date => {
+                self.planned = p.planned;
+                self.end = p.end;
+            }
             FieldKind::Deadline => self.due = p.due,
             FieldKind::Duration => self.duration = p.duration,
             FieldKind::Reminder => {
@@ -115,7 +125,7 @@ impl Picked {
             }
             FieldKind::Time => self.time = p.time,
             FieldKind::Priority => self.priority = p.priority,
-            FieldKind::Project | FieldKind::Context => {}
+            FieldKind::Project | FieldKind::Context | FieldKind::Event => {}
         }
     }
 }
@@ -188,6 +198,7 @@ impl App {
         };
         let picked = Picked {
             planned: date(&task.planned),
+            end: date(&task.end),
             due: date(&task.due),
             duration: task
                 .duration
@@ -260,6 +271,12 @@ impl App {
         }
         line = format!("{}{line}", keep.done);
         for t in &keep.tags {
+            // A span typed again replaces the one the task had.
+            if (det.parsed.end.is_some() && t.starts_with("end:"))
+                || ((det.parsed.end.is_some() || det.parsed.event) && t.starts_with("event:"))
+            {
+                continue;
+            }
             line.push(' ');
             line.push_str(t);
         }
@@ -304,6 +321,9 @@ impl App {
         let p = &mut det.parsed;
         if picked.planned.is_some() {
             p.planned = picked.planned;
+            p.end = picked
+                .end
+                .filter(|e| picked.planned.is_some_and(|d| *e > d));
         }
         if picked.due.is_some() {
             p.due = picked.due;
@@ -385,7 +405,10 @@ impl App {
             .iter()
             .filter_map(|&kind| {
                 let value = match kind {
-                    FieldKind::Date => p.planned.map(short_date),
+                    FieldKind::Date => p.planned.map(|d| match p.end {
+                        Some(e) if e > d => format!("{} → {}", short_date(d), short_date(e)),
+                        _ => short_date(d),
+                    }),
                     FieldKind::Deadline => p.due.map(|d| format!("by {}", short_date(d))),
                     FieldKind::Duration => p.duration.map(crate::duration::describe),
                     FieldKind::Reminder => (!p.reminders.is_empty()).then(|| {
@@ -417,8 +440,9 @@ impl App {
                     FieldKind::Context => (!p.contexts.is_empty()).then(|| p.contexts.join(" ")),
                     FieldKind::Priority => p.priority.map(|c| format!("({c})")),
                     FieldKind::ShowFrom => p.threshold.clone(),
+                    FieldKind::Event => p.event.then(|| "event".to_string()),
                 };
-                if kind == FieldKind::ShowFrom && value.is_none() {
+                if matches!(kind, FieldKind::ShowFrom | FieldKind::Event) && value.is_none() {
                     return None;
                 }
                 let picked = self.draft.live.picked.has(kind);
@@ -584,6 +608,10 @@ impl App {
         if matches!(chip.kind, FieldKind::Project | FieldKind::Context) && chip.value.is_some() {
             return;
         }
+        // An event has nothing to pick: `x` takes it off.
+        if chip.kind == FieldKind::Event {
+            return;
+        }
         if has_picker && let Some(span) = chip.span {
             let det = self.live_detection();
             self.draft.live.picked.take_from(chip.kind, &det.parsed);
@@ -645,6 +673,7 @@ impl App {
             FieldKind::Time => self.live_append(" at "),
             FieldKind::Duration => self.live_append(" for "),
             FieldKind::Reminder => self.live_append(" remind me "),
+            FieldKind::Event => {}
         }
         self.live_refresh();
     }

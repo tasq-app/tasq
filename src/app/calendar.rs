@@ -49,6 +49,33 @@ pub struct CalScreen {
     pub month_style: CalStyle,
 }
 
+/// A change made to one occurrence in the calendar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SeriesOp {
+    /// Open the edit dialog (`true`: in Insert mode).
+    Edit(bool),
+    Delete,
+    /// Days later (negative: earlier).
+    ShiftDay(i64),
+    /// Minutes later (negative: earlier).
+    ShiftTime(i32),
+    /// Dropped on a day (and a time, for a timed block).
+    MoveTo {
+        date: NaiveDate,
+        start: Option<u32>,
+    },
+    /// A new length, in minutes.
+    Resize(u32),
+}
+
+/// A change to a repeating task waiting for "only this one, or this and
+/// the ones after?".
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SeriesAsk {
+    pub occ: Occurrence,
+    pub op: SeriesOp,
+}
+
 /// Monday of `d`'s week.
 pub fn week_start(d: NaiveDate) -> NaiveDate {
     d - Days::new(u64::from(d.weekday().num_days_from_monday()))
@@ -116,6 +143,15 @@ impl App {
 
     pub fn today_naive(&self) -> NaiveDate {
         NaiveDate::parse_from_str(self.store.today(), "%Y-%m-%d").unwrap_or_default()
+    }
+
+    /// The task an action is about: the one selected in the calendar when
+    /// it's open, else the list's.
+    pub fn calendar_or_list_abs(&self) -> Option<usize> {
+        if self.calendar.is_some() {
+            return self.cal_selected().map(|o| o.abs);
+        }
+        self.cur_abs()
     }
 
     /// Open the calendar on `view`, at today (or where it was).
@@ -250,19 +286,8 @@ impl App {
         }
     }
 
-    /// The selected task, refusing a future repeat for changes that only
-    /// make sense on the task itself.
-    fn cal_editable(&mut self, what: &str) -> Option<Occurrence> {
-        let occ = self.cal_selected()?;
-        if occ.projected {
-            self.flash(format!("a future repeat · {what} the current one instead"));
-            return None;
-        }
-        Some(occ)
-    }
-
-    /// Enter: edit the selected task (a repeat edits the whole series); in
-    /// the month, open the selected day.
+    /// Enter: edit the selected task (a repeat asks which ones); in the
+    /// month, open the selected day.
     pub fn cal_edit(&mut self) {
         if self
             .calendar
@@ -272,11 +297,196 @@ impl App {
             self.open_cal(CalView::Day);
             return;
         }
-        let Some(occ) = self.cal_selected() else {
+        if let Some(occ) = self.cal_selected() {
+            self.cal_apply(occ, SeriesOp::Edit(false));
+        }
+    }
+
+    /// `i`: edit the selected task in Insert mode (a repeat asks which).
+    pub fn cal_edit_insert(&mut self) {
+        if let Some(occ) = self.cal_selected() {
+            self.cal_apply(occ, SeriesOp::Edit(true));
+        }
+    }
+
+    /// `D` / Delete: delete the selected task (a repeat asks which ones).
+    pub fn cal_delete(&mut self) {
+        if let Some(occ) = self.cal_selected() {
+            self.cal_apply(occ, SeriesOp::Delete);
+        }
+    }
+
+    /// Make `op` on the occurrence `occ`: straight away for a task that
+    /// doesn't repeat; a repeating one first asks whether it's only this
+    /// one or this and the ones after.
+    pub fn cal_apply(&mut self, occ: Occurrence, op: SeriesOp) {
+        let Some(t) = self.store.tasks().get(occ.abs) else {
             return;
         };
-        self.begin_live_edit(occ.abs, false);
-        self.mode = Mode::Insert;
+        if t.rec.is_some() && !t.done {
+            self.series_ask = Some(SeriesAsk { occ, op });
+            return;
+        }
+        self.cal_do(occ.abs, &occ, op);
+    }
+
+    /// The answer to [`SeriesAsk`]: `only_this` takes the occurrence out of
+    /// its series (a task of its own), else the series is cut there and the
+    /// change made to the part from it on.
+    pub fn series_answer(&mut self, only_this: bool) {
+        use crate::core::series;
+        let Some(ask) = self.series_ask.take() else {
+            return;
+        };
+        let occ = ask.occ;
+        let Some(t) = self.store.tasks().get(occ.abs).cloned() else {
+            return;
+        };
+        let (on, current) = (occ.origin, !occ.projected);
+        if ask.op == SeriesOp::Delete {
+            let edit = |s: &mut Self, raw: String| match s.store.edit_line(occ.abs, &raw) {
+                crate::core::EditOutcome::Saved { abs } => s.after_mutation(abs),
+                crate::core::EditOutcome::Aborted(r) => s.handle_reconcile_abort(r),
+                crate::core::EditOutcome::Error(e) => s.flash(format!("couldn't save: {e}")),
+                _ => {}
+            };
+            match (only_this, current) {
+                (true, true) => match series::advance_one(&t) {
+                    Some(raw) => edit(self, raw),
+                    None => self.delete(occ.abs),
+                },
+                (true, false) => edit(self, series::add_skip(&t.raw, on)),
+                (false, true) => self.delete(occ.abs),
+                (false, false) => edit(self, series::split_at(&t, on).0),
+            }
+            if !(only_this && current) || series::advance_one(&t).is_some() {
+                self.flash(if only_this {
+                    "that one's gone · the rest stay"
+                } else {
+                    "gone from here on"
+                });
+            }
+            self.recompute_visible();
+            self.cal_clamp();
+            return;
+        }
+        let target = match (only_this, current) {
+            (false, true) => Some(occ.abs),
+            (true, true) => match series::advance_one(&t) {
+                Some(rest) => self.split_out(occ.abs, &rest, &series::one_off(&t, on)),
+                None => {
+                    self.cal_rewrite(occ.abs, series::one_off(&t, on));
+                    Some(occ.abs)
+                }
+            },
+            (true, false) => self.split_out(
+                occ.abs,
+                &series::add_skip(&t.raw, on),
+                &series::one_off(&t, on),
+            ),
+            (false, false) => {
+                let (old, new) = series::split_at(&t, on);
+                self.split_out(occ.abs, &old, &new)
+            }
+        };
+        if let Some(target) = target {
+            // The new task stands where the occurrence was.
+            let occ = Occurrence {
+                abs: target,
+                projected: false,
+                ..occ
+            };
+            self.cal_do(target, &occ, ask.op);
+        }
+    }
+
+    /// Rewrite task `abs` as `keep` and add `add` after it; the added
+    /// task's index.
+    fn split_out(&mut self, abs: usize, keep: &str, add: &str) -> Option<usize> {
+        use crate::core::EditOutcome;
+        match self.store.rewrite_and_add(abs, keep, add) {
+            EditOutcome::Saved { abs } => {
+                self.recompute_visible();
+                Some(abs)
+            }
+            EditOutcome::Aborted(r) => {
+                self.handle_reconcile_abort(r);
+                None
+            }
+            EditOutcome::Error(e) => {
+                self.flash(format!("couldn't save: {e}"));
+                None
+            }
+            _ => None,
+        }
+    }
+
+    /// Make `op` on task `abs`, whose occurrence `occ` it's about.
+    fn cal_do(&mut self, abs: usize, occ: &Occurrence, op: SeriesOp) {
+        let Some(raw) = self.task_raw(abs) else {
+            return;
+        };
+        // Moving a day: the deadline for a deadline, else the plan (and the
+        // end, for something lasting several days).
+        let moved = |raw: &str, days: i64| -> String {
+            if occ.deadline {
+                shift_date(raw, "due", days).unwrap_or_else(|| raw.to_string())
+            } else {
+                let r = shift_date(raw, "plan", days).unwrap_or_else(|| raw.to_string());
+                shift_date(&r, crate::core::series::END_KEY, days).unwrap_or(r)
+            }
+        };
+        match op {
+            SeriesOp::Edit(insert) => {
+                self.begin_live_edit(abs, insert);
+                self.mode = Mode::Insert;
+            }
+            SeriesOp::Delete => {
+                self.delete(abs);
+                self.cal_clamp();
+            }
+            SeriesOp::ShiftTime(minutes) => {
+                let start = match occ.start {
+                    Some(s) => (s as i32 + minutes).clamp(0, 24 * 60 - 30) as u32,
+                    None => 9 * 60,
+                };
+                self.cal_rewrite(abs, set_time(&raw, start));
+            }
+            SeriesOp::ShiftDay(days) => {
+                self.cal_rewrite(abs, moved(&raw, days));
+                self.cal_move(days);
+                self.cal_select_task(abs);
+            }
+            SeriesOp::MoveTo { date, start } => {
+                let days = (date - occ.date).num_days();
+                let mut new = moved(&raw, days);
+                if let Some(s) = start {
+                    new = set_time(&new, s);
+                }
+                self.cal_rewrite(abs, new);
+                if let Some(c) = self.calendar.as_mut() {
+                    c.date = date;
+                }
+                self.cal_select_task(abs);
+            }
+            SeriesOp::Resize(minutes) => {
+                let dur = crate::duration::format_minutes(minutes.max(15));
+                self.cal_rewrite(
+                    abs,
+                    crate::core::series::set_kv(&raw, crate::todo::DURATION_KEY, Some(&dur)),
+                );
+            }
+        }
+    }
+
+    /// Select task `abs` on the selected day, if it's there.
+    fn cal_select_task(&mut self, abs: usize) {
+        let items = self.cal_day_items();
+        if let Some(i) = items.iter().position(|o| o.abs == abs)
+            && let Some(c) = self.calendar.as_mut()
+        {
+            c.selected = i;
+        }
     }
 
     /// `r` in the calendar: reschedule the selected task, not the one
@@ -305,12 +515,17 @@ impl App {
         self.open_calendar(target);
     }
 
-    /// `x`: complete the selected task.
+    /// `x`: complete the selected task (the current one of a repeat).
     pub fn cal_complete(&mut self) {
-        if let Some(occ) = self.cal_editable("complete") {
-            self.toggle_complete(occ.abs);
-            self.cal_clamp();
+        let Some(occ) = self.cal_selected() else {
+            return;
+        };
+        if occ.projected {
+            self.flash("a future repeat · tick off the current one");
+            return;
         }
+        self.toggle_complete(occ.abs);
+        self.cal_clamp();
     }
 
     /// `n`: a new task planned on the selected day.
@@ -331,38 +546,15 @@ impl App {
     /// `J` / `K`: move the selected block later or earlier by `minutes`; an
     /// all-day task gets a time, 09:00.
     pub fn cal_shift_time(&mut self, minutes: i32) {
-        let Some(occ) = self.cal_editable("move") else {
-            return;
-        };
-        let Some(raw) = self.task_raw(occ.abs) else {
-            return;
-        };
-        let start = match occ.start {
-            Some(s) => (s as i32 + minutes).clamp(0, 24 * 60 - 30) as u32,
-            None => 9 * 60,
-        };
-        self.cal_rewrite(occ.abs, set_time(&raw, start));
+        if let Some(occ) = self.cal_selected() {
+            self.cal_apply(occ, SeriesOp::ShiftTime(minutes));
+        }
     }
 
     /// `H` / `L`: move the selected task to the day before or after.
     pub fn cal_shift_day(&mut self, days: i64) {
-        let Some(occ) = self.cal_editable("move") else {
-            return;
-        };
-        let Some(raw) = self.task_raw(occ.abs) else {
-            return;
-        };
-        let key = if occ.deadline { "due" } else { "plan" };
-        if let Some(new) = shift_date(&raw, key, days) {
-            self.cal_rewrite(occ.abs, new);
-            self.cal_move(days);
-            // Keep the moved task selected.
-            let items = self.cal_day_items();
-            if let Some(i) = items.iter().position(|o| o.abs == occ.abs)
-                && let Some(c) = self.calendar.as_mut()
-            {
-                c.selected = i;
-            }
+        if let Some(occ) = self.cal_selected() {
+            self.cal_apply(occ, SeriesOp::ShiftDay(days));
         }
     }
 
@@ -433,17 +625,67 @@ mod tests {
             app.calendar.as_ref().unwrap().date.to_string(),
             "2026-05-07"
         );
-        // Tomorrow's gym is a future repeat: it can't be moved on its own.
+        // Tomorrow's gym is a future repeat: moving it asks first.
         app.cal_select(false);
         assert!(app.cal_selected().unwrap().projected);
         let before = app.tasks()[2].raw.clone();
         app.cal_shift_time(30);
+        assert!(app.series_ask.is_some());
         assert_eq!(app.tasks()[2].raw, before);
+        app.series_ask = None;
         app.cal_page(false);
         app.cal_today();
         assert_eq!(
             app.calendar.as_ref().unwrap().date.to_string(),
             "2026-05-06"
+        );
+    }
+
+    #[test]
+    fn a_repeat_changes_only_this_one_or_from_here_on() {
+        // Today is 2026-05-06, a wednesday.
+        let mut app = build_app("Class plan:2026-05-06 at:09:00 rec:+1w event:1\n");
+        app.open_cal(CalView::Day);
+        // Next week's class, moved an hour later on its own.
+        app.cal_move(7);
+        app.cal_shift_time(60);
+        app.series_answer(true);
+        let raws: Vec<String> = app.tasks().iter().map(|t| t.raw.clone()).collect();
+        assert_eq!(
+            raws,
+            [
+                "Class plan:2026-05-06 at:09:00 rec:+1w event:1 skip:2026-05-13",
+                "Class plan:2026-05-13 at:10:00 event:1",
+            ]
+        );
+        assert_eq!(app.cal_selected().unwrap().abs, 1);
+
+        // The week after, deleted from there on: the series ends before it.
+        app.cal_move(7);
+        let occ = app
+            .cal_day_items()
+            .into_iter()
+            .find(|o| o.abs == 0)
+            .unwrap();
+        app.cal_apply(occ, SeriesOp::Delete);
+        app.series_answer(false);
+        assert!(
+            app.tasks()[0].raw.contains("until:2026-05-19"),
+            "{}",
+            app.tasks()[0].raw
+        );
+        assert!(app.cal_day_items().is_empty());
+
+        // Today's, deleted on its own: the series moves on to the next.
+        app.cal_today();
+        let occ = app.cal_day_items()[0].clone();
+        app.cal_apply(occ, SeriesOp::Delete);
+        app.series_answer(true);
+        // Its next date is 2026-05-13 (skipped), then 05-20 (past until).
+        assert!(
+            app.tasks()
+                .iter()
+                .all(|t| !t.raw.contains("plan:2026-05-06"))
         );
     }
 

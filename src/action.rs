@@ -23,6 +23,8 @@ pub enum Action {
     /// `*` — star/unstar the current task (`star:1`): starred tasks sort to
     /// the top of their priority group.
     ToggleStar,
+    /// Make the current task an event (a class, a holiday) or a task again.
+    ToggleEvent,
     MoveTaskDown,
     MoveTaskUp,
     BeginSearch,
@@ -129,6 +131,7 @@ impl Action {
             "reschedule" => Some(Self::Reschedule),
             "cycle_priority" => Some(Self::CyclePriority),
             "toggle_star" | "star" => Some(Self::ToggleStar),
+            "toggle_event" | "event" => Some(Self::ToggleEvent),
             "move_task_down" => Some(Self::MoveTaskDown),
             "move_task_up" => Some(Self::MoveTaskUp),
             "begin_search" | "search" => Some(Self::BeginSearch),

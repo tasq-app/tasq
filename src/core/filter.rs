@@ -68,6 +68,10 @@ pub fn due_bucket(task: &Task, today: &str, week_start: &WeekStart) -> ListDueBu
             };
 
             match d.cmp(today) {
+                // An event that started before today is still on.
+                Ordering::Less if task.event || task.last_day().is_some_and(|e| e >= today) => {
+                    ListDueBucket::Today
+                }
                 Ordering::Less => ListDueBucket::Overdue,
                 Ordering::Equal => ListDueBucket::Today,
                 Ordering::Greater if d <= this_week.as_str() => ListDueBucket::ThisWeek,
@@ -163,13 +167,9 @@ pub fn passes_preset(t: &Task, p: crate::app::Preset) -> bool {
             let today = chrono::Local::now().format("%Y-%m-%d").to_string();
             !t.done && t.due.as_deref().is_some_and(|d| d < today.as_str())
         }
-        Preset::Inbox => {
-            !t.done
-                && t.projects.is_empty()
-                && t.planned.is_none()
-                && t.due.is_none()
-                && t.rec.is_none()
-        }
+        // Everything still without a day, whatever else it has (a space, a
+        // priority, tags): what's left to put in the calendar.
+        Preset::Inbox => !t.done && t.planned.is_none() && t.due.is_none() && t.rec.is_none(),
     }
 }
 

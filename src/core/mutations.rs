@@ -303,6 +303,71 @@ impl Store {
 
     /// Parse `new_raw`, snapshot for undo, replace the task at `abs`, persist.
     /// Caller is responsible for reconcile + bounds checks.
+    /// Rewrite task `abs` and add `added` right after it, as one step (one
+    /// undo): taking an occurrence out of a series, or splitting one.
+    /// `Saved { abs }` is the added task.
+    pub fn rewrite_and_add(&mut self, abs: usize, rewritten: &str, added: &str) -> EditOutcome {
+        match self.reconcile() {
+            Reconcile::Unchanged => {}
+            other => return EditOutcome::Aborted(other),
+        }
+        if abs >= self.tasks.len() {
+            return EditOutcome::OutOfRange;
+        }
+        let (mut kept, new) = match (todo::parse_line(rewritten), todo::parse_line(added)) {
+            (Ok(a), Ok(b)) => (a, b),
+            (Err(e), _) | (_, Err(e)) => return EditOutcome::Error(StoreError::Parse(e)),
+        };
+        kept.id = self.tasks[abs].id.clone();
+        self.push_history();
+        self.tasks[abs] = kept;
+        self.tasks.insert(abs + 1, new);
+        match self.persist() {
+            Ok(()) => EditOutcome::Saved { abs: abs + 1 },
+            Err(e) => EditOutcome::Error(e),
+        }
+    }
+
+    /// Events that are over move on to their next date, or are done when
+    /// they have none. Returns how many moved or ended.
+    pub fn roll_events(&mut self) -> usize {
+        use super::series;
+        let Ok(today) = chrono::NaiveDate::parse_from_str(&self.today, "%Y-%m-%d") else {
+            return 0;
+        };
+        if !self
+            .tasks
+            .iter()
+            .any(|t| !t.done && t.event && series::event_over(t, today))
+        {
+            return 0;
+        }
+        if !matches!(self.reconcile(), Reconcile::Unchanged) {
+            return 0;
+        }
+        self.push_history();
+        let mut n = 0;
+        for i in 0..self.tasks.len() {
+            let t = &self.tasks[i];
+            if t.done || !t.event || !series::event_over(t, today) {
+                continue;
+            }
+            n += 1;
+            match series::roll_event(t, today).and_then(|raw| todo::parse_line(&raw).ok()) {
+                Some(mut next) => {
+                    next.id = self.tasks[i].id.clone();
+                    self.tasks[i] = next;
+                }
+                None => {
+                    let today = self.today.clone();
+                    let _ = self.tasks[i].mark_done(&today);
+                }
+            }
+        }
+        let _ = self.persist();
+        n
+    }
+
     fn rewrite_raw(&mut self, abs: usize, new_raw: &str) -> EditOutcome {
         match todo::parse_line(new_raw) {
             Ok(mut task) => {
