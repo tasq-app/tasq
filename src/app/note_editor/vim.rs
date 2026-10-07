@@ -139,6 +139,58 @@ impl NoteEditorState {
         outcome
     }
 
+    /// The mouse went down at `pos`: the cursor goes there. Insert mode
+    /// stays in Insert; a selection is dropped.
+    pub fn mouse_press(&mut self, pos: Pos) {
+        if self.mode == NoteEditorMode::Preview {
+            return;
+        }
+        if self.mode.is_visual() {
+            self.mode = NoteEditorMode::Normal;
+        }
+        self.cursor_line = pos.0.min(self.lines.len() - 1);
+        self.cursor_col = pos.1;
+        if self.mode == NoteEditorMode::Insert {
+            self.clamp_col();
+        } else {
+            self.clamp_normal_col();
+        }
+    }
+
+    /// Dragged from `anchor` to `pos`: a charwise Visual selection between
+    /// them (leaving Insert mode first, like vim with the mouse).
+    pub fn mouse_drag(&mut self, anchor: Pos, pos: Pos) {
+        if self.mode == NoteEditorMode::Preview || (anchor == pos && !self.mode.is_visual()) {
+            return;
+        }
+        if self.mode == NoteEditorMode::Insert {
+            self.esc_to_normal();
+        }
+        if !self.mode.is_visual() {
+            self.mode = NoteEditorMode::Visual;
+        }
+        self.visual_anchor = (anchor.0.min(self.lines.len() - 1), anchor.1);
+        self.cursor_line = pos.0.min(self.lines.len() - 1);
+        self.cursor_col = pos.1;
+        self.clamp_normal_col();
+    }
+
+    /// Put the Visual selection on the clipboard (and in the register, as
+    /// `y` would) without leaving Visual mode. Returns whether there was a
+    /// selection.
+    pub fn mouse_copy(&mut self) -> bool {
+        let Some(sel) = self.visual_selection() else {
+            return false;
+        };
+        let text = if sel.linewise {
+            self.lines[sel.start.0..=sel.end.0].join("\n")
+        } else {
+            self.text_between(sel.start, (sel.end.0, sel.end.1 + 1))
+        };
+        self.set_register(text, sel.linewise);
+        true
+    }
+
     /// The Visual selection, while in Visual mode.
     pub fn visual_selection(&self) -> Option<VisualSelection> {
         if !self.mode.is_visual() {
@@ -843,6 +895,31 @@ mod tests {
 
     fn pos(e: &NoteEditorState) -> Pos {
         (e.cursor_line(), e.cursor_col())
+    }
+
+    #[test]
+    fn the_mouse_selects_and_copies_text() {
+        let mut e = editor(&["hello world", "second line"]);
+        // From "world" on the first line to "second" on the next.
+        e.mouse_press((0, 6));
+        e.mouse_drag((0, 6), (1, 5));
+        assert_eq!(e.mode(), NoteEditorMode::Visual);
+        assert!(e.mouse_copy());
+        assert_eq!(e.take_clipboard_out().as_deref(), Some("world\nsecond"));
+        assert_eq!(e.mode(), NoteEditorMode::Visual, "still selected");
+        // `y` copies it the vim way, too.
+        keys(&mut e, "y");
+        assert_eq!(e.take_clipboard_out().as_deref(), Some("world\nsecond"));
+        // A click drops the selection and moves the cursor.
+        e.mouse_press((1, 2));
+        assert_eq!(e.mode(), NoteEditorMode::Normal);
+        assert_eq!(pos(&e), (1, 2));
+        assert!(!e.mouse_copy());
+        // Dragging in Insert mode leaves it for Visual.
+        keys(&mut e, "i");
+        e.mouse_drag((0, 0), (0, 4));
+        assert!(e.mouse_copy());
+        assert_eq!(e.take_clipboard_out().as_deref(), Some("hello"));
     }
 
     #[test]

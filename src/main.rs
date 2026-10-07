@@ -289,6 +289,9 @@ fn run(
                     dirty = true;
                 }
                 Event::Mouse(m) if handle_mouse(app, m) => {
+                    if let Some(text) = app.take_note_clipboard() {
+                        let _ = clipboard::copy(&text);
+                    }
                     dirty = true;
                 }
                 // A terminal resize must trigger an immediate redraw;
@@ -437,6 +440,20 @@ fn handle_paste(app: &mut App, text: &str, keybinds: &KeyBindings) {
 /// keep to the keyboard. True when something changed.
 fn handle_mouse(app: &mut App, m: crossterm::event::MouseEvent) -> bool {
     use crossterm::event::{MouseButton, MouseEventKind};
+    // Selecting text in a note editor: the popup's too, outside Normal.
+    let in_editor = match m.kind {
+        MouseEventKind::Down(MouseButton::Left)
+            if matches!(app.mode, Mode::Normal | Mode::Notes) =>
+        {
+            app.editor_mouse_down(m.column, m.row)
+        }
+        MouseEventKind::Drag(MouseButton::Left) => app.editor_mouse_drag(m.column, m.row),
+        MouseEventKind::Up(MouseButton::Left) => app.editor_mouse_up(),
+        _ => false,
+    };
+    if in_editor {
+        return true;
+    }
     if !matches!(app.mode, Mode::Normal) {
         return false;
     }

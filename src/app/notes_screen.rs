@@ -246,6 +246,46 @@ mod tests {
     use crate::app::test_support::build_app_with_config;
 
     #[test]
+    fn dragging_over_a_note_selects_and_copies_only_its_text() {
+        use ratatui::{Terminal, backend::TestBackend};
+        let dir = std::env::temp_dir().join(format!(
+            "tasq-notes-mouse-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        let folder = dir.join("tasks").join("abc");
+        std::fs::create_dir_all(&folder).unwrap();
+        std::fs::write(folder.join("a.md"), "# Title\n\nalpha beta gamma\n").unwrap();
+        let cfg = crate::config::Config {
+            notes_dir: Some(dir.to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        let mut app = build_app_with_config("Teoría AII +Uni/AII notes:abc/\n", cfg);
+        app.open_notes_screen();
+        app.notes_screen_open_editor();
+        let mut term = Terminal::new(TestBackend::new(120, 30)).unwrap();
+        term.draw(|f| crate::ui::draw(f, &app)).unwrap();
+        // Where "beta" was drawn.
+        let buf = term.backend().buffer().clone();
+        let (bx, by) = (0..buf.area.height)
+            .find_map(|y| {
+                let row: String = (0..buf.area.width).map(|x| buf[(x, y)].symbol()).collect();
+                row.find("alpha beta")
+                    .map(|i| (row[..i].chars().count() as u16 + 6, y))
+            })
+            .unwrap();
+        // Outside the text: not the editor's.
+        assert!(!app.editor_mouse_down(0, by));
+        assert!(app.editor_mouse_down(bx, by));
+        // Dragged way past the right edge: stops at the end of the text.
+        assert!(app.editor_mouse_drag(119, by));
+        assert!(app.editor_mouse_up());
+        assert_eq!(app.take_note_clipboard().as_deref(), Some("beta gamma"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn the_notes_screen_lists_searches_and_links_back() {
         let dir = std::env::temp_dir().join(format!(
             "tasq-notes-screen-{}-{:?}",

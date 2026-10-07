@@ -37,6 +37,17 @@ mod vim;
 pub use lists::wrap_indent;
 pub use vim::{EditorKey, NormalOutcome, VisualSelection};
 
+/// Which open editor the mouse is dragging in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EditorAt {
+    /// The Notes screen's editor.
+    Screen,
+    /// The notes popup's (`o`).
+    Popup,
+    /// The active pinned tab.
+    Pinned,
+}
+
 /// Normal vs Insert sub-mode for the embedded editor. Kept as its own small
 /// enum rather than reusing `DialogInputMode` (the single-line draft
 /// dialog's identically-shaped Normal/Insert enum): the note editor is a
@@ -126,6 +137,27 @@ pub struct NoteEditorState {
     scroll_top: std::cell::Cell<usize>,
     /// Scroll state of Preview mode.
     preview: preview::PreviewScroll,
+    /// Where the text was drawn last frame, for the mouse (see
+    /// [`NoteEditorState::pos_at`]).
+    screen: std::cell::RefCell<ScreenMap>,
+}
+
+/// Where an editor's text sits on screen: its area and, top to bottom, the
+/// buffer slice drawn on each row. Written by the renderer.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ScreenMap {
+    pub area: ratatui::layout::Rect,
+    pub rows: Vec<ScreenRow>,
+}
+
+/// One drawn row: chars `start..end` of buffer line `line`, after `indent`
+/// blank cells.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScreenRow {
+    pub line: usize,
+    pub start: usize,
+    pub end: usize,
+    pub indent: usize,
 }
 
 /// What [`NoteEditorState::execute_command_prompt`] decided for the typed
@@ -179,7 +211,48 @@ impl NoteEditorState {
             clipboard_out: None,
             scroll_top: std::cell::Cell::new(0),
             preview: preview::PreviewScroll::default(),
+            screen: std::cell::RefCell::new(ScreenMap::default()),
         }
+    }
+
+    /// The renderer records where the text went (empty rows in Preview).
+    pub fn set_screen(&self, map: ScreenMap) {
+        *self.screen.borrow_mut() = map;
+    }
+
+    /// The buffer position under screen cell `(x, y)`: `None` outside the
+    /// text, unless `clamp`, which pulls a point outside onto the nearest
+    /// text (for a drag that leaves the box).
+    pub fn pos_at(&self, x: u16, y: u16, clamp: bool) -> Option<(usize, usize)> {
+        use unicode_width::UnicodeWidthChar;
+        let map = self.screen.borrow();
+        let a = map.area;
+        if map.rows.is_empty() || a.width == 0 || a.height == 0 {
+            return None;
+        }
+        let inside = x >= a.x && x < a.right() && y >= a.y && y < a.bottom();
+        if !inside && !clamp {
+            return None;
+        }
+        let y = y.clamp(a.y, a.bottom() - 1);
+        let x = x.clamp(a.x, a.right() - 1);
+        let ri = usize::from(y - a.y);
+        let row = map.rows.get(ri).or(map.rows.last())?;
+        let line = self.lines.get(row.line)?;
+        // Below the last row: the end of the text.
+        if ri >= map.rows.len() {
+            return Some((row.line, row.end));
+        }
+        let mut left = usize::from(x - a.x).saturating_sub(row.indent);
+        let chars = line.chars().skip(row.start).take(row.end - row.start);
+        for (col, c) in (row.start..).zip(chars) {
+            let w = c.width().unwrap_or(0).max(1);
+            if left < w {
+                return Some((row.line, col));
+            }
+            left -= w;
+        }
+        Some((row.line, row.end))
     }
 
     /// See the `scroll_top` field.
@@ -597,6 +670,78 @@ impl App {
         }
     }
 
+    fn editor_at_mut(&mut self, at: EditorAt) -> Option<&mut NoteEditorState> {
+        match at {
+            EditorAt::Screen => self.notes_screen.as_mut().and_then(|s| s.editor.as_mut()),
+            EditorAt::Popup => self.notes_popup.active_editor.as_mut(),
+            EditorAt::Pinned => self.pinned_notes.get_mut(self.active_pin),
+        }
+    }
+
+    /// The editors on screen, topmost first.
+    fn editors_on_screen(&self) -> Vec<EditorAt> {
+        let mut v = Vec::new();
+        if self
+            .notes_screen
+            .as_ref()
+            .is_some_and(|s| s.editor.is_some())
+        {
+            v.push(EditorAt::Screen);
+        }
+        if self.mode == super::types::Mode::Notes && self.notes_popup.active_editor.is_some() {
+            v.push(EditorAt::Popup);
+        }
+        if !self.pinned_notes.is_empty() {
+            v.push(EditorAt::Pinned);
+        }
+        v
+    }
+
+    /// A click on a note's text: the cursor goes there, and a drag from
+    /// here selects. Returns whether the click landed on an editor's text.
+    pub fn editor_mouse_down(&mut self, x: u16, y: u16) -> bool {
+        for at in self.editors_on_screen() {
+            let Some(editor) = self.editor_at_mut(at) else {
+                continue;
+            };
+            if let Some(pos) = editor.pos_at(x, y, false) {
+                editor.mouse_press(pos);
+                if at == EditorAt::Pinned {
+                    self.pinned_focus = true;
+                }
+                self.editor_drag = Some((at, pos));
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Dragging: select from where the button went down to here — only
+    /// the note's text, even when the pointer leaves its box.
+    pub fn editor_mouse_drag(&mut self, x: u16, y: u16) -> bool {
+        let Some((at, anchor)) = self.editor_drag else {
+            return false;
+        };
+        if let Some(editor) = self.editor_at_mut(at)
+            && let Some(pos) = editor.pos_at(x, y, true)
+        {
+            editor.mouse_drag(anchor, pos);
+        }
+        true
+    }
+
+    /// The button comes up: a selection is copied to the clipboard and
+    /// stays selected (`y` copies it too, the vim way).
+    pub fn editor_mouse_up(&mut self) -> bool {
+        let Some((at, _)) = self.editor_drag.take() else {
+            return false;
+        };
+        if self.editor_at_mut(at).is_some_and(|e| e.mouse_copy()) {
+            self.flash("copied");
+        }
+        true
+    }
+
     /// Text a note editor just yanked or deleted, for the binary to put on
     /// the system clipboard.
     pub fn take_note_clipboard(&mut self) -> Option<String> {
@@ -695,6 +840,49 @@ mod tests {
     use crate::config::Config;
 
     // ---- load -------------------------------------------------------------
+
+    #[test]
+    fn a_screen_cell_maps_to_the_text_under_it() {
+        use ratatui::layout::Rect;
+        let path = std::env::temp_dir().join(format!(
+            "tasq-pos-at-{}-{:?}.md",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        std::fs::write(&path, "- [ ] a long item\nnext").expect("write note");
+        let e = NoteEditorState::load(path, NoteEditorMode::Normal);
+        // Drawn at (10, 5): "- [ ] a lo" / "      ng item" (hanging) / "next".
+        e.set_screen(ScreenMap {
+            area: Rect::new(10, 5, 20, 6),
+            rows: vec![
+                ScreenRow {
+                    line: 0,
+                    start: 0,
+                    end: 10,
+                    indent: 0,
+                },
+                ScreenRow {
+                    line: 0,
+                    start: 10,
+                    end: 17,
+                    indent: 6,
+                },
+                ScreenRow {
+                    line: 1,
+                    start: 0,
+                    end: 4,
+                    indent: 0,
+                },
+            ],
+        });
+        assert_eq!(e.pos_at(10, 5, false), Some((0, 0)));
+        assert_eq!(e.pos_at(16, 6, false), Some((0, 10)), "after the hang");
+        assert_eq!(e.pos_at(12, 6, false), Some((0, 10)), "in the hang");
+        assert_eq!(e.pos_at(25, 7, false), Some((1, 4)), "past the end");
+        assert_eq!(e.pos_at(9, 5, false), None, "outside the box");
+        assert_eq!(e.pos_at(5, 2, true), Some((0, 0)), "clamped in");
+        assert_eq!(e.pos_at(12, 9, false), Some((1, 4)), "below the text");
+    }
 
     #[test]
     fn load_splits_file_content_into_lines() {
