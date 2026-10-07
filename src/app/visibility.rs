@@ -47,7 +47,7 @@ impl TodaySlot {
 
     pub(crate) fn of(t: &Task, today: &str) -> (Self, u32) {
         // An event under way (several days long) isn't late.
-        let late = !t.done && !t.event && t.date().is_some_and(|d| d < today);
+        let late = !t.done && !t.event && t.last_day().is_some_and(|d| d < today);
         let at = crate::todo::find_kv(&t.clean_raw, "at")
             .and_then(|v| crate::core::calendar::parse_time(&v));
         let slot = match (late, at) {

@@ -129,9 +129,10 @@ pub fn occurrences(
             });
         }
         // An event is never late: it's over, not missed.
+        let last = main + chrono::Days::new(u64::from(span - 1));
         if !t.done
             && !t.event
-            && main < today
+            && last < today
             && in_range(today)
             && (planned.is_some() || due.is_some())
         {

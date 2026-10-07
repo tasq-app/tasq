@@ -380,10 +380,13 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
 
     // When: the planned day, else (with no deadline) just the time.
     // A day you've missed reads as late, in red.
-    let late = task
-        .planned
-        .as_deref()
-        .filter(|p| !done && !task.event && *p < opts.today && shown("plan"));
+    let late = task.planned.as_deref().filter(|p| {
+        !done
+            && !task.event
+            && *p < opts.today
+            && task.last_day().is_none_or(|e| e < opts.today)
+            && shown("plan")
+    });
     let mut when: Vec<String> = Vec::new();
     if let Some(p) = task.planned.as_deref().filter(|_| shown("plan")) {
         // Inside Today, "today" goes without saying.

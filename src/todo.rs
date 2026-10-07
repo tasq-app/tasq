@@ -93,6 +93,15 @@ impl Task {
     pub fn date(&self) -> Option<&str> {
         self.planned.as_deref().or(self.due.as_deref())
     }
+
+    /// Its last day: the `end:` of one lasting several, else its date. It's
+    /// late only once that has gone.
+    pub fn last_day(&self) -> Option<&str> {
+        match (self.end.as_deref(), self.date()) {
+            (Some(e), Some(d)) if e > d => Some(e),
+            (_, d) => d,
+        }
+    }
 }
 
 /// The `key:value` key marking a starred task, e.g. `star:1`. A plain

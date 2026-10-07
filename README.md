@@ -762,11 +762,18 @@ count as a routine; once it's over it moves on to its next date, or out
 of the way when it doesn't repeat. Make one from any task (or turn a
 class routine into one) with `E` in the calendar, or *event / task* in
 the menu (`space`) and the command palette, or type the word *event* in
-the add dialog: "Bank holiday event on oct 12". "Christmas from dec 22 to
-jan 7" makes an event of several days (`end:`), drawn as one bar across
-the days in the week and the month; after *event* the days can also go
-without "from": "dec 22 to jan 7", "dec 22 - jan 7", "22-25 oct",
-"oct 22-25", "mon-fri".
+the add dialog: "Bank holiday event on oct 12".
+
+**Several days.** Any task can span days, an event or not: it's planned
+on the first and isn't late until the last has gone, and the calendar
+draws it as one bar across the days. The add dialog reads the days
+however they're typed: "from 16 to 17 nov", "from 16-17 nov", "16 - 17nov",
+"nov 16-17", "from dec 30 to jan 2", "between mon and wed", "mon-fri"
+(bare numbers like "22-25" need "from" or "event"). And stretches said in
+words: "this weekend", "next weekend", "this week", "next week" (Monday
+to Sunday), "in / for / during / within the next week" (the coming seven
+days), "the next 3 days", "the next 2 weeks", "this month", "next month",
+"the rest of the week".
 
 `5` shows the week: seven columns of the same blocks, today's column lit,
 the all-day rows on top (something lasting several days is one bar across

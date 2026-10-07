@@ -69,7 +69,9 @@ pub fn due_bucket(task: &Task, today: &str, week_start: &WeekStart) -> ListDueBu
 
             match d.cmp(today) {
                 // An event that started before today is still on.
-                Ordering::Less if task.event => ListDueBucket::Today,
+                Ordering::Less if task.event || task.last_day().is_some_and(|e| e >= today) => {
+                    ListDueBucket::Today
+                }
                 Ordering::Less => ListDueBucket::Overdue,
                 Ordering::Equal => ListDueBucket::Today,
                 Ordering::Greater if d <= this_week.as_str() => ListDueBucket::ThisWeek,

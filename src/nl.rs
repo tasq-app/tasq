@@ -170,6 +170,7 @@ fn detect_once(text: &str, today: NaiveDate, blocked: &[bool], spaces: &[String]
     pass_repeat_end(&mut scratch, &mut parsed, today);
     pass_event(&mut scratch, &mut parsed);
     pass_span(&mut scratch, &mut parsed, today);
+    pass_period(&mut scratch, &mut parsed, today);
     pass_date(&mut scratch, &mut parsed, today, weekday_hint);
     pass_project_context(&mut scratch, &mut parsed);
     pass_priority(&mut scratch, &mut parsed);
@@ -290,7 +291,7 @@ pub fn format_as_todo_txt(p: &ParsedNl) -> String {
         out.push_str(" end:");
         out.push_str(&d.format("%Y-%m-%d").to_string());
     }
-    if p.event || end.is_some() {
+    if p.event {
         out.push_str(" event:1");
     }
     if let Some(r) = &p.rec {
@@ -824,7 +825,13 @@ fn pass_space(scratch: &mut Scratch, p: &mut ParsedNl, spaces: &[String]) {
             continue;
         }
         let typed = fold(scratch.word_lc(next));
-        if typed.chars().count() < 3 {
+        // "in the next week", "in this one": not a space.
+        if typed.chars().count() < 3
+            || matches!(
+                typed.as_str(),
+                "the" | "this" | "that" | "next" | "my" | "our" | "your" | "his" | "her"
+            )
+        {
             continue;
         }
         let leaf = |s: &String| fold(&crate::core::spaces::leaf(s).to_lowercase());
@@ -1478,114 +1485,321 @@ fn pass_event(scratch: &mut Scratch, p: &mut ParsedNl) {
     }
 }
 
-/// The days of something lasting several: "from dec 22 to jan 7", "from
-/// monday until friday". After "event" also without "from" ("dec 22 to
-/// jan 7", "dec 22 - jan 7") and run together: "mon-fri", "22-25 dec",
-/// "dec 22-25". The first day is when it's planned, the last its `end:`
-/// (a year on when it would come first: dec 22 to jan 7 crosses new year).
+/// The days of something lasting several, written loosely: "from dec 22
+/// to jan 7", "from 16 to 17 nov", "16-17 nov", "16 - 17nov", "nov 16-17",
+/// "mon-fri", "between mon and wed". The first day is when it's planned,
+/// the last its `end:`. Without "from" (or "event") it needs a month or a
+/// weekday, so "pages 22-25" stays text.
 fn pass_span(scratch: &mut Scratch, p: &mut ParsedNl, today: NaiveDate) {
-    let words = scratch.word_cache.clone();
-    let found = (0..words.len()).find_map(|i| {
-        if p.planned.is_some() || !scratch.is_live(words[i].0, words[i].1) {
-            return None;
-        }
-        let from = scratch.word_lc(words[i]) == "from";
-        if from {
-            return (i + 1 < words.len())
-                .then(|| span_at(scratch, &words, i + 1, today))
-                .flatten()
-                .map(|(a, b, last)| (i, a, b, last));
-        }
-        if !p.event {
-            return None;
-        }
-        span_at(scratch, &words, i, today)
-            .map(|(a, b, last)| (i, a, b, last))
-            .or_else(|| run_together(scratch, &words, i, today))
-    });
-    let Some((i, first, mut last, last_word)) = found else {
+    if p.planned.is_some() {
         return;
-    };
-    while last < first {
-        let Some(next) = last.checked_add_months(Months::new(12)) else {
-            break;
-        };
-        last = next;
     }
-    scratch.kind = Some(FieldKind::Date);
-    scratch.mark(words[i].0, words[last_word].1);
-    p.planned = Some(first);
-    if last > first {
-        p.end = Some(last);
+    let words = scratch.word_cache.clone();
+    for i in 0..words.len() {
+        for k in (1..=7usize).rev() {
+            if i + k > words.len() || !scratch.is_live(words[i].0, words[i + k - 1].1) {
+                continue;
+            }
+            let joined: Vec<&str> = words[i..i + k]
+                .iter()
+                .map(|w| scratch.word_lc(*w))
+                .collect();
+            let tokens = range_tokens(&joined.join(" "));
+            let Some((first, last)) = read_range(&tokens, today, p.event) else {
+                continue;
+            };
+            scratch.kind = Some(FieldKind::Date);
+            scratch.mark(words[i].0, words[i + k - 1].1);
+            p.planned = Some(first);
+            if last > first {
+                p.end = Some(last);
+            }
+            return;
+        }
     }
 }
 
-/// "<date> to <date>" from `words[i]`: both days and the last word used.
-fn span_at(
-    scratch: &Scratch,
-    words: &[(usize, usize)],
-    i: usize,
-    today: NaiveDate,
-) -> Option<(NaiveDate, NaiveDate, usize)> {
-    let (first, n1) = match_date_at(scratch, words, i, today)?;
-    let j = i + n1;
-    if j + 1 >= words.len()
-        || !scratch.is_live(words[j].0, words[j].1)
-        || !matches!(
-            scratch.word_lc(words[j]),
-            "to" | "until" | "till" | "through" | "-" | "–"
-        )
+/// `s` split into the pieces a range is read from: dashes apart ("16-17"
+/// → `16 - 17`, a date like `2026-11-16` kept whole), a day stuck to its
+/// month apart ("17nov" → `17 nov`, "nov17" → `nov 17`), "16th" kept.
+fn range_tokens(s: &str) -> Vec<String> {
+    let s = s.replace(['–', '—'], "-");
+    let mut out = Vec::new();
+    for word in s.split_whitespace() {
+        if NaiveDate::parse_from_str(word, "%Y-%m-%d").is_ok() {
+            out.push(word.to_string());
+            continue;
+        }
+        for (n, piece) in word.split('-').enumerate() {
+            if n > 0 {
+                out.push("-".to_string());
+            }
+            // Runs of digits and of letters, an ordinal suffix kept on.
+            let mut cur = String::new();
+            for c in piece.chars() {
+                let switch = !cur.is_empty()
+                    && cur.chars().last().is_some_and(|l| l.is_ascii_digit()) != c.is_ascii_digit();
+                if switch {
+                    let ordinal = cur.chars().all(|c| c.is_ascii_digit())
+                        && ["st", "nd", "rd", "th"]
+                            .iter()
+                            .any(|o| piece[cur.len()..].starts_with(o))
+                        && piece[cur.len()..].len() == 2;
+                    if !ordinal {
+                        out.push(std::mem::take(&mut cur));
+                    }
+                }
+                cur.push(c);
+            }
+            if !cur.is_empty() {
+                out.push(cur);
+            }
+        }
+    }
+    out
+}
+
+/// One end of a range, as typed.
+#[derive(Debug, Clone, Copy)]
+enum RangeEnd {
+    Day(u32),
+    DayMonth(u32, u32),
+    Weekday(Weekday),
+    Date(NaiveDate),
+}
+
+/// Read one end of a range at `tokens[*i]`.
+fn range_end(tokens: &[String], i: &mut usize, today: NaiveDate) -> Option<RangeEnd> {
+    let t = |k: usize| tokens.get(k).map(String::as_str);
+    if t(*i) == Some("the") {
+        *i += 1;
+    }
+    let w = t(*i)?;
+    let one = |i: &mut usize, e: RangeEnd| {
+        *i += 1;
+        Some(e)
+    };
+    if let Ok(d) = NaiveDate::parse_from_str(w, "%Y-%m-%d") {
+        return one(i, RangeEnd::Date(d));
+    }
+    match w {
+        "today" => return one(i, RangeEnd::Date(today)),
+        "tomorrow" => return one(i, RangeEnd::Date(today.checked_add_days(Days::new(1))?)),
+        _ => {}
+    }
+    if let Some(wd) = parse_weekday(w) {
+        return one(i, RangeEnd::Weekday(wd));
+    }
+    if let Some(m) = parse_month(w)
+        && let Some(d) = t(*i + 1).and_then(parse_day_ordinal)
     {
+        *i += 2;
+        return Some(RangeEnd::DayMonth(d, m));
+    }
+    let d = parse_day_ordinal(w)?;
+    let mut j = *i + 1;
+    if t(j) == Some("of") {
+        j += 1;
+    }
+    if let Some(m) = t(j).and_then(parse_month) {
+        *i = j + 1;
+        return Some(RangeEnd::DayMonth(d, m));
+    }
+    one(i, RangeEnd::Day(d))
+}
+
+/// The two days `tokens` say, when they're all a range: "[from|between]
+/// A (-|to|until|till|through|thru|and) B".
+fn read_range(tokens: &[String], today: NaiveDate, event: bool) -> Option<(NaiveDate, NaiveDate)> {
+    let mut i = 0;
+    let lead = tokens.first().map(String::as_str);
+    let from = matches!(lead, Some("from" | "between"));
+    if from {
+        i += 1;
+    }
+    let a = range_end(tokens, &mut i, today)?;
+    let sep = tokens.get(i).map(String::as_str)?;
+    let and_ok = lead == Some("between") && sep == "and";
+    if !and_ok && !matches!(sep, "-" | "to" | "until" | "till" | "through" | "thru") {
         return None;
     }
-    let (last, n2) = match_date_at(scratch, words, j + 1, today)?;
-    Some((first, last, j + n2))
+    i += 1;
+    let b = range_end(tokens, &mut i, today)?;
+    if i != tokens.len() {
+        return None;
+    }
+    let anchored = |e: RangeEnd| !matches!(e, RangeEnd::Day(_));
+    if !from && !event && !anchored(a) && !anchored(b) {
+        return None;
+    }
+    let month_of = |e: RangeEnd| match e {
+        RangeEnd::DayMonth(_, m) => Some(m),
+        RangeEnd::Date(d) => Some(d.month()),
+        _ => None,
+    };
+    // A day on its own takes its month from the other end.
+    let on = |day: u32, month: Option<u32>, after: NaiveDate| -> Option<NaiveDate> {
+        match month {
+            Some(m) => {
+                let d = NaiveDate::from_ymd_opt(after.year(), m, day)?;
+                if d < after {
+                    NaiveDate::from_ymd_opt(after.year() + 1, m, day)
+                } else {
+                    Some(d)
+                }
+            }
+            None => {
+                let d = NaiveDate::from_ymd_opt(after.year(), after.month(), day);
+                match d {
+                    Some(d) if d >= after => Some(d),
+                    _ => {
+                        let n = after.checked_add_months(Months::new(1))?;
+                        NaiveDate::from_ymd_opt(n.year(), n.month(), day)
+                    }
+                }
+            }
+        }
+    };
+    let first = match a {
+        RangeEnd::Date(d) => d,
+        RangeEnd::Weekday(wd) => next_weekday(today, wd, false)?,
+        RangeEnd::DayMonth(d, m) => on(d, Some(m), today)?,
+        RangeEnd::Day(d) => {
+            // "16 to 17 nov": the 16th of November, even if that's past
+            // the 17th's month turn.
+            match month_of(b) {
+                Some(m) => {
+                    let last = on(
+                        match b {
+                            RangeEnd::DayMonth(d, _) => d,
+                            RangeEnd::Date(x) => x.day(),
+                            _ => d,
+                        },
+                        Some(m),
+                        today,
+                    )?;
+                    let mut f = NaiveDate::from_ymd_opt(last.year(), m, d)?;
+                    if f > last {
+                        f = f.checked_sub_months(Months::new(1))?;
+                    }
+                    f
+                }
+                None => on(d, None, today)?,
+            }
+        }
+    };
+    let last = match b {
+        RangeEnd::Date(d) => d,
+        RangeEnd::Weekday(wd) => next_weekday(first, wd, false)?,
+        RangeEnd::DayMonth(d, m) => on(d, Some(m), first)?,
+        RangeEnd::Day(d) => on(d, month_of(a), first)?,
+    };
+    (last >= first).then_some((first, last))
 }
 
-/// "mon-fri", "22-25 dec", "dec 22-25" at `words[i]`: the first word
-/// used, both days and the last word used.
-fn run_together(
-    scratch: &Scratch,
-    words: &[(usize, usize)],
-    i: usize,
-    today: NaiveDate,
-) -> Option<(usize, NaiveDate, NaiveDate, usize)> {
-    let w = scratch.word_lc(words[i]);
-    let (a, b) = w.split_once('-').or_else(|| w.split_once('–'))?;
-    if let (Some(wa), Some(wb)) = (parse_weekday(a), parse_weekday(b)) {
-        let first = next_weekday(today, wa, false)?;
-        return Some((i, first, next_weekday(first, wb, false)?, i));
+/// Stretches of time said in words: "this weekend", "next weekend", "this
+/// week", "next week", "this month", "next month", "the rest of the week",
+/// "for / in / during / over / within the next (3) days / weeks / months".
+/// The first day is when it's planned, the last its `end:`.
+fn pass_period(scratch: &mut Scratch, p: &mut ParsedNl, today: NaiveDate) {
+    if p.planned.is_some() {
+        return;
     }
-    let (da, db) = (parse_day_ordinal(a)?, parse_day_ordinal(b)?);
-    let live = |k: usize| scratch.is_live(words[k].0, words[k].1);
-    // The month after ("22-25 dec") or before ("dec 22-25").
-    let (month, first_word, last_word) = match (i + 1 < words.len())
-        .then(|| parse_month(scratch.word_lc(words[i + 1])))
-        .flatten()
-        .filter(|_| live(i + 1))
-    {
-        Some(m) => (m, i, i + 1),
-        None => (
-            (i > 0 && live(i - 1))
-                .then(|| parse_month(scratch.word_lc(words[i - 1])))
-                .flatten()?,
-            i - 1,
-            i,
-        ),
-    };
-    let mut year = today.year();
-    if NaiveDate::from_ymd_opt(year, month, da)? < today {
-        year += 1;
+    let words = scratch.word_cache.clone();
+    for i in 0..words.len() {
+        for k in (1..=6usize).rev() {
+            if i + k > words.len() || !scratch.is_live(words[i].0, words[i + k - 1].1) {
+                continue;
+            }
+            let said: Vec<&str> = words[i..i + k]
+                .iter()
+                .map(|w| scratch.word_lc(*w))
+                .collect();
+            let last_word = i + k == words.len();
+            let Some((first, last)) = read_period(&said, today, last_word) else {
+                continue;
+            };
+            scratch.kind = Some(FieldKind::Date);
+            scratch.mark(words[i].0, words[i + k - 1].1);
+            p.planned = Some(first);
+            if last > first {
+                p.end = Some(last);
+            }
+            return;
+        }
     }
-    let first = NaiveDate::from_ymd_opt(year, month, da)?;
-    let last = if db >= da {
-        NaiveDate::from_ymd_opt(year, month, db)?
-    } else {
-        // "28-3 dec" is the 28th to the 3rd of the next month.
-        let next = first.checked_add_months(Months::new(1))?;
-        NaiveDate::from_ymd_opt(next.year(), next.month(), db)?
+}
+
+fn read_period(said: &[&str], today: NaiveDate, at_end: bool) -> Option<(NaiveDate, NaiveDate)> {
+    let mut w: &[&str] = said;
+    let lead = matches!(
+        w.first(),
+        Some(&("for" | "in" | "during" | "over" | "within" | "on" | "at" | "by"))
+    );
+    if lead {
+        w = &w[1..];
+    }
+    let the = w.first() == Some(&"the");
+    if the {
+        w = &w[1..];
+    }
+    let day = |n: i64| today.checked_add_signed(chrono::Duration::days(n));
+    let sunday = |d: NaiveDate| {
+        d + chrono::Duration::days(6 - i64::from(d.weekday().num_days_from_monday()))
     };
-    Some((first_word, first, last, last_word))
+    let saturday_of = |d: NaiveDate| {
+        let wd = i64::from(d.weekday().num_days_from_monday());
+        if wd >= 5 {
+            d
+        } else {
+            d + chrono::Duration::days(5 - wd)
+        }
+    };
+    let month_end = |d: NaiveDate| {
+        let first = NaiveDate::from_ymd_opt(d.year(), d.month(), 1)?;
+        first.checked_add_months(Months::new(1))?.pred_opt()
+    };
+    match w {
+        // The weekend: a word with something before it ("this weekend",
+        // "on the weekend"), or the last word.
+        ["weekend"] if lead || the || at_end => {
+            let sat = saturday_of(today);
+            Some((sat.max(today), sunday(today)))
+        }
+        ["this", "weekend"] => Some((saturday_of(today).max(today), sunday(today))),
+        ["next", "weekend"] => {
+            let sat = saturday_of(sunday(today) + chrono::Duration::days(1));
+            Some((sat, sat + chrono::Duration::days(1)))
+        }
+        ["this", "week"] | ["rest", "of", "the", "week"] => Some((today, sunday(today))),
+        // "the next week": the coming seven days; "next week": Monday on.
+        ["next", "week"] if the => Some((today, day(6)?)),
+        ["next", "week"] => {
+            let mon = sunday(today) + chrono::Duration::days(1);
+            Some((mon, mon + chrono::Duration::days(6)))
+        }
+        ["this", "month"] => Some((today, month_end(today)?)),
+        ["rest", "of", "the", "month"] => Some((today, month_end(today)?)),
+        ["next", "month"] if the => {
+            Some((today, today.checked_add_months(Months::new(1))?.pred_opt()?))
+        }
+        ["next", "month"] => {
+            let n = NaiveDate::from_ymd_opt(today.year(), today.month(), 1)?
+                .checked_add_months(Months::new(1))?;
+            Some((n, month_end(n)?))
+        }
+        ["next", n, unit] if lead || the => {
+            let n = parse_number(n)?;
+            let end = match *unit {
+                "days" | "day" => day(i64::from(n) - 1)?,
+                "weeks" | "week" => day(i64::from(n) * 7 - 1)?,
+                "months" | "month" => today.checked_add_months(Months::new(n))?.pred_opt()?,
+                _ => return None,
+            };
+            Some((today, end))
+        }
+        _ => None,
+    }
 }
 
 /// First day of a weekly rule on given weekdays (`+1w:fri,sat,sun`) after
@@ -2242,9 +2456,10 @@ mod tests {
         assert_eq!(p.planned, Some(d("2026-12-22")));
         assert_eq!(p.end, Some(d("2027-01-07")));
         assert_eq!(p.body, "Christmas");
+        // Several days, but a task you can tick off unless it says "event".
         assert_eq!(
             format_as_todo_txt(&p),
-            "Christmas plan:2026-12-22 end:2027-01-07 event:1"
+            "Christmas plan:2026-12-22 end:2027-01-07"
         );
         let p = detect("exams from monday until friday", today, &[]).parsed;
         assert_eq!(
@@ -2294,8 +2509,97 @@ mod tests {
                 p.body
             );
         }
-        // Without "event", "22-25 oct" is not read as days.
-        assert_eq!(detect("pages 22-25 oct", today, &[]).parsed.end, None);
+        // Without "event" or "from", bare numbers aren't days.
+        assert_eq!(detect("read pages 22-25", today, &[]).parsed.end, None);
+    }
+
+    #[test]
+    fn ranges_are_read_however_theyre_typed() {
+        // 2026-10-03 is a saturday.
+        let today = d("2026-10-03");
+        for (text, first, last) in [
+            ("trip from 16 to 17 nov", "2026-11-16", "2026-11-17"),
+            ("trip from 16-17 nov", "2026-11-16", "2026-11-17"),
+            ("trip from 16-17nov", "2026-11-16", "2026-11-17"),
+            ("trip from 16 - 17 nov", "2026-11-16", "2026-11-17"),
+            ("trip from 16 -17 nov", "2026-11-16", "2026-11-17"),
+            ("trip from 16th to 17th nov", "2026-11-16", "2026-11-17"),
+            ("trip 16-17 nov", "2026-11-16", "2026-11-17"),
+            ("trip nov 16-17", "2026-11-16", "2026-11-17"),
+            ("trip nov16-nov17", "2026-11-16", "2026-11-17"),
+            ("trip from nov 30 to dec 2", "2026-11-30", "2026-12-02"),
+            ("trip from dec 30 to jan 2", "2026-12-30", "2027-01-02"),
+            ("trip between mon and wed", "2026-10-05", "2026-10-07"),
+            ("trip mon-fri", "2026-10-05", "2026-10-09"),
+            (
+                "trip from 2026-11-16 to 2026-11-18",
+                "2026-11-16",
+                "2026-11-18",
+            ),
+            ("trip from 10 to 12", "2026-10-10", "2026-10-12"),
+        ] {
+            let p = detect(text, today, &[]).parsed;
+            assert_eq!(
+                (p.planned, p.end),
+                (Some(d(first)), Some(d(last))),
+                "{text}"
+            );
+            assert_eq!(p.body, "trip", "{text}");
+        }
+    }
+
+    #[test]
+    fn stretches_of_time_said_in_words() {
+        // 2026-10-07 is a wednesday.
+        let today = d("2026-10-07");
+        for (text, first, last) in [
+            ("clean garage this weekend", "2026-10-10", "2026-10-11"),
+            ("clean garage on the weekend", "2026-10-10", "2026-10-11"),
+            ("clean garage over the weekend", "2026-10-10", "2026-10-11"),
+            ("clean garage weekend", "2026-10-10", "2026-10-11"),
+            ("clean garage next weekend", "2026-10-17", "2026-10-18"),
+            ("clean garage this week", "2026-10-07", "2026-10-11"),
+            ("clean garage next week", "2026-10-12", "2026-10-18"),
+            ("clean garage in the next week", "2026-10-07", "2026-10-13"),
+            ("clean garage for the next week", "2026-10-07", "2026-10-13"),
+            (
+                "clean garage within the next 3 days",
+                "2026-10-07",
+                "2026-10-09",
+            ),
+            (
+                "clean garage during the next 2 weeks",
+                "2026-10-07",
+                "2026-10-20",
+            ),
+            (
+                "clean garage for the next month",
+                "2026-10-07",
+                "2026-11-06",
+            ),
+            ("clean garage next month", "2026-11-01", "2026-11-30"),
+            ("clean garage this month", "2026-10-07", "2026-10-31"),
+            (
+                "clean garage the rest of the week",
+                "2026-10-07",
+                "2026-10-11",
+            ),
+        ] {
+            let p = detect(text, today, &[]).parsed;
+            assert_eq!(
+                (p.planned, p.end),
+                (Some(d(first)), Some(d(last))),
+                "{text}"
+            );
+            assert_eq!(p.body, "clean garage", "{text}");
+        }
+        // A weekend inside a title, not at its end, stays a word.
+        assert!(
+            detect("plan weekend trip", today, &[])
+                .parsed
+                .planned
+                .is_none()
+        );
     }
 
     #[test]
