@@ -68,8 +68,8 @@ pub use live_add::{CHIP_ORDER, Chip, describe_rec};
 pub use menu::{MenuDo, MenuEntry, entries as menu_entries};
 pub use mouse::{FilterPart, Hit, Hits};
 pub use note_editor::{
-    EditorKey, NormalOutcome, NoteCommandResult, NoteEditorMode, NoteEditorState, Register,
-    UNSAVED_WARNING, VisualSelection, wrap_indent,
+    EditorAt, EditorKey, NormalOutcome, NoteCommandResult, NoteEditorMode, NoteEditorState,
+    Register, ScreenMap, ScreenRow, UNSAVED_WARNING, VisualSelection, wrap_indent,
 };
 pub use notes_popup::{NotePromptKind, NotesPopupState};
 pub use notes_screen::{NoteEntry, NotesScreen};
@@ -159,6 +159,9 @@ pub struct App {
     pub search_all: SearchAll,
     /// The inspector's edge is being dragged.
     pub resizing: bool,
+    /// A drag selecting text in a note editor: which one, and where the
+    /// button went down.
+    pub editor_drag: Option<(EditorAt, (usize, usize))>,
     /// The screen's width, as last drawn.
     pub screen_w: std::cell::Cell<u16>,
     /// Where Home's "Add a task" bar was drawn: adding from Home types
@@ -349,6 +352,7 @@ impl App {
             hits: Hits::default(),
             search_all: SearchAll::default(),
             resizing: false,
+            editor_drag: None,
             screen_w: std::cell::Cell::new(0),
             home_bar: std::cell::Cell::new(None),
             notes_screen: None,

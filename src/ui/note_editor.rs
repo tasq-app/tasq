@@ -197,6 +197,8 @@ pub fn render_editor(
 /// The note as rendered markdown, scrolled to the preview's position
 /// (clamped here, where the rendered height is known).
 fn render_preview(frame: &mut Frame, inner: Rect, theme: &Theme, editor: &NoteEditorState) {
+    // No text to select in the rendered view.
+    editor.set_screen(crate::app::ScreenMap::default());
     // One column of breathing room on each side.
     let body = Rect {
         x: inner.x + 1,
@@ -228,6 +230,21 @@ fn render_preview(frame: &mut Frame, inner: Rect, theme: &Theme, editor: &NoteEd
 fn render_source(frame: &mut Frame, inner: Rect, theme: &Theme, editor: &NoteEditorState) {
     let rows = visual_rows(editor, inner.width as usize);
     let top = scroll_to_cursor(editor, &rows, inner.height as usize);
+    // Where each row went, so the mouse can find the text under it.
+    editor.set_screen(crate::app::ScreenMap {
+        area: inner,
+        rows: rows
+            .iter()
+            .skip(top)
+            .take(inner.height as usize)
+            .map(|r| crate::app::ScreenRow {
+                line: r.line,
+                start: r.start,
+                end: r.end,
+                indent: r.indent,
+            })
+            .collect(),
+    });
     let selection = editor.visual_selection();
     let rendered: Vec<Line> = rows
         .iter()

@@ -179,6 +179,12 @@ local database, notes, live natural-language capture and more, listed below.
 | | `Ctrl+Z` | Undo the newest detection (its words become plain text); on an empty dialog, undo the task just added |
 | | `Enter` | Add the task (converted to todo.txt) and stay open for the next one |
 
+**Selecting with the mouse:** drag over a note's text to select it — only
+the note's text, even when the pointer leaves its box — and let go to copy
+it; it stays selected (vim's Visual mode), so `y`, `d` or `c` work on it
+too. A click moves the cursor there. From the keyboard, `v` / `V` and a
+motion select, and `y` copies.
+
 Yanks and deletes in the editor are also copied to the system clipboard via
 OSC 52 (most modern terminals; in tmux, `set -g set-clipboard on`). To paste
 from the system clipboard, use your terminal's paste in Insert mode — it
