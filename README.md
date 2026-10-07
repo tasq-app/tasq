@@ -185,10 +185,14 @@ it; it stays selected (vim's Visual mode), so `y`, `d` or `c` work on it
 too. A click moves the cursor there. From the keyboard, `v` / `V` and a
 motion select, and `y` copies.
 
-Yanks and deletes in the editor are also copied to the system clipboard via
-OSC 52 (most modern terminals; in tmux, `set -g set-clipboard on`). To paste
-from the system clipboard, use your terminal's paste in Insert mode — it
-goes in verbatim, lists and all.
+Yanks, deletes and mouse selections in the editor are also copied to the
+system clipboard: through `pbcopy` on macOS (`wl-copy`, `xclip` or `xsel`
+on Linux, `clip` on Windows), so it works inside tmux and zellij too, and
+through OSC 52 over SSH. tasq owns the mouse, so the terminal's own
+`Cmd+C` has nothing selected to copy — let go of the drag (or press `y`)
+instead; hold `Shift` while dragging to use the terminal's selection. To
+paste from the system clipboard, use your terminal's paste in Insert mode
+— it goes in verbatim, lists and all.
 
 ### Install
 
