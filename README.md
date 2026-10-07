@@ -76,6 +76,10 @@ local database, notes, live natural-language capture and more, listed below.
 - **Home you can drive**: `Tab` steps through the capture bar and the
   tiles, `Enter` goes into one (`x` ticks a task there); everything can be
   clicked too (`mouse = false` hands the mouse back to the terminal).
+  A click also moves the keyboard there: click a space in the sidebar and
+  `c`, `a`, `r` act on it. The Search screen, the filter popover and the
+  Notes screen (its search box and its notes; a second click reads one)
+  take clicks as well.
 - **Readable rows**: a task shows its title, then chips: when (`today ·
   16:00 · 2h`), the deadline (`◷ by fri 9 oct`, red when due or late), the
   repeat (`↻ every mon, wed, fri`), its space in the space's colour and its
@@ -757,9 +761,12 @@ instead of the box) isn't ticked off, never shows as overdue and doesn't
 count as a routine; once it's over it moves on to its next date, or out
 of the way when it doesn't repeat. Make one from any task (or turn a
 class routine into one) with `E` in the calendar, or *event / task* in
-the menu (`space`) and the command palette. "Christmas from dec 22 to
-jan 7" in the add dialog makes an event of several days (`end:`), drawn
-as one bar across the days in the week and the month.
+the menu (`space`) and the command palette, or type the word *event* in
+the add dialog: "Bank holiday event on oct 12". "Christmas from dec 22 to
+jan 7" makes an event of several days (`end:`), drawn as one bar across
+the days in the week and the month; after *event* the days can also go
+without "from": "dec 22 to jan 7", "dec 22 - jan 7", "22-25 oct",
+"oct 22-25", "mon-fri".
 
 `5` shows the week: seven columns of the same blocks, today's column lit,
 the all-day rows on top (something lasting several days is one bar across

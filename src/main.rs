@@ -455,7 +455,7 @@ fn handle_mouse(app: &mut App, m: crossterm::event::MouseEvent) -> bool {
     if in_editor {
         return true;
     }
-    if !matches!(app.mode, Mode::Normal) {
+    if !matches!(app.mode, Mode::Normal | Mode::SearchAll | Mode::Filters) {
         return false;
     }
     app.notes_cache.clear();

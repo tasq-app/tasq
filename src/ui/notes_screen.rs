@@ -68,6 +68,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     };
     if !state.reading {
         rounded(buf, q, bg.fg(border));
+        app.hits.add(q, crate::app::Hit::NotesSearch);
     }
     let text = if let Some(name) = &state.naming {
         format!("+ new note: {name}▏")
@@ -121,6 +122,15 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         let y = top + 2 * (n - skip) as u16;
         let here = n == state.cursor;
         let row = if here { bg.bg(theme.cursor) } else { bg };
+        app.hits.add(
+            Rect {
+                x: list.x + 1,
+                y,
+                width: list.width.saturating_sub(2),
+                height: 2,
+            },
+            crate::app::Hit::NoteRow(n),
+        );
         for dy in 0..2 {
             for x in list.x + 1..list.right() - 1 {
                 if let Some(c) = buf.cell_mut((x, y + dy)) {

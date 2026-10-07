@@ -115,6 +115,15 @@ pub fn render(frame: &mut Frame, list: Rect, app: &App) {
             }
             Some(i) => {
                 let here = *i == app.filter_pop.cursor;
+                app.hits.add(
+                    Rect {
+                        x: r.x + 2,
+                        y: ly,
+                        width: r.width.saturating_sub(4),
+                        height: 1,
+                    },
+                    crate::app::Hit::FilterRow(*i),
+                );
                 option(buf, r, ly, &rows[*i], here, app, theme);
             }
         }

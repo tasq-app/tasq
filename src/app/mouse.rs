@@ -38,6 +38,14 @@ pub enum Hit {
     /// A block in the calendar's time grid, and whether it's its bottom
     /// edge (to drag its length).
     CalBlock(Box<crate::core::calendar::Occurrence>, bool),
+    /// A result in the Search screen.
+    SearchRow(usize),
+    /// An option in the "+ filter" popover.
+    FilterRow(usize),
+    /// The Notes screen's search box.
+    NotesSearch,
+    /// A note in the Notes screen's list.
+    NoteRow(usize),
 }
 
 /// Which of the active filters a chip is.
@@ -111,6 +119,23 @@ impl App {
             }
             return None;
         }
+        // The Search screen and the filter popover float on top: a click on
+        // one of their rows takes it, anywhere else closes them.
+        if matches!(self.mode, super::Mode::SearchAll | super::Mode::Filters) {
+            match self.hits.at(x, y) {
+                Some(Hit::SearchRow(i)) => {
+                    self.search_all.cursor = i;
+                    self.search_all_go();
+                }
+                Some(Hit::FilterRow(i)) => {
+                    self.filter_pop.cursor = i;
+                    self.filter_pop_pick();
+                }
+                _ if self.mode == super::Mode::SearchAll => self.close_search_all(),
+                _ => self.close_filters(),
+            }
+            return None;
+        }
         let Some(hit) = self.hits.at(x, y) else {
             // Off any block in the calendar's grid: that day.
             if self.calendar.is_some() {
@@ -122,6 +147,12 @@ impl App {
         match hit {
             Hit::Nav(item) => {
                 self.sidebar_open(&item);
+                // The sidebar takes the keyboard: `c`, `a`, `r`… now act
+                // on the space clicked.
+                if let Some(i) = self.sidebar_rows().iter().position(|r| r.item == item) {
+                    self.sidebar_cursor = i;
+                }
+                self.sidebar_focus = true;
                 if item == NavItem::Search {
                     return Some(Action::SearchAll);
                 }
@@ -162,6 +193,24 @@ impl App {
             Hit::AddFilter => return Some(Action::OpenFilters),
             Hit::ClearFilter(part) => self.clear_filter_part(part),
             Hit::Swatch(i) => self.color_pick_click(i),
+            Hit::SearchRow(_) | Hit::FilterRow(_) => {}
+            Hit::NotesSearch => {
+                if let Some(s) = self.notes_screen.as_mut() {
+                    s.searching = true;
+                }
+            }
+            // A note: selected; clicked again, read.
+            Hit::NoteRow(i) => {
+                let again = self.notes_screen.as_ref().is_some_and(|s| s.cursor == i);
+                if let Some(s) = self.notes_screen.as_mut() {
+                    s.cursor = i;
+                    s.scroll = 0;
+                    s.searching = false;
+                }
+                if again {
+                    self.notes_screen_read(true);
+                }
+            }
             Hit::CalBlock(occ, edge) => self.cal_press(*occ, edge, x, y),
         }
         None
@@ -169,6 +218,17 @@ impl App {
 
     /// The wheel: up and down through whatever's under the pointer.
     pub fn wheel(&mut self, down: bool) -> Option<Action> {
+        match self.mode {
+            super::Mode::SearchAll => {
+                self.search_all_move(down);
+                return None;
+            }
+            super::Mode::Filters => {
+                self.filter_pop_move(down);
+                return None;
+            }
+            _ => {}
+        }
         if self.notes_screen.is_some() {
             self.notes_screen_scroll_by(if down { 2 } else { -2 });
             return None;
@@ -178,5 +238,101 @@ impl App {
         } else {
             Action::CursorUp
         })
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use crate::app::NavItem;
+    use crate::app::test_support::build_app;
+    use ratatui::{Terminal, backend::TestBackend};
+
+    /// Where `needle` was drawn: its first cell.
+    fn find(term: &Terminal<TestBackend>, needle: &str) -> (u16, u16) {
+        find_before(term, needle, u16::MAX)
+    }
+
+    /// Like [`find`], left of column `max_x` (the sidebar).
+    fn find_before(term: &Terminal<TestBackend>, needle: &str, max_x: u16) -> (u16, u16) {
+        let buf = term.backend().buffer();
+        (0..buf.area.height)
+            .find_map(|y| {
+                let row: String = (0..buf.area.width.min(max_x))
+                    .map(|x| buf[(x, y)].symbol())
+                    .collect();
+                row.find(needle)
+                    .map(|i| (row[..i].chars().count() as u16, y))
+            })
+            .unwrap()
+    }
+
+    #[test]
+    fn a_click_on_a_space_gives_the_sidebar_the_keyboard() {
+        let mut app = build_app("study +Uni/Exams\nrent +Errands\n");
+        let mut term = Terminal::new(TestBackend::new(120, 30)).unwrap();
+        term.draw(|f| crate::ui::draw(f, &app)).unwrap();
+        let (x, y) = find_before(&term, "Errands", 24);
+        app.click(x, y);
+        assert!(app.sidebar_focus);
+        assert_eq!(
+            app.sidebar_current(),
+            Some(NavItem::Space("Errands".into()))
+        );
+        // `c` now opens the colour picker for it, not the @ prompt.
+        app.open_color_pick();
+        assert_eq!(app.color_pick.as_ref().unwrap().path, "Errands");
+    }
+
+    #[test]
+    fn notes_and_search_results_answer_a_click() {
+        let dir = std::env::temp_dir().join(format!(
+            "tasq-notes-click-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        let folder = dir.join("tasks").join("abc");
+        std::fs::create_dir_all(&folder).unwrap();
+        std::fs::write(folder.join("a.md"), "# Alpha\n").unwrap();
+        std::fs::write(folder.join("b.md"), "# Beta\n").unwrap();
+        let cfg = crate::config::Config {
+            notes_dir: Some(dir.to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        let mut app = crate::app::test_support::build_app_with_config("study notes:abc/\n", cfg);
+        app.open_notes_screen();
+        let mut term = Terminal::new(TestBackend::new(120, 30)).unwrap();
+        term.draw(|f| crate::ui::draw(f, &app)).unwrap();
+        // The search box starts a search.
+        let (x, y) = find(&term, "⌕ search notes");
+        app.click(x, y);
+        assert!(app.notes_screen.as_ref().unwrap().searching);
+        app.notes_screen.as_mut().unwrap().searching = false;
+        // A note: selected, then read on a second click.
+        term.draw(|f| crate::ui::draw(f, &app)).unwrap();
+        let other = if app.current_note_entry().unwrap().title == "Alpha" {
+            "Beta"
+        } else {
+            "Alpha"
+        };
+        let (x, y) = find(&term, other);
+        app.click(x, y);
+        assert_eq!(app.current_note_entry().unwrap().title, other);
+        app.click(x, y);
+        assert!(app.notes_screen.as_ref().unwrap().reading);
+        let _ = std::fs::remove_dir_all(&dir);
+
+        // The Search screen: a click on a result goes there.
+        let mut app = build_app("water plants\nbuy milk\n");
+        app.mode = crate::app::Mode::SearchAll;
+        for c in "milk".chars() {
+            app.search_all_type(c);
+        }
+        term.draw(|f| crate::ui::draw(f, &app)).unwrap();
+        let (x, y) = find(&term, "buy milk");
+        app.click(x, y);
+        assert_eq!(app.mode, crate::app::Mode::Normal);
+        assert_eq!(app.cur_abs(), Some(1));
     }
 }

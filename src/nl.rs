@@ -32,6 +32,8 @@ pub struct ParsedNl {
     /// The last day of something lasting several days: "from dec 22 to
     /// jan 7" (`end:`). It makes an event.
     pub end: Option<NaiveDate>,
+    /// "event": a class, a holiday, a trip — not ticked off (`event:1`).
+    pub event: bool,
     /// How long it takes, in minutes: "for 1h".
     pub duration: Option<u32>,
     /// Reminders, in minutes before its time: "remind me 15 min before".
@@ -70,6 +72,8 @@ pub enum FieldKind {
     Repeat,
     /// When the task starts showing (`t:`).
     ShowFrom,
+    /// An event (`event:1`): "event".
+    Event,
     Project,
     Context,
     Priority,
@@ -164,6 +168,7 @@ fn detect_once(text: &str, today: NaiveDate, blocked: &[bool], spaces: &[String]
     pass_threshold(&mut scratch, &mut parsed);
     let weekday_hint = pass_recurrence(&mut scratch, &mut parsed);
     pass_repeat_end(&mut scratch, &mut parsed, today);
+    pass_event(&mut scratch, &mut parsed);
     pass_span(&mut scratch, &mut parsed, today);
     pass_date(&mut scratch, &mut parsed, today, weekday_hint);
     pass_project_context(&mut scratch, &mut parsed);
@@ -280,9 +285,12 @@ pub fn format_as_todo_txt(p: &ParsedNl) -> String {
         out.push_str(" due:");
         out.push_str(&d.format("%Y-%m-%d").to_string());
     }
-    if let Some(d) = p.end.filter(|e| p.planned.is_some_and(|s| *e > s)) {
+    let end = p.end.filter(|e| p.planned.is_some_and(|s| *e > s));
+    if let Some(d) = end {
         out.push_str(" end:");
         out.push_str(&d.format("%Y-%m-%d").to_string());
+    }
+    if p.event || end.is_some() {
         out.push_str(" event:1");
     }
     if let Some(r) = &p.rec {
@@ -1457,51 +1465,127 @@ fn pass_date(
     }
 }
 
-/// "from dec 22 to jan 7", "from monday until friday": the first day is
-/// when it's planned, the last its `end:` (a year on when it would come
-/// first: "from dec 22 to jan 7" crosses new year).
-fn pass_span(scratch: &mut Scratch, p: &mut ParsedNl, today: NaiveDate) {
+/// "event": what's typed is an event — a class, a holiday, a trip.
+fn pass_event(scratch: &mut Scratch, p: &mut ParsedNl) {
     let words = scratch.word_cache.clone();
-    for i in 0..words.len() {
-        if p.planned.is_some() {
+    for w in words {
+        if scratch.is_live(w.0, w.1) && scratch.word_lc(w) == "event" {
+            scratch.kind = Some(FieldKind::Event);
+            scratch.mark(w.0, w.1);
+            p.event = true;
             return;
         }
-        if !scratch.is_live(words[i].0, words[i].1) || scratch.word_lc(words[i]) != "from" {
-            continue;
-        }
-        let Some((first, n1)) = (i + 1 < words.len())
-            .then(|| match_date_at(scratch, &words, i + 1, today))
-            .flatten()
-        else {
-            continue;
-        };
-        let j = i + 1 + n1;
-        if j + 1 >= words.len()
-            || !scratch.is_live(words[j].0, words[j].1)
-            || !matches!(
-                scratch.word_lc(words[j]),
-                "to" | "until" | "till" | "through" | "-"
-            )
-        {
-            continue;
-        }
-        let Some((mut last, n2)) = match_date_at(scratch, &words, j + 1, today) else {
-            continue;
-        };
-        while last < first {
-            let Some(next) = last.checked_add_months(Months::new(12)) else {
-                break;
-            };
-            last = next;
-        }
-        scratch.kind = Some(FieldKind::Date);
-        scratch.mark(words[i].0, words[j + n2].1);
-        p.planned = Some(first);
-        if last > first {
-            p.end = Some(last);
-        }
-        return;
     }
+}
+
+/// The days of something lasting several: "from dec 22 to jan 7", "from
+/// monday until friday". After "event" also without "from" ("dec 22 to
+/// jan 7", "dec 22 - jan 7") and run together: "mon-fri", "22-25 dec",
+/// "dec 22-25". The first day is when it's planned, the last its `end:`
+/// (a year on when it would come first: dec 22 to jan 7 crosses new year).
+fn pass_span(scratch: &mut Scratch, p: &mut ParsedNl, today: NaiveDate) {
+    let words = scratch.word_cache.clone();
+    let found = (0..words.len()).find_map(|i| {
+        if p.planned.is_some() || !scratch.is_live(words[i].0, words[i].1) {
+            return None;
+        }
+        let from = scratch.word_lc(words[i]) == "from";
+        if from {
+            return (i + 1 < words.len())
+                .then(|| span_at(scratch, &words, i + 1, today))
+                .flatten()
+                .map(|(a, b, last)| (i, a, b, last));
+        }
+        if !p.event {
+            return None;
+        }
+        span_at(scratch, &words, i, today)
+            .map(|(a, b, last)| (i, a, b, last))
+            .or_else(|| run_together(scratch, &words, i, today))
+    });
+    let Some((i, first, mut last, last_word)) = found else {
+        return;
+    };
+    while last < first {
+        let Some(next) = last.checked_add_months(Months::new(12)) else {
+            break;
+        };
+        last = next;
+    }
+    scratch.kind = Some(FieldKind::Date);
+    scratch.mark(words[i].0, words[last_word].1);
+    p.planned = Some(first);
+    if last > first {
+        p.end = Some(last);
+    }
+}
+
+/// "<date> to <date>" from `words[i]`: both days and the last word used.
+fn span_at(
+    scratch: &Scratch,
+    words: &[(usize, usize)],
+    i: usize,
+    today: NaiveDate,
+) -> Option<(NaiveDate, NaiveDate, usize)> {
+    let (first, n1) = match_date_at(scratch, words, i, today)?;
+    let j = i + n1;
+    if j + 1 >= words.len()
+        || !scratch.is_live(words[j].0, words[j].1)
+        || !matches!(
+            scratch.word_lc(words[j]),
+            "to" | "until" | "till" | "through" | "-" | "–"
+        )
+    {
+        return None;
+    }
+    let (last, n2) = match_date_at(scratch, words, j + 1, today)?;
+    Some((first, last, j + n2))
+}
+
+/// "mon-fri", "22-25 dec", "dec 22-25" at `words[i]`: the first word
+/// used, both days and the last word used.
+fn run_together(
+    scratch: &Scratch,
+    words: &[(usize, usize)],
+    i: usize,
+    today: NaiveDate,
+) -> Option<(usize, NaiveDate, NaiveDate, usize)> {
+    let w = scratch.word_lc(words[i]);
+    let (a, b) = w.split_once('-').or_else(|| w.split_once('–'))?;
+    if let (Some(wa), Some(wb)) = (parse_weekday(a), parse_weekday(b)) {
+        let first = next_weekday(today, wa, false)?;
+        return Some((i, first, next_weekday(first, wb, false)?, i));
+    }
+    let (da, db) = (parse_day_ordinal(a)?, parse_day_ordinal(b)?);
+    let live = |k: usize| scratch.is_live(words[k].0, words[k].1);
+    // The month after ("22-25 dec") or before ("dec 22-25").
+    let (month, first_word, last_word) = match (i + 1 < words.len())
+        .then(|| parse_month(scratch.word_lc(words[i + 1])))
+        .flatten()
+        .filter(|_| live(i + 1))
+    {
+        Some(m) => (m, i, i + 1),
+        None => (
+            (i > 0 && live(i - 1))
+                .then(|| parse_month(scratch.word_lc(words[i - 1])))
+                .flatten()?,
+            i - 1,
+            i,
+        ),
+    };
+    let mut year = today.year();
+    if NaiveDate::from_ymd_opt(year, month, da)? < today {
+        year += 1;
+    }
+    let first = NaiveDate::from_ymd_opt(year, month, da)?;
+    let last = if db >= da {
+        NaiveDate::from_ymd_opt(year, month, db)?
+    } else {
+        // "28-3 dec" is the 28th to the 3rd of the next month.
+        let next = first.checked_add_months(Months::new(1))?;
+        NaiveDate::from_ymd_opt(next.year(), next.month(), db)?
+    };
+    Some((first_word, first, last, last_word))
 }
 
 /// First day of a weekly rule on given weekdays (`+1w:fri,sat,sun`) after
@@ -2171,6 +2255,47 @@ mod tests {
         let p = detect("call from the office", today, &[]).parsed;
         assert_eq!(p.end, None);
         assert_eq!(p.body, "call from the office");
+    }
+
+    #[test]
+    fn event_marks_an_event_and_its_days_without_from() {
+        // 2026-10-03 is a saturday.
+        let today = d("2026-10-03");
+        let p = detect("Bank holiday event on oct 12", today, &[]).parsed;
+        assert!(p.event);
+        assert_eq!(p.planned, Some(d("2026-10-12")));
+        assert_eq!(p.body, "Bank holiday");
+        assert_eq!(
+            format_as_todo_txt(&p),
+            "Bank holiday plan:2026-10-12 event:1"
+        );
+        let det = detect("Christmas event dec 22 - jan 7", today, &[]);
+        assert!(det.spans.iter().any(|s| s.kind == FieldKind::Event));
+        assert_eq!(
+            (det.parsed.planned, det.parsed.end),
+            (Some(d("2026-12-22")), Some(d("2027-01-07")))
+        );
+        assert_eq!(det.parsed.body, "Christmas");
+        for (text, first, last) in [
+            ("Trip event 22-25 oct", "2026-10-22", "2026-10-25"),
+            ("Trip event oct 22-25", "2026-10-22", "2026-10-25"),
+            ("Fair event mon-fri", "2026-10-05", "2026-10-09"),
+            ("Fair event oct 5 to oct 9", "2026-10-05", "2026-10-09"),
+        ] {
+            let p = detect(text, today, &[]).parsed;
+            assert_eq!(
+                (p.planned, p.end),
+                (Some(d(first)), Some(d(last))),
+                "{text}"
+            );
+            assert!(
+                !p.body.contains('-') && !p.body.contains("oct"),
+                "{text}: {}",
+                p.body
+            );
+        }
+        // Without "event", "22-25 oct" is not read as days.
+        assert_eq!(detect("pages 22-25 oct", today, &[]).parsed.end, None);
     }
 
     #[test]

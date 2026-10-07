@@ -383,6 +383,8 @@ pub fn field_icon(kind: FieldKind, nerd: bool) -> &'static str {
         (FieldKind::Context, true) => "\u{f02b}",
         (FieldKind::Priority, true) => "\u{f024}",
         (FieldKind::ShowFrom, true) => "\u{f06e}",
+        (FieldKind::Event, true) => "\u{f219}",
+        (FieldKind::Event, false) => "◆",
         (FieldKind::Date, false) => "▦",
         (FieldKind::Deadline, false) => "⇥",
         (FieldKind::Time, false) => "◷",
@@ -428,6 +430,7 @@ pub fn field_color(kind: FieldKind, theme: &Theme) -> Color {
         FieldKind::Context => theme.context,
         FieldKind::Priority => theme.pri_a,
         FieldKind::ShowFrom => theme.dim,
+        FieldKind::Event => theme.accent,
     }
 }
 
