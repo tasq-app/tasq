@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0-alpha.9](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.8...v0.1.0-alpha.9) (2026-10-07)
+
+
+### Bug Fixes
+
+* **clipboard:** copy through the system's clipboard tool, so it works in tmux ([#53](https://github.com/tasq-app/tasq/issues/53)) ([a8c3442](https://github.com/tasq-app/tasq/commit/a8c34428264eb5bd3435685b06dddad9e4a4da63))
+
 ## [0.1.0-alpha.8](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.7...v0.1.0-alpha.8) (2026-10-07)
 
 
