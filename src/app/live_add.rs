@@ -120,6 +120,22 @@ impl Picked {
     }
 }
 
+/// What editing a task in the live dialog keeps aside and puts back on
+/// save: its done mark and creation date, and the `key:value` tags the
+/// dialog has no chip for (`notes:`, `star:`, …).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct EditKeep {
+    /// `x 2026-10-04 ` for a done task, else empty.
+    pub done: String,
+    pub created: Option<String>,
+    pub tags: Vec<String>,
+}
+
+/// Tag keys the dialog shows as chips; anything else is kept aside.
+const CHIP_KEYS: [&str; 9] = [
+    "plan", "due", "dur", "remind", "t", "rec", "until", "times", "at",
+];
+
 /// How a picked value is recorded in `LiveState::seen`, so `Ctrl+Z` can
 /// undo it too.
 const PICKED_MARK: &str = "\u{0}picked";
@@ -129,10 +145,140 @@ impl App {
         NaiveDate::parse_from_str(self.store.today(), "%Y-%m-%d").ok()
     }
 
-    /// Whether the dialog is adding a task (live capture) rather than
-    /// editing an existing one.
+    /// Whether the dialog is the live one: adding a task, or editing one
+    /// with `e` / `i` (rescheduling still edits the raw line).
     pub fn live_add_active(&self) -> bool {
-        self.selection.editing().is_none()
+        self.selection.editing().is_none() || self.draft.live.edit.is_some()
+    }
+
+    /// Whether the live dialog is editing an existing task.
+    pub fn live_editing(&self) -> bool {
+        self.selection.editing().is_some() && self.draft.live.edit.is_some()
+    }
+
+    /// `e` / `i`: open task `abs` in the live dialog — its title and tags as
+    /// text, everything else as chips. Words already in the title stay
+    /// words: "Plan Saturday hike" doesn't turn into a date on edit.
+    pub fn begin_live_edit(&mut self, abs: usize, insert: bool) {
+        let Some(task) = self.store.tasks().get(abs).cloned() else {
+            return;
+        };
+        let mut words: Vec<&str> = Vec::new();
+        let mut tags: Vec<String> = Vec::new();
+        for tok in crate::todo::body_after_priority(&task.raw).split_whitespace() {
+            match tok.split_once(':') {
+                Some((k, v)) if crate::todo::is_valid_key(k) && !v.is_empty() => {
+                    if !CHIP_KEYS.contains(&k) {
+                        tags.push(tok.to_string());
+                    }
+                }
+                _ => words.push(tok),
+            }
+        }
+        let text = words.join(" ");
+        self.selection.enter_edit(abs);
+        if insert {
+            self.draft_set_insert(text);
+        } else {
+            self.draft_set(text);
+        }
+        let date = |s: &Option<String>| {
+            s.as_deref()
+                .and_then(|d| NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
+        };
+        let picked = Picked {
+            planned: date(&task.planned),
+            due: date(&task.due),
+            duration: task
+                .duration
+                .as_deref()
+                .and_then(crate::duration::parse_minutes),
+            reminders: task.reminders.as_deref().map(|r| {
+                r.split(',')
+                    .filter_map(crate::duration::parse_minutes)
+                    .collect()
+            }),
+            threshold: task.threshold.clone(),
+            rec: task.rec.clone(),
+            until: date(&task.until),
+            times: task.times.as_deref().and_then(|t| t.parse().ok()),
+            time: crate::todo::find_kv(&task.raw, "at").and_then(|t| {
+                let (h, m) = t.split_once(':')?;
+                Some((h.parse().ok()?, m.parse().ok()?))
+            }),
+            priority: task.priority,
+        };
+        // What the title already says is text, not a new detection.
+        if let Some(today) = self.today_date() {
+            let det = nl::detect(self.draft.text(), today, &[]);
+            let text = self.draft.text().to_string();
+            for span in det.spans {
+                if !matches!(span.kind, FieldKind::Project | FieldKind::Context) {
+                    let phrase = text[span.start..span.end].to_lowercase();
+                    self.draft.live.rejected.push((span.kind, phrase));
+                }
+            }
+        }
+        self.draft.live.picked = picked;
+        self.draft.live.edit = Some(EditKeep {
+            done: if task.done {
+                format!("x {} ", task.done_date.clone().unwrap_or_default()).replace("x  ", "x ")
+            } else {
+                String::new()
+            },
+            created: task.created_date.clone(),
+            tags,
+        });
+        self.live_refresh();
+        // Nothing to undo yet: the task's own fields aren't new detections.
+        self.draft.live.seen.clear();
+        // The cursor lands after the last tag: no suggestions until you type.
+        self.draft.suppress_autocomplete();
+    }
+
+    /// `Enter` while editing: write the task back — the text and chips as
+    /// todo.txt, with what was kept aside — and close the dialog. Returns
+    /// whether it closed.
+    pub fn live_save_edit(&mut self) -> bool {
+        let Some(idx) = self.selection.editing() else {
+            return false;
+        };
+        let Some(keep) = self.draft.live.edit.clone() else {
+            return false;
+        };
+        let det = self.live_detection();
+        if det.parsed.body.trim().is_empty() {
+            self.flash("add a title to the task");
+            return false;
+        }
+        let mut line = det.to_todo_txt();
+        if let Some(created) = &keep.created {
+            line = match line.strip_prefix('(').and_then(|r| r.split_once(") ")) {
+                Some((p, rest)) if p.len() == 1 => format!("({p}) {created} {rest}"),
+                _ => format!("{created} {line}"),
+            };
+        }
+        line = format!("{}{line}", keep.done);
+        for t in &keep.tags {
+            line.push(' ');
+            line.push_str(t);
+        }
+        match self.store.edit_line(idx, &line) {
+            crate::core::EditOutcome::Saved { abs } => {
+                self.flash("saved");
+                self.after_mutation(abs);
+            }
+            crate::core::EditOutcome::Aborted(r) => self.handle_reconcile_abort(r),
+            crate::core::EditOutcome::Error(e) => {
+                self.flash(format!("invalid: {e}"));
+                return false;
+            }
+            _ => {}
+        }
+        self.mode = super::types::Mode::Normal;
+        self.draft_clear();
+        self.selection.exit_edit();
+        true
     }
 
     /// The live detection over the current draft, with picked values
@@ -293,6 +439,14 @@ impl App {
     /// Call after every edit of the draft: keeps the order in which
     /// detections appeared, so `Ctrl+Z` knows which one is newest.
     pub fn live_refresh(&mut self) {
+        // A phrase typed now beats a value set before (a picker's, or the
+        // task's own when editing): "tomorrow" replaces the old date.
+        let typed = self.live_detection().spans;
+        for span in typed {
+            if self.draft.live.picked.has(span.kind) {
+                self.draft.live.picked.clear(span.kind);
+            }
+        }
         let det = self.live_detection();
         let text = self.draft.text().to_string();
         let current: Vec<nl::Rejection> = det
@@ -630,6 +784,56 @@ mod tests {
             app.draft_insert_char(c);
             app.live_refresh();
         }
+    }
+
+    #[test]
+    fn editing_opens_the_task_as_text_and_chips_and_saves_it_back() {
+        // Today is 2026-05-06 in tests.
+        let raw = "(A) 2026-05-01 Plan Saturday hike +Personal @phone plan:2026-05-09 at:09:00 dur:1h30m notes:abc/ star:1";
+        let mut app = build_app(&format!("{raw}\n"));
+        app.begin_live_edit(0, true);
+        assert!(app.live_editing());
+        assert_eq!(app.draft.text(), "Plan Saturday hike +Personal @phone");
+        assert_eq!(chip(&app, FieldKind::Time).value.as_deref(), Some("09:00"));
+        assert_eq!(
+            chip(&app, FieldKind::Duration).value.as_deref(),
+            Some("1h 30m")
+        );
+        // "Saturday" in the title stays a word, not a new date.
+        assert_eq!(
+            chip(&app, FieldKind::Date).value.as_deref(),
+            Some("sat 9 may")
+        );
+        // Saved untouched: the same task, its notes and star kept.
+        assert!(app.live_save_edit());
+        let t = &app.tasks()[0];
+        assert_eq!(t.planned.as_deref(), Some("2026-05-09"));
+        assert_eq!(t.priority, Some('A'));
+        assert_eq!(t.created_date.as_deref(), Some("2026-05-01"));
+        assert!(t.raw.contains("notes:abc/") && t.starred, "{}", t.raw);
+        assert!(t.raw.contains("Plan Saturday hike"), "{}", t.raw);
+
+        // A date typed now replaces the old one.
+        app.begin_live_edit(0, true);
+        typed(&mut app, " tomorrow");
+        assert!(app.live_save_edit());
+        assert_eq!(app.tasks()[0].planned.as_deref(), Some("2026-05-07"));
+        assert_eq!(app.tasks()[0].raw.matches("tomorrow").count(), 0);
+    }
+
+    #[test]
+    fn a_done_task_stays_done_when_edited() {
+        let mut app = build_app("x 2026-05-05 2026-05-01 Gym +Health\n");
+        app.begin_live_edit(0, true);
+        typed(&mut app, " class");
+        assert!(app.live_save_edit());
+        let t = &app.tasks()[0];
+        assert!(t.done, "{}", t.raw);
+        assert!(
+            t.raw.starts_with("x 2026-05-05 2026-05-01 Gym class"),
+            "{}",
+            t.raw
+        );
     }
 
     fn chip(app: &App, kind: FieldKind) -> Chip {

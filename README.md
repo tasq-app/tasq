@@ -645,7 +645,16 @@ must be fully visible within one sort tie.
 
 ### Edit dialog
 
-The edit dialog uses vim-style modal editing. Press `i` to edit the current task
+Editing a task opens the same box as adding one: the title and its
+`+space` / `@tag` as text, its date, time, duration, repeat, deadline,
+reminders and priority as chips. Type a new phrase ("tomorrow", "at 6pm",
+"every mon") and it replaces the old value; `Tab` walks the chips (`x`
+clears one, `Enter` opens its picker); `Enter` saves. Words already in the
+title stay words, and whatever has no chip (`notes:`, the star, the
+creation date) is kept as it was. `r` (reschedule) still edits the raw
+todo.txt line, with the calendar open.
+
+The dialog uses vim-style modal editing. Press `i` to edit the current task
 starting in **Insert mode** — start typing immediately. Press `e` to start in
 **Normal mode** so you can navigate before changing anything. The add prompt
 (`n`) also opens directly in Insert mode.

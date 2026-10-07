@@ -1508,6 +1508,9 @@ fn apply_to_draft(app: &mut App, key: KeyEvent) -> DraftEffect {
 fn handle_insert_normal(app: &mut App, key: KeyEvent) {
     match key.code {
         // Live capture: save and stay, ready to type the next task.
+        KeyCode::Enter if app.live_editing() => {
+            app.live_save_edit();
+        }
         KeyCode::Enter if app.live_add_active() => {
             app.live_add();
             app.draft.set_input_mode(DialogInputMode::Insert);
@@ -1596,6 +1599,10 @@ fn handle_live_add_keys(app: &mut App, key: KeyEvent) -> bool {
     match key.code {
         KeyCode::Tab => {
             app.live_focus_chips();
+            true
+        }
+        KeyCode::Enter if app.live_editing() => {
+            app.live_save_edit();
             true
         }
         KeyCode::Enter => {
@@ -2278,21 +2285,11 @@ fn apply_action(app: &mut App, action: Action) {
             app.draft_set_insert(seed);
             app.selection.exit_edit();
         }
-        Action::BeginEdit => {
-            if let Some(abs) = app.cur_abs()
-                && let Some(raw) = app.task_raw(abs)
-            {
-                app.selection.enter_edit(abs);
-                app.draft_set(raw);
-                app.mode = Mode::Insert;
-            }
-        }
-        Action::BeginEditInsert => {
-            if let Some(abs) = app.cur_abs()
-                && let Some(raw) = app.task_raw(abs)
-            {
-                app.selection.enter_edit(abs);
-                app.draft_set_insert(raw);
+        // Editing opens the same live dialog as adding: the title as text,
+        // the rest as chips.
+        Action::BeginEdit | Action::BeginEditInsert => {
+            if let Some(abs) = app.cur_abs() {
+                app.begin_live_edit(abs, action == Action::BeginEditInsert);
                 app.mode = Mode::Insert;
             }
         }
