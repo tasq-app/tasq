@@ -561,6 +561,29 @@ impl App {
                 | FieldKind::Repeat
                 | FieldKind::Priority
         );
+        // A time, duration or reminder already set: its whole phrase ("at
+        // 15:30") becomes the pill, nothing is left behind as text, and
+        // typing a new one replaces it.
+        let typed_only = matches!(
+            chip.kind,
+            FieldKind::Time | FieldKind::Duration | FieldKind::Reminder
+        );
+        if typed_only && chip.value.is_some() {
+            if let Some(span) = chip.span {
+                let det = self.live_detection();
+                self.draft.live.picked.take_from(chip.kind, &det.parsed);
+                self.draft.remove_range(span.start, span.end);
+                self.draft
+                    .live
+                    .seen
+                    .push((chip.kind, PICKED_MARK.to_string()));
+            }
+            self.live_refresh();
+            return;
+        }
+        if matches!(chip.kind, FieldKind::Project | FieldKind::Context) && chip.value.is_some() {
+            return;
+        }
         if has_picker && let Some(span) = chip.span {
             let det = self.live_detection();
             self.draft.live.picked.take_from(chip.kind, &det.parsed);
@@ -834,6 +857,22 @@ mod tests {
             "{}",
             t.raw
         );
+    }
+
+    #[test]
+    fn enter_on_a_time_chip_takes_the_whole_phrase() {
+        let mut app = build_app("");
+        typed(&mut app, "Repasar at 15:30");
+        app.live_focus_chips();
+        let i = app
+            .live_chips()
+            .iter()
+            .position(|c| c.kind == FieldKind::Time)
+            .expect("a time chip");
+        app.draft.live.chip_focus = Some(i);
+        app.live_open_focused();
+        assert_eq!(app.draft.text().trim(), "Repasar", "no stray \"at\"");
+        assert_eq!(chip(&app, FieldKind::Time).value.as_deref(), Some("15:30"));
     }
 
     fn chip(app: &App, kind: FieldKind) -> Chip {

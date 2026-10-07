@@ -45,6 +45,7 @@ pub enum SetKey {
     WeekStart,
     RecBuilder,
     ChecklistCompletes,
+    ArchiveDone,
     PhoneCapture,
     Trash,
     Help,
@@ -199,7 +200,7 @@ impl App {
                 row(
                     "Capture",
                     "Checklist → done",
-                    on(p.checklist_completes),
+                    p.checklist_done.label().to_string(),
                     Some(SetKey::ChecklistCompletes),
                 ),
                 row(
@@ -246,6 +247,12 @@ impl App {
                     None,
                 ),
                 row("Data", "Export", "tasq export > todo.txt".to_string(), None),
+                row(
+                    "Trash",
+                    "Archive done",
+                    self.prefs.archive_done.label().to_string(),
+                    Some(SetKey::ArchiveDone),
+                ),
                 row(
                     "Trash",
                     "Trash",
@@ -368,7 +375,12 @@ impl App {
                 None
             }
             SetKey::ChecklistCompletes => {
-                self.prefs.checklist_completes = !self.prefs.checklist_completes;
+                self.prefs.checklist_done = self.prefs.checklist_done.next();
+                None
+            }
+            SetKey::ArchiveDone => {
+                self.prefs.archive_done = self.prefs.archive_done.next();
+                self.auto_archive();
                 None
             }
             SetKey::RecBuilder => {

@@ -26,6 +26,8 @@ pub enum NavItem {
     Calendar,
     Notes,
     Search,
+    /// Done tasks that left the list.
+    Archive,
     Trash,
     Space(String),
     Preset(Preset),
@@ -97,6 +99,10 @@ impl App {
             row(NavItem::Notes, "Notes", None),
             row(NavItem::Search, "Search", None),
         ]);
+        let archived = self.archive().len();
+        if archived > 0 || self.view() == super::View::Archive {
+            rows.push(row(NavItem::Archive, "Archive", Some(archived)));
+        }
         if trash > 0 || self.trash_screen.is_some() {
             rows.push(row(NavItem::Trash, "Trash", Some(trash)));
         }
@@ -141,6 +147,9 @@ impl App {
         }
         if self.calendar.is_some() {
             return Some(NavItem::Calendar);
+        }
+        if self.view() == super::View::Archive {
+            return Some(NavItem::Archive);
         }
         if self.filter.preset == Some(Preset::Inbox) {
             return Some(NavItem::Inbox);
@@ -216,8 +225,13 @@ impl App {
         self.notes_screen = None;
         self.trash_screen = None;
         self.mode = Mode::Normal;
+        // Leaving the archive for anywhere else.
+        if *item != NavItem::Archive && self.view() == super::View::Archive {
+            self.set_view(super::View::List);
+        }
         match item {
             NavItem::Trash => self.open_trash(),
+            NavItem::Archive => self.set_view(super::View::Archive),
             NavItem::Home => self.open_home(),
             NavItem::Notes => self.open_notes_screen(),
             NavItem::Inbox => {

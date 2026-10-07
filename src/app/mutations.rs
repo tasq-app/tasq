@@ -50,6 +50,9 @@ impl App {
                 let title = self.task_title(abs);
                 self.toast(ToastKind::Done, "Done", title, "completed");
                 self.after_mutation(abs);
+                if self.prefs.archive_done == super::ArchiveWhen::Now {
+                    self.auto_archive();
+                }
             }
             CompleteOutcome::CompletedLast { abs } => {
                 let title = self
@@ -476,6 +479,24 @@ impl App {
         }
     }
 
+    /// Move done tasks to the archive on their own, as the setting says:
+    /// the day after (so today's progress still counts them), right away,
+    /// or never. Quiet: it's housekeeping, not news.
+    pub fn auto_archive(&mut self) {
+        let before = match self.prefs.archive_done {
+            super::ArchiveWhen::Never => return,
+            super::ArchiveWhen::NextDay => Some(self.store.today().to_string()),
+            super::ArchiveWhen::Now => None,
+        };
+        if !self.store.tasks().iter().any(|t| t.done) {
+            return;
+        }
+        if let ArchiveOutcome::Archived { .. } = self.store.archive_done_before(before.as_deref()) {
+            self.recompute_visible();
+            self.clamp_cursor();
+        }
+    }
+
     pub fn archive_completed(&mut self) {
         match self.store.archive_completed() {
             ArchiveOutcome::Archived { count } => {
@@ -543,6 +564,25 @@ mod tests {
         WeekStart,
         test_support::{build_app, test_path},
     };
+
+    #[test]
+    fn done_tasks_go_to_the_archive_the_day_after() {
+        // Today is 2026-05-06 in tests.
+        let mut app = build_app("x 2026-05-05 yesterday's\nx 2026-05-06 today's\nstill open\n");
+        app.auto_archive();
+        let left: Vec<&str> = app.tasks().iter().map(|t| t.raw.as_str()).collect();
+        assert_eq!(left, ["x 2026-05-06 today's", "still open"]);
+        assert_eq!(app.archive().len(), 1);
+        // Never: nothing moves.
+        app.prefs.archive_done = crate::app::ArchiveWhen::Never;
+        app.store.set_today("2026-05-08".into());
+        app.auto_archive();
+        assert_eq!(app.tasks().len(), 2);
+        // Right away: everything done goes.
+        app.prefs.archive_done = crate::app::ArchiveWhen::Now;
+        app.auto_archive();
+        assert_eq!(app.tasks().len(), 1);
+    }
 
     #[test]
     fn open_file_rebinds_path_body_and_resets_cursor() {

@@ -191,16 +191,26 @@ impl Store {
     }
 
     pub fn archive_completed(&mut self) -> ArchiveOutcome {
+        self.archive_done_before(None)
+    }
+
+    /// Archive the done tasks — with `before`, only those done before that
+    /// day (`YYYY-MM-DD`); a done task with no date counts as done before.
+    pub fn archive_done_before(&mut self, before: Option<&str>) -> ArchiveOutcome {
         match self.reconcile() {
             Reconcile::Unchanged => {}
             other => return ArchiveOutcome::Aborted(other),
         }
-        let to_move: Vec<Task> = self.tasks.iter().filter(|t| t.done).cloned().collect();
+        let goes = |t: &Task| {
+            t.done && before.is_none_or(|b| t.done_date.as_deref().is_none_or(|d| d < b))
+        };
+        let to_move: Vec<Task> = self.tasks.iter().filter(|t| goes(t)).cloned().collect();
         if to_move.is_empty() {
             return ArchiveOutcome::Nothing;
         }
         if self.db.is_some() {
-            let mut remaining: Vec<Task> = self.tasks.iter().filter(|t| !t.done).cloned().collect();
+            let mut remaining: Vec<Task> =
+                self.tasks.iter().filter(|t| !goes(t)).cloned().collect();
             let mut archived = self.archive.tasks.clone();
             archived.extend(to_move.iter().cloned());
             if let Err(e) = self.save_lists(Some(&mut remaining), Some(&mut archived)) {
@@ -228,7 +238,7 @@ impl Store {
         if let Err(e) = todo::write_atomic(&self.archive.path, &combined) {
             return ArchiveOutcome::Error(StoreError::ArchiveIo(e));
         }
-        let remaining: Vec<Task> = self.tasks.iter().filter(|t| !t.done).cloned().collect();
+        let remaining: Vec<Task> = self.tasks.iter().filter(|t| !goes(t)).cloned().collect();
         let remaining_body = todo::serialize(&remaining);
         if let Err(e) = todo::write_atomic(&self.file_path, &remaining_body) {
             let _ = todo::write_atomic(&self.archive.path, &previous_archive_body);

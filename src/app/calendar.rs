@@ -275,11 +275,34 @@ impl App {
         let Some(occ) = self.cal_selected() else {
             return;
         };
-        if let Some(raw) = self.task_raw(occ.abs) {
-            self.selection.enter_edit(occ.abs);
-            self.draft_set(raw);
-            self.mode = Mode::Insert;
+        self.begin_live_edit(occ.abs, false);
+        self.mode = Mode::Insert;
+    }
+
+    /// `r` in the calendar: reschedule the selected task, not the one
+    /// under the list's cursor.
+    pub fn cal_reschedule(&mut self) {
+        if let Some(occ) = self.cal_selected() {
+            self.reschedule(occ.abs);
         }
+    }
+
+    /// Reschedule task `abs`: its line in the edit dialog with the
+    /// calendar open on its planned date (or its deadline, for a task that
+    /// only has one).
+    pub fn reschedule(&mut self, abs: usize) {
+        use super::draft_overlay::CalendarTarget;
+        let Some(raw) = self.task_raw(abs) else {
+            return;
+        };
+        let target = match self.tasks().get(abs) {
+            Some(t) if t.planned.is_none() && t.due.is_some() => CalendarTarget::Due,
+            _ => CalendarTarget::Planned,
+        };
+        self.selection.enter_edit(abs);
+        self.draft_set_insert(raw);
+        self.mode = Mode::Insert;
+        self.open_calendar(target);
     }
 
     /// `x`: complete the selected task.
@@ -366,6 +389,24 @@ impl App {
 mod tests {
     use super::*;
     use crate::app::test_support::build_app;
+
+    #[test]
+    fn r_in_the_calendar_reschedules_the_task_selected_there() {
+        let mut app = build_app(
+            "Other task\n\
+             Teoria AII plan:2026-05-06 at:09:00 dur:2h\n",
+        );
+        app.cursor = 0; // the list is on "Other task"
+        app.open_cal(CalView::Day);
+        assert_eq!(app.cal_selected().unwrap().abs, 1);
+        app.cal_reschedule();
+        assert_eq!(app.selection.editing(), Some(1));
+        assert!(
+            app.draft.text().contains("Teoria AII"),
+            "{}",
+            app.draft.text()
+        );
+    }
 
     #[test]
     fn day_view_selects_moves_and_reschedules() {

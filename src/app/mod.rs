@@ -75,7 +75,7 @@ pub use notes_popup::{NotePromptKind, NotesPopupState};
 pub use notes_screen::{NoteEntry, NotesScreen};
 pub use palette::{CommandPaletteState, NotesEntryAction, PaletteDispatch};
 pub use pomodoro::{BREAK, FOCUS, Phase, Pomodoro};
-pub use prefs::{DETAILS_W, Layout, Prefs};
+pub use prefs::{ArchiveWhen, AutoDone, DETAILS_W, Layout, Prefs};
 pub use routines::{DayMark, Routine};
 pub use search_all::{Found, FoundRow, SearchAll};
 pub use selection::Selection;
@@ -162,6 +162,8 @@ pub struct App {
     /// A drag selecting text in a note editor: which one, and where the
     /// button went down.
     pub editor_drag: Option<(EditorAt, (usize, usize))>,
+    /// The last checklist box was ticked: asking whether task `abs` is done.
+    pub confirm_done: Option<usize>,
     /// The screen's width, as last drawn.
     pub screen_w: std::cell::Cell<u16>,
     /// Where Home's "Add a task" bar was drawn: adding from Home types
@@ -353,6 +355,7 @@ impl App {
             search_all: SearchAll::default(),
             resizing: false,
             editor_drag: None,
+            confirm_done: None,
             screen_w: std::cell::Cell::new(0),
             home_bar: std::cell::Cell::new(None),
             notes_screen: None,
@@ -765,6 +768,8 @@ impl App {
     pub fn refresh_today(&mut self, now: String) -> bool {
         if self.store.set_today(now) {
             self.recompute_visible();
+            // Yesterday's done tasks go to the archive.
+            self.auto_archive();
             true
         } else {
             false

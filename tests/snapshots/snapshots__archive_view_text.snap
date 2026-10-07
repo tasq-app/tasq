@@ -2,16 +2,17 @@
 source: tests/snapshots.rs
 expression: buffer_to_text(&buf)
 ---
-                       │ ▶▮◀ done.txt  •  0 tasks  •  sort:complet│                                 
-  ■ tasq               │                                          │  no task selected               
-                       │   no completed tasks yet                 │                                 
-   ⌂ Home              │                                          │                                 
+                       │  Archive                                 │                                 
+  ■ tasq               │  0 done tasks · x brings one back · dd de│  no task selected               
+                       │                                          │                                 
+   ⌂ Home              │   no completed tasks yet                 │                                 
    ▤ Inbox          3  │                                          │                                 
    ◉ Today          1  │                                          │                                 
    ◷ Upcoming       6  │                                          │                                 
    ▦ Calendar          │                                          │                                 
    ✎ Notes             │                                          │                                 
    ⌕ Search        ^K  │                                          │                                 
+   ✓ Archive        0  │                                          │                                 
                        │                                          │                                 
   SPACES               │                                          │                                 
    ● work           4  │                                          │                                 
@@ -26,7 +27,6 @@ expression: buffer_to_text(&buf)
    ⚑ High priority  2  │                                          │                                 
    ★ Starred        0  │                                          │                                 
    ◷ Overdue        7  │                                          │                                 
-                       │                                          │                                 
                        │                                          │                                 
  ╭───────────────────╮ │                                          │                                 
  │  Y  you           │ │                                          │                                 

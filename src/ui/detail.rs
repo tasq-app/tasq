@@ -713,6 +713,53 @@ pub fn render_checklist_prompt(frame: &mut Frame, screen: Rect, app: &App) {
     p.text(0, "Enter add · paste a list · Esc done", bg.fg(theme.dim));
 }
 
+/// "Every step is done — is the task?": a small box over everything, `y`
+/// or `Enter` marks it done, any other key leaves it.
+pub fn render_confirm_done(frame: &mut Frame, screen: Rect, app: &App, abs: usize) {
+    let theme = app.theme();
+    let title = app
+        .tasks()
+        .get(abs)
+        .map(|t| crate::todo::body_only(&t.raw))
+        .unwrap_or_default();
+    let w = 52.min(screen.width.saturating_sub(4));
+    let r = Rect {
+        x: screen.x + (screen.width.saturating_sub(w)) / 2,
+        y: screen.y + screen.height.saturating_sub(7) / 2,
+        width: w,
+        height: 6.min(screen.height),
+    };
+    frame.render_widget(ratatui::widgets::Clear, r);
+    let block = ratatui::widgets::Block::bordered()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_style(Style::default().fg(theme.accent))
+        .style(Style::default().bg(theme.panel));
+    let inner = block.inner(r);
+    frame.render_widget(block, r);
+    let lines = vec![
+        ratatui::text::Line::styled(
+            "Every step is done.",
+            Style::default().fg(theme.ok).add_modifier(Modifier::BOLD),
+        ),
+        ratatui::text::Line::styled(
+            fit(
+                &format!("Mark \u{201c}{title}\u{201d} done too?"),
+                usize::from(inner.width),
+            ),
+            Style::default().fg(theme.fg),
+        ),
+        ratatui::text::Line::raw(""),
+        ratatui::text::Line::styled(
+            "y / Enter  done · any other key  not yet",
+            Style::default().fg(theme.dim),
+        ),
+    ];
+    frame.render_widget(
+        ratatui::widgets::Paragraph::new(lines).style(Style::default().bg(theme.panel)),
+        inner,
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
