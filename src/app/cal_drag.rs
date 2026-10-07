@@ -56,6 +56,9 @@ pub struct CalDrag {
     pub grab: i64,
     /// Where it would land: day, start, length.
     pub target: Option<(NaiveDate, u32, u32)>,
+    /// It was already selected when pressed: let go without moving, it
+    /// opens.
+    pub was_selected: bool,
 }
 
 impl App {
@@ -71,15 +74,7 @@ impl App {
     /// A press on a block (`resize`: on its bottom edge): it's selected,
     /// and dragging starts.
     pub fn cal_press(&mut self, occ: Occurrence, resize: bool, x: u16, y: u16) {
-        if let Some(c) = self.calendar.as_mut() {
-            c.date = occ.date;
-        }
-        let items = self.cal_day_items();
-        if let Some(i) = items.iter().position(|o| *o == occ)
-            && let Some(c) = self.calendar.as_mut()
-        {
-            c.selected = i;
-        }
+        let was_selected = self.cal_select_occ(&occ);
         let grab = match (self.cal_col_at(x), occ.start) {
             (Some(col), Some(s)) => i64::from(col.minutes_at(y)) - i64::from(s),
             _ => 0,
@@ -89,7 +84,30 @@ impl App {
             resize,
             grab,
             target: None,
+            was_selected,
         });
+    }
+
+    /// Select the occurrence `occ` (its day, and it in the day). Returns
+    /// whether it was selected already.
+    pub fn cal_select_occ(&mut self, occ: &Occurrence) -> bool {
+        let same = |a: &Occurrence, b: &Occurrence| {
+            a.abs == b.abs && a.origin == b.origin && a.projected == b.projected
+        };
+        let was = self.cal_selected().is_some_and(|s| same(&s, occ));
+        if let Some(c) = self.calendar.as_mut()
+            && c.date != occ.date
+            && !(was && occ.span > 1)
+        {
+            c.date = occ.date;
+        }
+        let items = self.cal_day_items();
+        if let Some(i) = items.iter().position(|o| same(o, occ))
+            && let Some(c) = self.calendar.as_mut()
+        {
+            c.selected = i;
+        }
+        was
     }
 
     /// The pointer dragged to `(x, y)`: where the block would land.
@@ -134,6 +152,10 @@ impl App {
             return;
         };
         let Some((date, start, minutes)) = drag.target else {
+            // A click, not a drag, on the selected block: edit it.
+            if drag.was_selected {
+                self.cal_edit();
+            }
             return;
         };
         let op = if drag.resize {

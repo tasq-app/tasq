@@ -38,6 +38,11 @@ pub enum Hit {
     /// A block in the calendar's time grid, and whether it's its bottom
     /// edge (to drag its length).
     CalBlock(Box<crate::core::calendar::Occurrence>, bool),
+    /// An all-day item in the calendar (a band across days, a chip): a
+    /// click selects it, a second one edits it.
+    CalItem(Box<crate::core::calendar::Occurrence>),
+    /// A day in the month: a click selects it, a second one opens it.
+    CalDay(chrono::NaiveDate),
     /// A result in the Search screen.
     SearchRow(usize),
     /// An option in the "+ filter" popover.
@@ -212,6 +217,21 @@ impl App {
                 }
             }
             Hit::CalBlock(occ, edge) => self.cal_press(*occ, edge, x, y),
+            Hit::CalItem(occ) => {
+                if self.cal_select_occ(&occ) {
+                    self.cal_edit();
+                }
+            }
+            Hit::CalDay(date) => {
+                let again = self.calendar.as_ref().is_some_and(|c| c.date == date);
+                if let Some(c) = self.calendar.as_mut() {
+                    c.date = date;
+                    c.selected = 0;
+                }
+                if again {
+                    self.cal_edit();
+                }
+            }
         }
         None
     }
@@ -334,5 +354,45 @@ mod tests {
         app.click(x, y);
         assert_eq!(app.mode, crate::app::Mode::Normal);
         assert_eq!(app.cur_abs(), Some(1));
+    }
+
+    #[test]
+    fn all_day_items_in_the_calendar_answer_a_click() {
+        use crate::app::{CalView, Mode};
+        // Today is 2026-05-06, a wednesday.
+        let raw = "Trip event:1 plan:2026-05-07 end:2026-05-09\nGym plan:2026-05-06 at:07:00\nCall plan:2026-05-07 at:10:00\n";
+        for view in [CalView::Week, CalView::Day] {
+            let mut app = build_app(raw);
+            app.open_cal(view);
+            if view == CalView::Day {
+                // Something else selected first: the call.
+                app.cal_move(1);
+                app.cal_select(true);
+            }
+            let mut term = Terminal::new(TestBackend::new(140, 40)).unwrap();
+            term.draw(|f| crate::ui::draw(f, &app)).unwrap();
+            let (x, y) = find(&term, "Trip");
+            // First click: selected (with its day).
+            app.click(x, y);
+            assert_eq!(app.cal_selected().unwrap().abs, 0, "{view:?}");
+            assert_eq!(app.mode, Mode::Normal);
+            // Keys now act on it; a second click edits it.
+            term.draw(|f| crate::ui::draw(f, &app)).unwrap();
+            app.click(x, y);
+            assert_eq!(app.mode, Mode::Insert, "{view:?}");
+            assert_eq!(app.selection.editing(), Some(0), "{view:?}");
+        }
+
+        // The month: a click on a day selects it.
+        let mut app = build_app(raw);
+        app.open_cal(CalView::Month);
+        let mut term = Terminal::new(TestBackend::new(140, 40)).unwrap();
+        term.draw(|f| crate::ui::draw(f, &app)).unwrap();
+        let (x, y) = find(&term, " 20 ");
+        app.click(x, y);
+        assert_eq!(
+            app.calendar.as_ref().unwrap().date.to_string(),
+            "2026-05-20"
+        );
     }
 }

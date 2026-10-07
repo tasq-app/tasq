@@ -325,6 +325,15 @@ fn draw_bands(
         let text = fit(&format!("{left}{prefix}{name}"), inner);
         let text = format!("{text:<inner$}{tail}");
         put(buf, x, y + b.row as u16, &text, w, style);
+        app.hits.add(
+            Rect {
+                x,
+                y: y + b.row as u16,
+                width: w,
+                height: 1,
+            },
+            crate::app::Hit::CalItem(Box::new(o.clone())),
+        );
     }
     for c in 0..cols {
         let n = hidden(c);
@@ -523,6 +532,15 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
                     .add_modifier(Modifier::CROSSED_OUT);
             }
             put(buf, x, y, &fit(&text, usize::from(w)), w, style);
+            app.hits.add(
+                Rect {
+                    x,
+                    y,
+                    width: w,
+                    height: 1,
+                },
+                crate::app::Hit::CalItem(Box::new(o.clone())),
+            );
             x += w + 1;
         }
         y += 1;
@@ -1525,6 +1543,7 @@ fn month(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
             if cell.bottom() > r.bottom() {
                 continue;
             }
+            app.hits.add(cell, crate::app::Hit::CalDay(d));
             let in_month = d.month() == first.month();
             let sel = d == cal.date;
             if sel && let Some(bg) = tint(theme.accent, theme.bg, 0.10) {

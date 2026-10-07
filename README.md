@@ -745,9 +745,12 @@ move the selected block half an hour later / earlier and `H` / `L` a day
 back / forward, `E` makes it an event (or a task again), `t` goes to today
 and `Esc` back to the list.
 
-With the mouse, drag a block to another time (or, in the week, another
-day): a dashed ghost shows where it would land and at what time, and
-letting go moves it there. Drag its bottom edge to make it longer or
+With the mouse, a click selects anything in the calendar — a block, an
+all-day task or event, a bar across days, a day of the month — so the
+keys (`e`, `D`, `E`, `x`…) act on it, and a second click opens it. Drag a
+block to another time (or, in the week, another day): a dashed ghost
+shows where it would land and at what time, and letting go moves it
+there. Drag its bottom edge to make it longer or
 shorter. Times snap to a quarter of an hour.
 
 Changing one occurrence of a repeating task (editing, moving, deleting,
