@@ -42,6 +42,7 @@ mod search_all;
 mod selection;
 mod settings;
 mod sidebar;
+mod space_ask;
 mod toast;
 mod trash;
 mod types;
@@ -85,6 +86,7 @@ pub use search_all::{Found, FoundRow, SearchAll};
 pub use selection::Selection;
 pub use settings::{SECTIONS as SETTINGS_SECTIONS, SetKey, SetRow, SettingsState};
 pub use sidebar::{NavItem, NavRow, SIDEBAR_SLIDE, SIDEBAR_W};
+pub use space_ask::SpaceAsk;
 pub use toast::{Toast, ToastKind, Toasts};
 pub use trash::TrashScreen;
 pub use types::{
@@ -177,6 +179,10 @@ pub struct App {
     pub notes_screen: Option<NotesScreen>,
     /// A space's colour picker (`c` on a space).
     pub color_pick: Option<ColorPick>,
+    /// A space waiting for "delete it?".
+    pub space_ask: Option<SpaceAsk>,
+    /// The spaces tasks had after the last change, to notice one emptied.
+    pub spaces_in_use: Option<std::collections::BTreeSet<String>>,
     /// A change to a repeating task asking "only this one?".
     pub series_ask: Option<SeriesAsk>,
     /// The calendar's day columns as last drawn, for the mouse.
@@ -372,6 +378,8 @@ impl App {
             home_bar: std::cell::Cell::new(None),
             notes_screen: None,
             color_pick: None,
+            space_ask: None,
+            spaces_in_use: None,
             series_ask: None,
             cal_cols: std::cell::RefCell::new(Vec::new()),
             cal_drag: None,
@@ -420,6 +428,7 @@ impl App {
             week_start: WeekStart::Sunday,
         };
         app.recompute_visible();
+        app.spaces_in_use = Some(app.spaces_used());
         app
     }
 
@@ -435,6 +444,7 @@ impl App {
         self.file_path = file_path;
         self.cursor = 0;
         self.recompute_visible();
+        self.spaces_in_use = Some(self.spaces_used());
     }
 
     /// Idempotent: bind the capture server on first call, then store
@@ -809,6 +819,7 @@ impl App {
     pub(crate) fn after_mutation(&mut self, follow_abs: usize) {
         self.recompute_visible();
         self.follow_cursor(follow_abs);
+        self.notice_emptied_space();
     }
 
     /// Handle a store reconcile that reloaded the file from disk: reset
