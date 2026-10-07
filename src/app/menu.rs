@@ -49,6 +49,7 @@ pub fn entries(p: MenuPage) -> Vec<MenuEntry> {
             act('r', "reschedule", Action::Reschedule),
             act('p', "priority", Action::CyclePriority),
             act('*', "star", Action::ToggleStar),
+            act('E', "event / task", Action::ToggleEvent),
             page('g', "go to…", MenuPage::Go),
             act('f', "filter…", Action::OpenFilters),
             act('X', "clear filters", Action::ClearFilters),

@@ -465,6 +465,14 @@ fn handle_mouse(app: &mut App, m: crossterm::event::MouseEvent) -> bool {
             app.drag_details_to(m.column);
             None
         }
+        MouseEventKind::Drag(MouseButton::Left) if app.cal_drag.is_some() => {
+            app.cal_drag_to(m.column, m.row);
+            None
+        }
+        MouseEventKind::Up(MouseButton::Left) if app.cal_drag.is_some() => {
+            app.cal_drop();
+            None
+        }
         MouseEventKind::Up(MouseButton::Left) => {
             if app.resizing {
                 app.resizing = false;
@@ -571,6 +579,15 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     // A space's colour picker takes every key while it's open.
     if app.color_pick.is_some() {
         handle_color_pick(app, key);
+        return;
+    }
+    // "Only this one, or this and the ones after?" takes the next key.
+    if app.series_ask.is_some() {
+        match key.code {
+            KeyCode::Char('o' | '1') => app.series_answer(true),
+            KeyCode::Char('f' | 'a' | '2') => app.series_answer(false),
+            _ => app.series_ask = None,
+        }
         return;
     }
     // "All its steps are done — is the task?" takes the next key.
@@ -1054,6 +1071,12 @@ fn handle_calendar(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Char('>') | KeyCode::PageDown => app.cal_page(true),
         KeyCode::Enter | KeyCode::Char('e') => app.cal_edit(),
         KeyCode::Char('x') => app.cal_complete(),
+        KeyCode::Char('D') | KeyCode::Delete | KeyCode::Backspace => app.cal_delete(),
+        KeyCode::Char('E') => {
+            if let Some(abs) = app.calendar_or_list_abs() {
+                app.toggle_event(abs);
+            }
+        }
         KeyCode::Char('r') => app.cal_reschedule(),
         KeyCode::Char('n') => app.cal_new(),
         KeyCode::Char('J') => app.cal_shift_time(30),
@@ -2378,6 +2401,7 @@ fn apply_action(app: &mut App, action: Action) {
             | Action::BeginEditInsert
             | Action::CyclePriority
             | Action::ToggleStar
+            | Action::ToggleEvent
             | Action::MoveTaskDown
             | Action::MoveTaskUp
             | Action::ToggleVisual
@@ -2458,6 +2482,11 @@ fn apply_action(app: &mut App, action: Action) {
         Action::ToggleStar => {
             if let Some(abs) = app.cur_abs() {
                 app.toggle_star(abs);
+            }
+        }
+        Action::ToggleEvent => {
+            if let Some(abs) = app.calendar_or_list_abs() {
+                app.toggle_event(abs);
             }
         }
         Action::MoveTaskDown => app.move_tasks(true),

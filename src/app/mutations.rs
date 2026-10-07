@@ -44,7 +44,39 @@ impl App {
         (!out.is_empty()).then_some(out)
     }
 
+    /// Make task `abs` an event, or a task again.
+    pub fn toggle_event(&mut self, abs: usize) {
+        use crate::core::series::{self, EVENT_KEY};
+        let Some(t) = self.store.tasks().get(abs) else {
+            return;
+        };
+        let was = t.event;
+        let raw = series::set_kv(&t.raw, EVENT_KEY, (!was).then_some("1"));
+        match self.store.edit_line(abs, &raw) {
+            EditOutcome::Saved { abs } => {
+                self.after_mutation(abs);
+                self.flash(if was {
+                    "a task again"
+                } else {
+                    "an event · not ticked off, never overdue, moves on once it's over"
+                });
+            }
+            EditOutcome::Aborted(r) => self.handle_reconcile_abort(r),
+            EditOutcome::Error(e) => self.flash(format!("couldn't save: {e}")),
+            _ => {}
+        }
+    }
+
     pub fn toggle_complete(&mut self, abs: usize) {
+        if self
+            .store
+            .tasks()
+            .get(abs)
+            .is_some_and(|t| t.event && !t.done)
+        {
+            self.flash("an event isn't ticked off · it moves on by itself once it's over");
+            return;
+        }
         match self.store.toggle_complete(abs) {
             CompleteOutcome::Completed { abs } => {
                 let title = self.task_title(abs);
@@ -476,6 +508,11 @@ impl App {
     /// the day after (so today's progress still counts them), right away,
     /// or never. Quiet: it's housekeeping, not news.
     pub fn auto_archive(&mut self) {
+        // Events that are over move on first (or end, and archive below).
+        if self.store.roll_events() > 0 {
+            self.recompute_visible();
+            self.clamp_cursor();
+        }
         let before = match self.prefs.archive_done {
             super::ArchiveWhen::Never => return,
             super::ArchiveWhen::NextDay => Some(self.store.today().to_string()),
@@ -588,6 +625,32 @@ mod tests {
         app.auto_archive();
         assert_eq!(app.tasks().len(), 1);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_event_isnt_ticked_off_and_moves_on_once_its_over() {
+        // Today is 2026-05-06, a wednesday.
+        let mut app = build_app(
+            "Algebra event:1 plan:2026-05-04 at:11:00 rec:+1w:mon,wed\n\
+             Fair event:1 plan:2026-05-01\n\
+             Trip event:1 plan:2026-05-05 end:2026-05-08\n",
+        );
+        app.toggle_complete(0);
+        assert!(!app.tasks()[0].done);
+        app.auto_archive();
+        let raws: Vec<&str> = app.tasks().iter().map(|t| t.raw.as_str()).collect();
+        // The class moves on to today; the fair is over and done; the trip
+        // is still on.
+        assert_eq!(
+            raws[0],
+            "Algebra event:1 plan:2026-05-06 at:11:00 rec:+1w:mon,wed"
+        );
+        assert!(
+            raws[1].starts_with("x 2026-05-06 ") && raws[1].contains("Fair"),
+            "{raws:?}"
+        );
+        assert_eq!(raws[2], "Trip event:1 plan:2026-05-05 end:2026-05-08");
+        assert!(app.routines().is_empty(), "an event isn't a routine");
     }
 
     #[test]

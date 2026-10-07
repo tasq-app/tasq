@@ -35,6 +35,9 @@ pub enum Hit {
     ClearFilter(FilterPart),
     /// A colour in a space's colour picker.
     Swatch(usize),
+    /// A block in the calendar's time grid, and whether it's its bottom
+    /// edge (to drag its length).
+    CalBlock(Box<crate::core::calendar::Occurrence>, bool),
 }
 
 /// Which of the active filters a chip is.
@@ -108,7 +111,13 @@ impl App {
             }
             return None;
         }
-        let hit = self.hits.at(x, y)?;
+        let Some(hit) = self.hits.at(x, y) else {
+            // Off any block in the calendar's grid: that day.
+            if self.calendar.is_some() {
+                self.cal_click_day(x, y);
+            }
+            return None;
+        };
         self.sidebar_focus = false;
         match hit {
             Hit::Nav(item) => {
@@ -153,6 +162,7 @@ impl App {
             Hit::AddFilter => return Some(Action::OpenFilters),
             Hit::ClearFilter(part) => self.clear_filter_part(part),
             Hit::Swatch(i) => self.color_pick_click(i),
+            Hit::CalBlock(occ, edge) => self.cal_press(*occ, edge, x, y),
         }
         None
     }

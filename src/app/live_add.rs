@@ -260,6 +260,10 @@ impl App {
         }
         line = format!("{}{line}", keep.done);
         for t in &keep.tags {
+            // A span typed again replaces the one the task had.
+            if det.parsed.end.is_some() && (t.starts_with("end:") || t.starts_with("event:")) {
+                continue;
+            }
             line.push(' ');
             line.push_str(t);
         }
@@ -385,7 +389,10 @@ impl App {
             .iter()
             .filter_map(|&kind| {
                 let value = match kind {
-                    FieldKind::Date => p.planned.map(short_date),
+                    FieldKind::Date => p.planned.map(|d| match p.end {
+                        Some(e) if e > d => format!("{} → {}", short_date(d), short_date(e)),
+                        _ => short_date(d),
+                    }),
                     FieldKind::Deadline => p.due.map(|d| format!("by {}", short_date(d))),
                     FieldKind::Duration => p.duration.map(crate::duration::describe),
                     FieldKind::Reminder => (!p.reminders.is_empty()).then(|| {

@@ -736,12 +736,34 @@ tinted in its space's colour; tasks with a date but no time sit in the
 selected task and the free gaps of the day. Future repeats show too, with
 a dashed edge and ↻. The tabs on top switch views (`d` / `w` / `m`); in
 the day view `←` / `→` change day, `↑` / `↓` select, `Enter` edits, `x`
-completes, `n` adds a task on that day, `J` / `K` move the selected block
-half an hour later / earlier and `H` / `L` a day back / forward, `t` goes
-to today and `Esc` back to the list.
+completes, `D` (or Delete) deletes, `n` adds a task on that day, `J` / `K`
+move the selected block half an hour later / earlier and `H` / `L` a day
+back / forward, `E` makes it an event (or a task again), `t` goes to today
+and `Esc` back to the list.
+
+With the mouse, drag a block to another time (or, in the week, another
+day): a dashed ghost shows where it would land and at what time, and
+letting go moves it there. Drag its bottom edge to make it longer or
+shorter. Times snap to a quarter of an hour.
+
+Changing one occurrence of a repeating task (editing, moving, deleting,
+dragging) asks first: `o` only this one, which becomes a task of its own
+while the series skips that day (`skip:`), or `f` this one and the ones
+after, which ends the series the day before (`until:`) and starts a new
+one from there.
+
+**Events.** A class, a holiday, an exam week: an event (`event:1`, a ◆
+instead of the box) isn't ticked off, never shows as overdue and doesn't
+count as a routine; once it's over it moves on to its next date, or out
+of the way when it doesn't repeat. Make one from any task (or turn a
+class routine into one) with `E` in the calendar, or *event / task* in
+the menu (`space`) and the command palette. "Christmas from dec 22 to
+jan 7" in the add dialog makes an event of several days (`end:`), drawn
+as one bar across the days in the week and the month.
 
 `5` shows the week: seven columns of the same blocks, today's column lit,
-an all-day row on top. `←` / `→` move the selected day, `<` / `>` the
+the all-day rows on top (something lasting several days is one bar across
+them). `←` / `→` move the selected day, `<` / `>` the
 week, and `v` switches to an agenda (each day a heading with its tasks
 below), which is also what narrow terminals get.
 
@@ -749,7 +771,7 @@ below), which is also what narrow terminals get.
 task in its colour (red for deadlines), and the selected day's tasks
 below the grid. `←` / `→` move a day, `↑` / `↓` a week, `<` / `>` the
 month, `Enter` opens the day, and `v` switches to the titles of each
-day's tasks inside the cells.
+day's tasks inside the cells, several-day events as bars across the week.
 
 **Spaces.** A task's `+project` is its space, and `/` nests it:
 `+Uni/Exams`. Filtering by `Uni` shows Uni's and its sub-spaces' tasks; the

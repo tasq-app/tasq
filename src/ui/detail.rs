@@ -771,6 +771,74 @@ fn wrap_input(text: &str, cursor: usize, width: usize) -> Vec<(String, Option<us
 
 /// "Every step is done — is the task?": a small box over everything, `y`
 /// or `Enter` marks it done, any other key leaves it.
+/// "Only this one, or this and the ones after?" for a change to a
+/// repeating task.
+pub fn render_series_ask(frame: &mut Frame, screen: Rect, app: &App, ask: &crate::app::SeriesAsk) {
+    use crate::app::SeriesOp;
+    let theme = app.theme();
+    let title = app
+        .tasks()
+        .get(ask.occ.abs)
+        .map(|t| crate::todo::body_only(&t.raw))
+        .unwrap_or_default();
+    let verb = match ask.op {
+        SeriesOp::Edit => "Edit",
+        SeriesOp::Delete => "Delete",
+        SeriesOp::Resize(_) => "Change the length of",
+        _ => "Move",
+    };
+    let day = ask
+        .occ
+        .origin
+        .format("%a %-d %b")
+        .to_string()
+        .to_lowercase();
+    let w = 56.min(screen.width.saturating_sub(4));
+    let r = Rect {
+        x: screen.x + (screen.width.saturating_sub(w)) / 2,
+        y: screen.y + screen.height.saturating_sub(8) / 2,
+        width: w,
+        height: 7.min(screen.height),
+    };
+    frame.render_widget(ratatui::widgets::Clear, r);
+    let block = ratatui::widgets::Block::bordered()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_style(Style::default().fg(theme.accent))
+        .style(Style::default().bg(theme.panel));
+    let inner = block.inner(r);
+    frame.render_widget(block, r);
+    let key = |k: &'static str| {
+        ratatui::text::Span::styled(
+            k,
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        )
+    };
+    let text = |t: String| ratatui::text::Span::styled(t, Style::default().fg(theme.fg));
+    let lines = vec![
+        ratatui::text::Line::styled(
+            fit(
+                &format!("{verb} \u{201c}{title}\u{201d}"),
+                usize::from(inner.width),
+            ),
+            Style::default().fg(theme.fg).add_modifier(Modifier::BOLD),
+        ),
+        ratatui::text::Line::styled("It repeats.", Style::default().fg(theme.dim)),
+        ratatui::text::Line::raw(""),
+        ratatui::text::Line::from(vec![key("o "), text(format!("only this one ({day})"))]),
+        ratatui::text::Line::from(vec![
+            key("f "),
+            text("this one and the ones after".into()),
+            ratatui::text::Span::styled("   Esc cancel", Style::default().fg(theme.dim)),
+        ]),
+    ];
+    frame.render_widget(
+        ratatui::widgets::Paragraph::new(lines).style(Style::default().bg(theme.panel)),
+        inner,
+    );
+}
+
 pub fn render_confirm_done(frame: &mut Frame, screen: Rect, app: &App, abs: usize) {
     let theme = app.theme();
     let title = app

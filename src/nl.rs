@@ -29,6 +29,9 @@ pub struct ParsedNl {
     pub due: Option<NaiveDate>,
     /// When you plan to do it: "on friday", "tomorrow".
     pub planned: Option<NaiveDate>,
+    /// The last day of something lasting several days: "from dec 22 to
+    /// jan 7" (`end:`). It makes an event.
+    pub end: Option<NaiveDate>,
     /// How long it takes, in minutes: "for 1h".
     pub duration: Option<u32>,
     /// Reminders, in minutes before its time: "remind me 15 min before".
@@ -161,6 +164,7 @@ fn detect_once(text: &str, today: NaiveDate, blocked: &[bool], spaces: &[String]
     pass_threshold(&mut scratch, &mut parsed);
     let weekday_hint = pass_recurrence(&mut scratch, &mut parsed);
     pass_repeat_end(&mut scratch, &mut parsed, today);
+    pass_span(&mut scratch, &mut parsed, today);
     pass_date(&mut scratch, &mut parsed, today, weekday_hint);
     pass_project_context(&mut scratch, &mut parsed);
     pass_priority(&mut scratch, &mut parsed);
@@ -275,6 +279,11 @@ pub fn format_as_todo_txt(p: &ParsedNl) -> String {
     if let Some(d) = p.due {
         out.push_str(" due:");
         out.push_str(&d.format("%Y-%m-%d").to_string());
+    }
+    if let Some(d) = p.end.filter(|e| p.planned.is_some_and(|s| *e > s)) {
+        out.push_str(" end:");
+        out.push_str(&d.format("%Y-%m-%d").to_string());
+        out.push_str(" event:1");
     }
     if let Some(r) = &p.rec {
         out.push_str(" rec:");
@@ -1448,6 +1457,53 @@ fn pass_date(
     }
 }
 
+/// "from dec 22 to jan 7", "from monday until friday": the first day is
+/// when it's planned, the last its `end:` (a year on when it would come
+/// first: "from dec 22 to jan 7" crosses new year).
+fn pass_span(scratch: &mut Scratch, p: &mut ParsedNl, today: NaiveDate) {
+    let words = scratch.word_cache.clone();
+    for i in 0..words.len() {
+        if p.planned.is_some() {
+            return;
+        }
+        if !scratch.is_live(words[i].0, words[i].1) || scratch.word_lc(words[i]) != "from" {
+            continue;
+        }
+        let Some((first, n1)) = (i + 1 < words.len())
+            .then(|| match_date_at(scratch, &words, i + 1, today))
+            .flatten()
+        else {
+            continue;
+        };
+        let j = i + 1 + n1;
+        if j + 1 >= words.len()
+            || !scratch.is_live(words[j].0, words[j].1)
+            || !matches!(
+                scratch.word_lc(words[j]),
+                "to" | "until" | "till" | "through" | "-"
+            )
+        {
+            continue;
+        }
+        let Some((mut last, n2)) = match_date_at(scratch, &words, j + 1, today) else {
+            continue;
+        };
+        while last < first {
+            let Some(next) = last.checked_add_months(Months::new(12)) else {
+                break;
+            };
+            last = next;
+        }
+        scratch.kind = Some(FieldKind::Date);
+        scratch.mark(words[i].0, words[j + n2].1);
+        p.planned = Some(first);
+        if last > first {
+            p.end = Some(last);
+        }
+        return;
+    }
+}
+
 /// First day of a weekly rule on given weekdays (`+1w:fri,sat,sun`) after
 /// `today`; `None` for any other rule.
 pub fn first_rec_day(rec: &str, today: NaiveDate) -> Option<NaiveDate> {
@@ -2093,6 +2149,28 @@ mod tests {
             format_as_todo_txt(&space("study tomorrow in exam")),
             "study +Uni/Exámenes plan:2026-10-04"
         );
+    }
+
+    #[test]
+    fn from_one_day_to_another_is_an_event_of_several_days() {
+        let today = d("2026-10-03");
+        let p = detect("Christmas from dec 22 to jan 7", today, &[]).parsed;
+        assert_eq!(p.planned, Some(d("2026-12-22")));
+        assert_eq!(p.end, Some(d("2027-01-07")));
+        assert_eq!(p.body, "Christmas");
+        assert_eq!(
+            format_as_todo_txt(&p),
+            "Christmas plan:2026-12-22 end:2027-01-07 event:1"
+        );
+        let p = detect("exams from monday until friday", today, &[]).parsed;
+        assert_eq!(
+            (p.planned, p.end),
+            (Some(d("2026-10-05")), Some(d("2026-10-09")))
+        );
+        // Not a span: just words.
+        let p = detect("call from the office", today, &[]).parsed;
+        assert_eq!(p.end, None);
+        assert_eq!(p.body, "call from the office");
     }
 
     #[test]

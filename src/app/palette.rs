@@ -94,6 +94,11 @@ pub const ENTRIES: &[PaletteEntry] = &[
         dispatch: PaletteDispatch::Global(Action::ToggleStar),
     },
     PaletteEntry {
+        label: "event / task (an event isn't ticked off)",
+        keys: "",
+        dispatch: PaletteDispatch::Global(Action::ToggleEvent),
+    },
+    PaletteEntry {
         label: "move task down",
         keys: "J",
         dispatch: PaletteDispatch::Global(Action::MoveTaskDown),
@@ -793,6 +798,7 @@ mod tests {
             Action::Delete,
             Action::CyclePriority,
             Action::ToggleStar,
+            Action::ToggleEvent,
             Action::MoveTaskDown,
             Action::MoveTaskUp,
             Action::BeginSearch,

@@ -80,7 +80,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     {
         match cal.view {
             crate::app::CalView::Day => {
-                "↑↓ task · ←→ day · Enter edit · x done · n new · J/K move · Esc list"
+                "↑↓ task · ←→ day · Enter edit · x done · D delete · n new · J/K move · Esc list"
             }
             crate::app::CalView::Week => {
                 "←→ day · ↑↓ task · < > week · v blocks/agenda · Enter edit · n new · Esc list"

@@ -83,6 +83,9 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
     }
     if task.done {
         spans.push(Span::styled("■ ", Style::default().fg(theme.ok)));
+    } else if task.event {
+        // An event isn't ticked off: a diamond, not a box.
+        spans.push(Span::styled("◆ ", Style::default().fg(theme.accent)));
     } else {
         spans.push(Span::styled(
             "☐ ",
@@ -144,6 +147,7 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
         if is_hidden_kv(token, opts.hidden_keys)
             || is_star_token(token)
             || is_main_note_token(token)
+            || is_series_token(token)
             || is_chip_token(token)
         {
             // Drop the separator we just emitted for this token...
@@ -276,6 +280,15 @@ fn push_token_spans<'a>(
     }
 }
 
+/// `event:`, `end:` and `skip:`: the diamond, the date chip and the
+/// calendar say what they mean.
+fn is_series_token(token: &str) -> bool {
+    use crate::core::series::{END_KEY, EVENT_KEY, SKIP_KEY};
+    token
+        .split_once(':')
+        .is_some_and(|(k, v)| !v.is_empty() && [EVENT_KEY, END_KEY, SKIP_KEY].contains(&k))
+}
+
 /// `main:<file>`, the task's main note: bookkeeping, never shown.
 fn is_main_note_token(token: &str) -> bool {
     token
@@ -370,12 +383,21 @@ fn push_chips<'a>(spans: &mut Vec<Span<'a>>, task: &Task, opts: RowOpts<'a>, the
     let late = task
         .planned
         .as_deref()
-        .filter(|p| !done && *p < opts.today && shown("plan"));
+        .filter(|p| !done && !task.event && *p < opts.today && shown("plan"));
     let mut when: Vec<String> = Vec::new();
     if let Some(p) = task.planned.as_deref().filter(|_| shown("plan")) {
         // Inside Today, "today" goes without saying.
-        if late.is_none() && !(opts.in_today && p == opts.today) {
-            when.push(chip_date(p, opts.today));
+        match task.end.as_deref() {
+            // Several days: from → to.
+            Some(e) if e > p => when.push(format!(
+                "{} → {}",
+                chip_date(p, opts.today),
+                chip_date(e, opts.today)
+            )),
+            _ if late.is_none() && !(opts.in_today && p == opts.today) => {
+                when.push(chip_date(p, opts.today));
+            }
+            _ => {}
         }
     }
     if let Some(p) = late {
@@ -641,6 +663,16 @@ mod tests {
         let text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
         assert!(text.contains("★ Book hotel"), "{text}");
         assert!(!text.contains("star:1"), "{text}");
+    }
+
+    #[test]
+    fn an_event_has_a_diamond_and_its_days() {
+        let task = parse_line("Christmas event:1 plan:2026-12-22 end:2027-01-07").unwrap();
+        let line = build_line(&task, RowOpts::default(), &MUTED);
+        let text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
+        assert!(text.contains("◆ Christmas"), "{text}");
+        assert!(text.contains("→"), "{text}");
+        assert!(!text.contains("event:") && !text.contains("end:"), "{text}");
     }
 
     #[test]
