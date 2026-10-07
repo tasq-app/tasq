@@ -41,9 +41,9 @@ local database, notes, live natural-language capture and more, listed below.
   week ahead as a heatmap, what's next, your routines with their streaks,
   your spaces, the notes you touched last and the inbox. tasq opens on
   Today; `start = "home"` in the config opens on Home instead.
-- **Inbox**: what you capture without a space or a date (from the phone,
-  the CLI, or a quick `n`) waits in the Inbox until you sort it in: `+`
-  gives it a space, `r` a date.
+- **Inbox**: every open task without a day (from the phone, the CLI, or a
+  quick `n`), whatever space, priority or tags it has, waits in the Inbox:
+  what's left to put in the calendar. `r` gives it a day and it moves on.
 - **Routines and streaks**: a repeating task counts how many times in a
   row you've done it, and the done notice says so the moment you tick it
   (`Gym · 13 in a row`).

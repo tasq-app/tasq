@@ -6,7 +6,7 @@ expression: buffer_to_text(&buf)
   ■ tasq               │  Upcoming  wednesday 6 may               │  Review pull requests for auth  
                        │  6 tasks                                 │  refactor                       
    ⌂ Home              │   + filter            sort · priority ▾  │                                 
-   ▤ Inbox          3  │                                          │  due      tomorrow              
+   ▤ Inbox          9  │                                          │  due      tomorrow              
    ◉ Today          1  │  TOMORROW ───────────────────────────────│  space    ● work                
    ◷ Upcoming       6  │▎ ☐ ⚑ Review pull requests for auth refact│  priority ⚑ medium              
    ▦ Calendar          │  FRI 8 MAY ──────────────────────────────│  tags     @laptop               
