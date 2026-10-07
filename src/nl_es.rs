@@ -279,6 +279,28 @@ fn single(w: &str) -> Option<String> {
         .or_else(|| number(w).filter(|_| !w.starts_with(|c: char| c.is_ascii_digit())))
 }
 
+/// "3horas" → (`3`, `hours`), "1.5hours" → (`1.5`, `hours`): a number
+/// stuck to a unit spelled out. Short units ("3h", "90m") are left to the
+/// parser, which reads them already.
+fn glued(w: &str) -> Option<(String, String)> {
+    let split = w.find(|c: char| c.is_ascii_alphabetic())?;
+    let (n, u) = w.split_at(split);
+    if n.is_empty()
+        || !n
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == '.' || c == ',')
+    {
+        return None;
+    }
+    let unit = match u {
+        "hours" | "hour" | "hrs" | "hr" | "minutes" | "minute" | "mins" | "days" | "day"
+        | "weeks" | "week" | "months" | "month" => u,
+        u if u.len() >= 3 => self::unit(u)?,
+        _ => return None,
+    };
+    Some((n.replace(',', "."), unit.to_string()))
+}
+
 /// The text as the parser reads it, and where each of its tokens came from.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Shadow {
@@ -416,6 +438,13 @@ pub fn shadow(typed: &str) -> Shadow {
         if done {
             continue;
         }
+        // A number stuck to its unit: "3horas", "2hours", "45minutos".
+        if let Some((n, u)) = glued(&folded[i]) {
+            push(&mut text, &n, ws[i]);
+            push(&mut text, &format!("{u}{}", trailing_punct(raw)), ws[i]);
+            i += 1;
+            continue;
+        }
         let tok = match single(&folded[i]) {
             Some(t) => format!("{t}{}", trailing_punct(raw)),
             None => raw.to_string(),
@@ -474,6 +503,8 @@ mod tests {
                 "llamar a mamá next week",
             ),
             ("pagar +Casa este finde", "pagar +Casa this weekend"),
+            ("pan durante 3horas", "pan for 3 hours"),
+            ("pan for 2hours", "pan for 2 hours"),
         ] {
             assert_eq!(shadow(typed).text, read, "{typed}");
         }

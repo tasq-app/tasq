@@ -2688,6 +2688,12 @@ mod tests {
         assert_eq!(p.duration, Some(120));
         assert_eq!(p.reminders, [15]);
 
+        let p = det("comprar pan a las 3 durante 3horas el 15 de noviembre");
+        assert_eq!(p.body, "comprar pan");
+        assert_eq!(p.duration, Some(180));
+        assert_eq!(p.time, Some((15, 0)));
+        assert_eq!(p.planned, Some(d("2026-11-15")));
+
         let p = det("Leer dentro de 3 días");
         assert_eq!(p.planned, Some(d("2026-10-10")));
 
