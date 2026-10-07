@@ -98,6 +98,9 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
                 DialogInputMode::Insert if app.live_chip_focus().is_some() => {
                     "←/→ chips · Enter pick · x reject · Esc back to text"
                 }
+                DialogInputMode::Insert if app.live_editing() => {
+                    "edit the title or type a new date, time, +space… · Tab chips · Enter save · Esc"
+                }
                 DialogInputMode::Insert if app.live_add_active() => {
                     "type naturally: tomorrow at 6pm, every fri and sat, +project @context · Tab chips · Ctrl+Z undo · Enter add"
                 }

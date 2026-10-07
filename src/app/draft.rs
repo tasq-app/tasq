@@ -70,6 +70,9 @@ pub(crate) struct LiveState {
     pub(crate) picked: super::live_add::Picked,
     /// The space picked with ↑/↓ when "in …" matches several.
     pub(crate) space_choice: Option<String>,
+    /// Editing an existing task in the same dialog: what of its line the
+    /// dialog doesn't show, put back on save.
+    pub(crate) edit: Option<super::live_add::EditKeep>,
 }
 
 impl DraftState {
