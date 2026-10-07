@@ -277,6 +277,9 @@ pub fn draw(frame: &mut Frame, app: &App) {
     if let Some(abs) = app.confirm_done {
         detail::render_confirm_done(frame, area, app, abs);
     }
+    if let Some(ask) = &app.space_ask {
+        detail::render_space_ask(frame, area, app, ask);
+    }
     color_pick::render(frame, area, app);
     if let Some(ask) = &app.series_ask {
         detail::render_series_ask(frame, area, app, ask);

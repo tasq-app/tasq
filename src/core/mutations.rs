@@ -527,6 +527,49 @@ impl Store {
         super::spaces::color_of(path, &self.spaces)
     }
 
+    /// Take the space `path` (and the spaces inside it) off every task that
+    /// has it, then forget it: one step, one undo. Returns how many tasks
+    /// lost it.
+    pub fn remove_space(&mut self, path: &str) -> Result<usize, DeleteSpaceOutcome> {
+        match self.reconcile() {
+            Reconcile::Unchanged => {}
+            other => return Err(DeleteSpaceOutcome::Aborted(other)),
+        }
+        let inside = |tok: &str| {
+            tok.strip_prefix('+')
+                .is_some_and(|p| super::spaces::is_within(p, path))
+        };
+        let mut changed: Vec<(usize, todo::Task)> = Vec::new();
+        for (i, t) in self.tasks.iter().enumerate() {
+            if !t.raw.split_whitespace().any(inside) {
+                continue;
+            }
+            let raw: Vec<&str> = t.raw.split_whitespace().filter(|w| !inside(w)).collect();
+            match todo::parse_line(&raw.join(" ")) {
+                Ok(mut new) => {
+                    new.id = t.id.clone();
+                    changed.push((i, new));
+                }
+                Err(e) => return Err(DeleteSpaceOutcome::Error(StoreError::Parse(e))),
+            }
+        }
+        self.push_history();
+        let n = changed.len();
+        for (i, t) in changed {
+            self.tasks[i] = t;
+        }
+        if let Err(e) = self.persist() {
+            return Err(DeleteSpaceOutcome::Error(e));
+        }
+        if let Some(db) = self.db.as_mut() {
+            if let Err(e) = db.delete_space(path) {
+                return Err(DeleteSpaceOutcome::Error(StoreError::Write(e)));
+            }
+            self.refresh_spaces();
+        }
+        Ok(n)
+    }
+
     /// Forget a space the database keeps (and its sub-spaces). Only an
     /// empty one: while a live task uses it, it would come straight back.
     pub fn delete_space(&mut self, path: &str) -> DeleteSpaceOutcome {

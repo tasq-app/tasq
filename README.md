@@ -716,7 +716,7 @@ The modal keys below apply in Normal mode:
 | `f` | filter popover: type to search spaces (sub-spaces included), tags, deadlines and priority; `↑` / `↓` move, `Enter` adds the filter (or removes it, if it's on), `⌫` with nothing typed drops the last chip, `Esc` closes. With filters on, it can save them as a view or clear them all |
 | `X` | clear every filter on the list (or click a chip to take just that one off) |
 | `Tab` | list → details → sidebar; `Shift-Tab` goes straight to the sidebar |
-| `a` / `c` / `C` / `H` / `r` / `d` (sidebar, on a space) | new space inside it, colour picker, automatic colour, hide / show, rename, delete an empty one |
+| `a` / `c` / `C` / `H` / `r` / `d` (sidebar, on a space) | new space inside it, colour picker, automatic colour, hide / show, rename, delete (asks first; its tasks stay, without it) |
 | `S` | cycle sort: priority → due → file order |
 | `v` | enter visual / multi-select; `space` toggles a row |
 | `x` / `dd` (in visual) | bulk-complete / bulk-delete the selection |
@@ -796,9 +796,11 @@ sidebar draws the tree with counts that include sub-spaces. In the add
 dialog, "in exams" (or "into labs") puts the task in an existing space whose
 name — ignoring case and accents, whole or by its first letters — matches;
 the chip shows `Uni › Exams`.
-The database keeps each space once a task has used it, so a space whose
-last task is done or deleted stays in the sidebar (with a count of 0) until
-you delete it from the sidebar (`Tab` to it, then `d` on the space).
+The database keeps each space once a task has used it. When an edit
+leaves a space with no tasks (a typo like `+Practicasf` fixed on its
+task), tasq asks whether to delete it. `d` on a space in the sidebar
+deletes it any time, after asking: its tasks stay, without that space
+(one `u` brings it all back).
 Renaming a space (`r` on it in the sidebar) takes its sub-spaces along:
 `Uni` → `School` moves `Uni/Exams` to `School/Exams`.
 Each space has a colour from the theme's palette, picked from its name

@@ -839,6 +839,66 @@ pub fn render_series_ask(frame: &mut Frame, screen: Rect, app: &App, ask: &crate
     );
 }
 
+/// "Delete this space?": from `d` on it, or when an edit left it empty.
+pub fn render_space_ask(frame: &mut Frame, screen: Rect, app: &App, ask: &crate::app::SpaceAsk) {
+    let theme = app.theme();
+    let name = crate::core::spaces::display(&ask.path);
+    let w = 56.min(screen.width.saturating_sub(4));
+    let r = Rect {
+        x: screen.x + (screen.width.saturating_sub(w)) / 2,
+        y: screen.y + screen.height.saturating_sub(7) / 2,
+        width: w,
+        height: 6.min(screen.height),
+    };
+    frame.render_widget(ratatui::widgets::Clear, r);
+    let block = ratatui::widgets::Block::bordered()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_style(Style::default().fg(theme.overdue))
+        .style(Style::default().bg(theme.panel));
+    let inner = block.inner(r);
+    frame.render_widget(block, r);
+    let (head, detail) = if ask.emptied {
+        (
+            format!("{name} has nothing left."),
+            "Delete the space?".to_string(),
+        )
+    } else if ask.tasks == 0 {
+        (
+            format!("Delete the space {name}?"),
+            "It has no tasks.".to_string(),
+        )
+    } else {
+        let tasks = if ask.tasks == 1 {
+            "task stays"
+        } else {
+            "tasks stay"
+        };
+        (
+            format!("Delete the space {name}?"),
+            format!("Its {} {tasks}, without a space.", ask.tasks),
+        )
+    };
+    let lines = vec![
+        ratatui::text::Line::styled(
+            fit(&head, usize::from(inner.width)),
+            Style::default().fg(theme.fg).add_modifier(Modifier::BOLD),
+        ),
+        ratatui::text::Line::styled(
+            fit(&detail, usize::from(inner.width)),
+            Style::default().fg(theme.dim),
+        ),
+        ratatui::text::Line::raw(""),
+        ratatui::text::Line::styled(
+            "y / Enter  delete · any other key  keep it",
+            Style::default().fg(theme.dim),
+        ),
+    ];
+    frame.render_widget(
+        ratatui::widgets::Paragraph::new(lines).style(Style::default().bg(theme.panel)),
+        inner,
+    );
+}
+
 pub fn render_confirm_done(frame: &mut Frame, screen: Rect, app: &App, abs: usize) {
     let theme = app.theme();
     let title = app

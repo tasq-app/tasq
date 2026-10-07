@@ -9,9 +9,8 @@ use super::types::{AddOutcome, Mode, Sort};
 use crate::app::WeekStart;
 use crate::core::AddOutcome as CoreAdd;
 use crate::core::{
-    ArchiveDeleteOutcome, ArchiveOutcome, CompleteOutcome, DeleteOutcome, DeleteSpaceOutcome,
-    EditOutcome, MoveOutcome, PriorityOutcome, RenameOutcome, SpaceSettingOutcome, TagOutcome,
-    UnarchiveOutcome, UndoOutcome,
+    ArchiveDeleteOutcome, ArchiveOutcome, CompleteOutcome, DeleteOutcome, EditOutcome, MoveOutcome,
+    PriorityOutcome, RenameOutcome, SpaceSettingOutcome, TagOutcome, UnarchiveOutcome, UndoOutcome,
 };
 use crate::nl;
 use crate::todo::Task;
@@ -424,31 +423,6 @@ impl App {
     }
 
     /// Forget the space the picker is on, if no task uses it any more.
-    pub fn delete_current_space(&mut self) {
-        let Some(path) = self.filter.project.clone() else {
-            return;
-        };
-        let name = crate::core::spaces::display(&path);
-        match self.store.delete_space(&path) {
-            DeleteSpaceOutcome::Deleted => {
-                self.flash(format!("space {name} removed"));
-                self.filter.project = None;
-                self.mode = Mode::Normal;
-                self.cursor = 0;
-                self.recompute_visible();
-            }
-            DeleteSpaceOutcome::InUse(n) => {
-                let tasks = if n == 1 { "task" } else { "tasks" };
-                self.flash(format!("{name} still has {n} {tasks}"));
-            }
-            DeleteSpaceOutcome::NotKept => {
-                self.flash("a space goes away with its last task in todo.txt");
-            }
-            DeleteSpaceOutcome::Aborted(r) => self.handle_reconcile_abort(r),
-            DeleteSpaceOutcome::Error(e) => self.flash(format!("delete failed: {e}")),
-        }
-    }
-
     pub fn rename_current_context_as(&mut self, new_name: &str) {
         let Some(name) = self.filter.context.clone() else {
             return;

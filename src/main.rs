@@ -590,6 +590,15 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         }
         return;
     }
+    // "Delete this space?" takes the next key.
+    if app.space_ask.is_some() {
+        if matches!(key.code, KeyCode::Char('y' | 's') | KeyCode::Enter) {
+            app.confirm_delete_space();
+        } else {
+            app.space_ask = None;
+        }
+        return;
+    }
     // "All its steps are done — is the task?" takes the next key.
     if let Some(abs) = app.confirm_done.take() {
         if matches!(key.code, KeyCode::Char('y' | 's') | KeyCode::Enter) {
@@ -1031,7 +1040,7 @@ fn handle_sidebar(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
                 'H' => app.toggle_current_space_hidden(),
                 'r' => app.begin_rename_project(),
                 'a' => app.begin_new_space(),
-                _ => app.delete_current_space(),
+                _ => app.begin_delete_space(),
             }
             // A deleted space leaves the cursor past the end.
             let last = app.sidebar_rows().len().saturating_sub(1);
@@ -2069,7 +2078,7 @@ fn handle_pick(app: &mut App, key: KeyEvent) {
             Mode::PickContext => app.begin_rename_context(),
             _ => {}
         },
-        KeyCode::Char('d') if app.mode == Mode::PickProject => app.delete_current_space(),
+        KeyCode::Char('d') if app.mode == Mode::PickProject => app.begin_delete_space(),
         KeyCode::Char('h') if app.mode == Mode::PickProject => app.toggle_current_space_hidden(),
         KeyCode::Char('c') if app.mode == Mode::PickProject => app.open_color_pick(),
         KeyCode::Char('C') if app.mode == Mode::PickProject => app.reset_current_space_color(),
