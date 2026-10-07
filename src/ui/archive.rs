@@ -5,31 +5,48 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 
 use crate::app::{App, GroupKey, Mode, View};
-use crate::ui::{header, keep_cursor_visible, task_row};
+use crate::ui::{keep_cursor_visible, task_row};
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let theme = app.theme();
     let space_color = |p: &str| app.space_color(p);
     super::fill_bg(frame, area, Style::default().bg(theme.bg));
 
-    let [header_area, _sp, body_area] = Layout::vertical([
+    let [header_area, info_area, _sp, body_area] = Layout::vertical([
+        Constraint::Length(1),
         Constraint::Length(1),
         Constraint::Length(1),
         Constraint::Min(1),
     ])
     .areas(area);
 
-    header::render(
-        frame,
+    // Like a list's title block: the name, then what's in it.
+    let pad = Span::raw("  ");
+    frame.render_widget(
+        Paragraph::new(Line::from(vec![
+            pad.clone(),
+            Span::styled(
+                "Archive",
+                Style::default().fg(theme.fg).add_modifier(Modifier::BOLD),
+            ),
+        ]))
+        .style(Style::default().bg(theme.bg)),
         header_area,
-        theme,
-        header::HeaderProps {
-            title: Some("done.txt"),
-            // file: "completed",
-            count: app.archive().len(),
-            sort: "completion-date",
-            filter: None,
-        },
+    );
+    let n = app.archive().len();
+    frame.render_widget(
+        Paragraph::new(Line::from(vec![
+            pad,
+            Span::styled(
+                format!(
+                    "{n} done {} · x brings one back · dd deletes · a back to the list",
+                    if n == 1 { "task" } else { "tasks" }
+                ),
+                Style::default().fg(theme.dim),
+            ),
+        ]))
+        .style(Style::default().bg(theme.bg)),
+        info_area,
     );
 
     let visible = app.visible_indices();

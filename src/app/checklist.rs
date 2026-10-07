@@ -275,15 +275,20 @@ impl App {
                 Some(item.text),
                 title.to_lowercase(),
             );
-            // The last box ticked: the task is done too (a setting).
+            // The last box ticked: the task may be done too (a setting:
+            // ask, always, never).
             if done
-                && self.prefs.checklist_completes
+                && self.prefs.checklist_done != super::AutoDone::Never
                 && let Some(t) = self.cur_task().cloned()
                 && !t.done
                 && self.task_notes(&t).progress().is_some_and(|(d, n)| d == n)
                 && let Some(abs) = self.cur_abs()
             {
-                self.toggle_complete(abs);
+                if self.prefs.checklist_done == super::AutoDone::Always {
+                    self.toggle_complete(abs);
+                } else {
+                    self.confirm_done = Some(abs);
+                }
             }
         }
     }
@@ -509,6 +514,14 @@ mod tests {
         app.inspector_toggle();
         assert!(!app.tasks()[0].done, "one box left");
         app.inspector_cursor = 1;
+        app.inspector_toggle();
+        // By default it asks first.
+        assert!(!app.tasks()[0].done);
+        assert_eq!(app.confirm_done, Some(0));
+        // Set to always, it's done straight away.
+        app.confirm_done = None;
+        app.inspector_toggle(); // untick
+        app.prefs.checklist_done = crate::app::AutoDone::Always;
         app.inspector_toggle();
         assert!(app.tasks()[0].done, "all ticked: done");
         let _ = std::fs::remove_dir_all(&dir);

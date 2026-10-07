@@ -413,7 +413,7 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
             continue;
         };
         let r0 = row_of(s);
-        let r1 = row_of(e).max(r0 + 1);
+        let r1 = gap_before_next(r0, row_of(e).max(r0 + 1), e, &timed, &row_of);
         let (r0, r1) = (r0.max(0), r1.min(i64::from(grid.height)));
         if r0 >= r1 {
             continue;
@@ -462,6 +462,32 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
                 }
             }
         }
+    }
+}
+
+/// Where a block ending at `end` (rows `r0..r1`) stops: one row short of a
+/// block that starts right when it ends (or in the same row, by rounding),
+/// so two back-to-back tasks read as two. A one-row block keeps its row.
+fn gap_before_next(
+    r0: i64,
+    r1: i64,
+    end: u32,
+    others: &[&Occurrence],
+    row_of: &dyn Fn(u32) -> i64,
+) -> i64 {
+    let next = others
+        .iter()
+        .filter_map(|o| o.start)
+        .filter(|&t| t >= end)
+        .map(row_of)
+        .filter(|&r| r <= r1)
+        .min();
+    match next {
+        Some(r) => {
+            let stop = r.min(r1).max(r0 + 1);
+            if stop - r0 >= 2 { stop - 1 } else { stop }
+        }
+        None => r1,
     }
 }
 
@@ -901,7 +927,14 @@ fn week_blocks(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
                 continue;
             };
             let r0 = row_of(s).max(0);
-            let r1 = row_of(e).max(row_of(s) + 1).min(i64::from(grid.height));
+            let r1 = gap_before_next(
+                row_of(s),
+                row_of(e).max(row_of(s) + 1),
+                e,
+                &day_timed,
+                &row_of,
+            )
+            .min(i64::from(grid.height));
             if r0 >= r1 {
                 continue;
             }

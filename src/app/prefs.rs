@@ -53,8 +53,100 @@ pub struct Prefs {
     pub start_home: bool,
     /// Width of the details pane, in columns (`{` / `}` or drag its edge).
     pub details_w: u16,
-    /// Ticking a checklist's last box marks its task done.
-    pub checklist_completes: bool,
+    /// What ticking a checklist's last box does to its task.
+    pub checklist_done: AutoDone,
+    /// When done tasks move to the archive.
+    pub archive_done: ArchiveWhen,
+}
+
+/// What ticking a checklist's last box does to its task.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AutoDone {
+    /// Ask whether the task is done too.
+    Ask,
+    /// Mark it done.
+    Always,
+    /// Leave it.
+    Never,
+}
+
+impl AutoDone {
+    fn parse(v: Option<&str>) -> Self {
+        match v {
+            Some("true" | "yes" | "on" | "always") => Self::Always,
+            Some("false" | "no" | "off" | "never") => Self::Never,
+            _ => Self::Ask,
+        }
+    }
+
+    fn word(self) -> &'static str {
+        match self {
+            Self::Ask => "ask",
+            Self::Always => "true",
+            Self::Never => "false",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Ask => "ask",
+            Self::Always => "always",
+            Self::Never => "never",
+        }
+    }
+
+    pub fn next(self) -> Self {
+        match self {
+            Self::Ask => Self::Always,
+            Self::Always => Self::Never,
+            Self::Never => Self::Ask,
+        }
+    }
+}
+
+/// When done tasks move to the archive.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ArchiveWhen {
+    /// The day after they're done, so today's progress still shows them.
+    NextDay,
+    /// As soon as they're done.
+    Now,
+    /// Only with `A`.
+    Never,
+}
+
+impl ArchiveWhen {
+    fn parse(v: Option<&str>) -> Self {
+        match v {
+            Some("now") => Self::Now,
+            Some("never" | "false" | "off") => Self::Never,
+            _ => Self::NextDay,
+        }
+    }
+
+    fn word(self) -> &'static str {
+        match self {
+            Self::NextDay => "next_day",
+            Self::Now => "now",
+            Self::Never => "never",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::NextDay => "the next day",
+            Self::Now => "right away",
+            Self::Never => "never (A archives)",
+        }
+    }
+
+    pub fn next(self) -> Self {
+        match self {
+            Self::NextDay => Self::Now,
+            Self::Now => Self::Never,
+            Self::Never => Self::NextDay,
+        }
+    }
 }
 
 /// The details pane's width: by default, and how narrow or wide it goes.
@@ -120,7 +212,8 @@ impl Prefs {
             },
             hints: cfg.hints.unwrap_or(true),
             start_home: cfg.start.as_deref() == Some("home"),
-            checklist_completes: cfg.checklist_completes.unwrap_or(true),
+            checklist_done: AutoDone::parse(cfg.checklist_completes.as_deref()),
+            archive_done: ArchiveWhen::parse(cfg.archive_done.as_deref()),
             details_w: cfg
                 .details_width
                 .unwrap_or(DETAILS_W)
@@ -228,7 +321,8 @@ impl Prefs {
         cfg.hints = Some(self.hints);
         cfg.design = Some(DESIGN);
         cfg.details_width = Some(self.details_w);
-        cfg.checklist_completes = Some(self.checklist_completes);
+        cfg.checklist_completes = Some(self.checklist_done.word().to_string());
+        cfg.archive_done = Some(self.archive_done.word().to_string());
         cfg.start = Some(if self.start_home { "home" } else { "list" }.to_string());
         cfg.save()
     }

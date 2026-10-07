@@ -994,11 +994,19 @@ tasq opens on Today; to open on Home instead:
 start = "home"
 ```
 
-Ticking the last box of a task's checklist marks the task done; to keep
-them apart:
+Ticking the last box of a task's checklist asks whether the task is done
+too; to always mark it (`true`) or never (`false`):
 
 ```toml
-checklist_completes = false
+checklist_completes = ask
+```
+
+Done tasks move to the Archive (in the sidebar, or `a`) the day after
+you finish them, so today's progress still counts them; `now` moves them
+straight away, `never` leaves it to `A`:
+
+```toml
+archive_done = next_day
 ```
 
 The short hints at the bottom, about what's selected, can be turned off:

@@ -267,6 +267,9 @@ pub fn draw(frame: &mut Frame, app: &App) {
     }
     // Toasts float above everything.
     // The focus timer pins itself on top; notices stack under it.
+    if let Some(abs) = app.confirm_done {
+        detail::render_confirm_done(frame, area, app, abs);
+    }
     let pinned = pomodoro::render(frame, area, app, 1);
     toast::render(frame, area, app, 1 + pinned);
     // OSC 8 hyperlinks are applied post-draw by the caller (see

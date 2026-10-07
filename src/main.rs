@@ -12,9 +12,9 @@ use std::io::Write;
 
 use tasq::action::{Action, RecAction};
 use tasq::app::{
-    AddOutcome, App, CalendarTarget, DialogInputMode, EditorKey, Mode, NormalOutcome,
-    NoteCommandResult, NoteEditorMode, NoteEditorState, NotesEntryAction, OverlayKind,
-    PaletteDispatch, UNSAVED_WARNING, View,
+    AddOutcome, App, DialogInputMode, EditorKey, Mode, NormalOutcome, NoteCommandResult,
+    NoteEditorMode, NoteEditorState, NotesEntryAction, OverlayKind, PaletteDispatch,
+    UNSAVED_WARNING, View,
 };
 use tasq::cli;
 use tasq::config::Config;
@@ -108,6 +108,7 @@ fn main() -> Result<()> {
     // notes' own connection; it isn't news to the task list.
     app_state.settle_external_changes();
     app_state.purge_old_trash();
+    app_state.auto_archive();
     if app_state.prefs.start_home {
         app_state.open_home();
     }
@@ -536,6 +537,13 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     if !app.check_external_changes() {
         return;
     }
+    // "All its steps are done — is the task?" takes the next key.
+    if let Some(abs) = app.confirm_done.take() {
+        if matches!(key.code, KeyCode::Char('y' | 's') | KeyCode::Enter) {
+            app.toggle_complete(abs);
+        }
+        return;
+    }
 
     // T11: while the pinned note has keyboard focus, `app.mode` stays
     // `Mode::Normal` throughout (see `src/app/pinned_note.rs`'s doc
@@ -930,6 +938,7 @@ fn handle_calendar(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Char('>') | KeyCode::PageDown => app.cal_page(true),
         KeyCode::Enter | KeyCode::Char('e') => app.cal_edit(),
         KeyCode::Char('x') => app.cal_complete(),
+        KeyCode::Char('r') => app.cal_reschedule(),
         KeyCode::Char('n') => app.cal_new(),
         KeyCode::Char('J') => app.cal_shift_time(30),
         KeyCode::Char('K') => app.cal_shift_time(-30),
@@ -2493,17 +2502,8 @@ fn apply_action(app: &mut App, action: Action) {
         // It moves the planned date — or the deadline, for a task that only has one — starting
         // on that date (today when there is none). Enter/escape goes back to insert mode on the task.
         Action::Reschedule => {
-            if let Some(abs) = app.cur_abs()
-                && let Some(raw) = app.task_raw(abs)
-            {
-                let target = match app.tasks().get(abs) {
-                    Some(t) if t.planned.is_none() && t.due.is_some() => CalendarTarget::Due,
-                    _ => CalendarTarget::Planned,
-                };
-                app.selection.enter_edit(abs);
-                app.draft_set_insert(raw);
-                app.mode = Mode::Insert;
-                app.open_calendar(target);
+            if let Some(abs) = app.cur_abs() {
+                app.reschedule(abs);
             }
         }
         Action::ChangeWeekStart => {
