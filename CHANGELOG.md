@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.0-alpha.8](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.7...v0.1.0-alpha.8) (2026-10-07)
+
+
+### Features
+
+* **edit:** edit a task in the live dialog, its fields as chips ([#50](https://github.com/tasq-app/tasq/issues/50)) ([0fa41c8](https://github.com/tasq-app/tasq/commit/0fa41c8fde885626a325394c1048376807d246a6))
+* **notes:** select a note's text with the mouse and copy it ([#51](https://github.com/tasq-app/tasq/issues/51)) ([9b4875b](https://github.com/tasq-app/tasq/commit/9b4875ba98b52c2a6f332758ba85960c6ded784f))
+
 ## [0.1.0-alpha.7](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.6...v0.1.0-alpha.7) (2026-10-04)
 
 
