@@ -72,7 +72,7 @@ pub use note_editor::{
     Register, ScreenMap, ScreenRow, UNSAVED_WARNING, VisualSelection, wrap_indent,
 };
 pub use notes_popup::{NotePromptKind, NotesPopupState};
-pub use notes_screen::{NoteEntry, NotesScreen};
+pub use notes_screen::{MAIN_NOTE_KEY, NoteEntry, NotesScreen};
 pub use palette::{CommandPaletteState, NotesEntryAction, PaletteDispatch};
 pub use pomodoro::{BREAK, FOCUS, Phase, Pomodoro};
 pub use prefs::{ArchiveWhen, AutoDone, DETAILS_W, Layout, Prefs};

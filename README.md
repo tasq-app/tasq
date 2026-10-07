@@ -50,9 +50,14 @@ local database, notes, live natural-language capture and more, listed below.
 - **Notes screen** (`N`): every note, the one you touched last on top, with
   a search box; the selected one rendered beside the list, checkboxes and
   all, and the tasks that link to it underneath. A search lights up its
-  hits in the note (`n` / `N` walk them). `Enter` opens the note in the
-  built-in vim-style editor (`:w`, `:q`, `:wq`), `E` in `$EDITOR`, `p`
-  pins it beside the list, `t` goes to its task.
+  hits in the note (`n` / `N` walk them). `Enter` reads the note across
+  the whole screen (`j` / `k`, `Ctrl-d` / `Ctrl-u`, `gg` / `G` scroll it,
+  `Tab` goes to the next note), `e` opens it in the built-in vim-style
+  editor (`:w`, `:q`, `:wq`), `E` in `$EDITOR`, `p` pins it beside the
+  list, `t` goes to its task.
+- **A task's notes** (`o` on a task): the Notes screen showing just that
+  task's notes. `a` adds another one (type a name, Enter), `*` makes the
+  selected one the main note, always listed first.
 - **Settings and profile** (`,`): you, then sections — sync and
   calendars (coming), appearance, lists, capture, data and the trash,
   keys, about — each a card of settings; `Enter` changes one and it's
@@ -91,14 +96,15 @@ local database, notes, live natural-language capture and more, listed below.
   upstream's single-file `note:<path>` model. They're still plain Markdown:
   `E` opens one in your `$EDITOR`. A todo.txt opened directly keeps them as
   files under `notes_dir/tasks/<id>/`.
-- **A popup to browse/manage them** (`o` on a task) instead of shelling out
-  to `$EDITOR`. A new note starts with just the task's title as a heading.
+- **Browse and manage them in the app** (`o` on a task opens its notes)
+  instead of shelling out to `$EDITOR`. A new note starts with its name as
+  a heading.
 - **An embedded markdown editor** built into the TUI itself — no external
   editor process, and it respects tasq's active theme. It speaks the
   everyday subset of vim (motions, operators, counts, Visual mode, undo,
   yank/put to the system clipboard), continues markdown lists as you type,
   and soft-wraps long lines to the window width without touching the file.
-  `M` (or `p` from the notes list) shows the note rendered — headings,
+  `M` shows the note rendered — headings,
   checkboxes, quotes, code blocks, tables — always current with the buffer.
   The preview follows the note-taking convention rather than strict
   CommonMark: every line break is kept, and a line starting with a bare
@@ -109,8 +115,8 @@ local database, notes, live natural-language capture and more, listed below.
 - **A `:`-command popup** inside the editor (`:w` / `:q` / `:wq` / `:x`),
   styled after [noice.nvim](https://github.com/folke/noice.nvim)'s cmdline
   popup, so `:w`/`:wq` muscle memory works without needing real vim.
-- The command palette (`Ctrl+P`, now also reachable from inside the notes
-  popup) lists every notes action too, and the `?` help overlay has a second
+- The command palette (`Ctrl+P`, also reachable from inside the note
+  editor) lists every notes action too, and the `?` help overlay has a second
   page (`Tab`) with every notes and editor key.
 - **Unsaved edits are protected**: Esc, `:q` and `Z` refuse to close a note
   with unsaved changes (`:w` to save, `:q!` to discard).
@@ -140,17 +146,21 @@ local database, notes, live natural-language capture and more, listed below.
 
 | Where | Key | Does |
 |---|---|---|
-| On a task | `o` | Open the notes popup for that task |
+| On a task | `o` | The Notes screen with just that task's notes |
 | Notes list | `j`/`k` or ↑↓ | Navigate |
-| | `n` | New note (type a name, `.md` added automatically) |
-| | `r` | Rename the selected note |
-| | `d` then `y`/`n` | Delete the selected note, with confirmation |
-| | `u` | Unlink (moves it out, doesn't delete the file) |
-| | `e` / `i` | Open the selected note in the editor (Normal / Insert) |
-| | `p` | Open the selected note rendered (preview) |
-| | `?` | Help, opened on its notes page (`Tab` flips to the task keys) |
-| | `z` | Pin the selected note straight to the side panel |
-| | Esc | Close the popup |
+| | `a` | New note for the task (type a name, `.md` added automatically) |
+| | `*` | Make the selected note the task's main note, listed first (again to unset) |
+| | `d` then `y` | Delete the selected note, with confirmation |
+| | `Enter` | Read the selected note across the whole screen |
+| | `e` / `i` | Open the selected note in the editor |
+| | `p` | Pin the selected note beside the list |
+| | `t` | Go to its task |
+| | `/` | Search the notes |
+| | Esc | Back to the list |
+| Reading a note | `j`/`k`, Space/`b`, `Ctrl+D`/`Ctrl+U`, `gg`/`G` | Scroll by line / page / half page, top / bottom |
+| | `Tab` / `Shift+Tab` | Next / previous note |
+| | `e` / Enter | Edit it |
+| | Esc | Back to the notes list |
 | Editor, Normal | `h j k l` / arrows, `w b e` (`W B E`), `0 ^ $`, `gg G`, `{ }` | Move; counts work (`3j`, `2w`) |
 | | `i a I A o O` | Enter Insert mode (`o` continues a list item) |
 | | `d c y` + motion, `dd cc yy`, `>> <<` | Delete / change / yank / indent |
@@ -696,7 +706,7 @@ The modal keys below apply in Normal mode:
 | `0` | Home (`Enter` or `Esc` there goes to Today, `i` to the Inbox) |
 | `P` | focus timer: start on the current task, pause, resume; `Ctrl-X` stops it, `␣ t b` takes a break |
 | `Ctrl-K` | Search: tasks (done ones too), notes word for word, and spaces; `Enter` goes there |
-| `N` | Notes screen (`/` search, `n` / `N` next / previous hit, `j` / `k` move, `J` / `K` scroll, `Enter` edit in the built-in editor, `E` in `$EDITOR`, `p` pin, `t` its task, `Esc` back) |
+| `N` | Notes screen (`/` search, `n` / `N` next / previous hit, `j` / `k` move, `J` / `K` scroll, `Enter` read, `e` edit in the built-in editor, `E` in `$EDITOR`, `p` pin, `t` its task, `Esc` back) |
 | `1` / `2` / `3` | Today / Upcoming / All |
 | `4` / `5` / `6` | Calendar: day / week / month (see [Calendar](#calendar)) |
 | `f` | filter popover: type to search spaces (sub-spaces included), tags, deadlines and priority; `↑` / `↓` move, `Enter` adds the filter (or removes it, if it's on), `⌫` with nothing typed drops the last chip, `Esc` closes. With filters on, it can save them as a view or clear them all |
@@ -711,8 +721,7 @@ The modal keys below apply in Normal mode:
 | `a` | toggle archive view |
 | `A` | archive completed tasks |
 | `H` | toggle showing done tasks in the main list |
-| `o` | open the current task's existing `note:<path>` in `$VISUAL` / `$EDITOR` |
-| `O` | create the current task's note if needed, then open it |
+| `o` | the current task's notes, on the Notes screen (`a` adds one) |
 
 **Views.** *Today* lists what's planned or due today or earlier, so a late
 plan or a missed deadline never drops out of sight; *Upcoming* lists every
@@ -971,8 +980,9 @@ round-trip as plain text, so you can add, rename, or delete them by editing
 A task's notes are linked by a `notes:<id>/` token on its line. With the
 database they're kept in it; with a todo.txt opened directly they're
 Markdown files under `notes_dir/tasks/<id>/`. If `notes_dir` is not set,
-tasq falls back to `$NOTES_DIR` and then `~/notes`. `o` opens a task's notes
-(creating the first one), `N` the Notes screen with all of them.
+tasq falls back to `$NOTES_DIR` and then `~/notes`. `o` opens the Notes
+screen with a task's notes (`a` adds one), `N` the Notes screen with all of
+them.
 
 ```toml
 notes_dir = ~/notes

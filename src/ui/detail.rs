@@ -640,7 +640,10 @@ pub fn render_checklist_prompt(frame: &mut Frame, screen: Rect, app: &App) {
         .rev()
         .collect();
     let w = 64.min(screen.width.saturating_sub(4));
-    let h = (8 + shown.len() as u16).min(screen.height.saturating_sub(2));
+    // A long item wraps onto more rows instead of running off the box.
+    let input_w = usize::from(w.saturating_sub(8)).max(4);
+    let input_rows = wrap_input(app.draft.text(), app.draft.cursor(), input_w);
+    let h = (7 + shown.len() as u16 + input_rows.len() as u16).min(screen.height.saturating_sub(2));
     let r = super::centered_in(screen, w, h);
     frame.render_widget(ratatui::widgets::Clear, r);
     let buf = frame.buffer_mut();
@@ -700,17 +703,70 @@ pub fn render_checklist_prompt(frame: &mut Frame, screen: Rect, app: &App) {
     // The line you're typing on.
     p.text(0, "☐", bg.fg(theme.accent));
     let x = p.r.x + 2;
-    let y = p.y;
-    let spans = crate::ui::dialog::draft_cursor_spans(
-        app.draft.text(),
-        app.draft.cursor(),
-        theme.fg,
-        theme.panel,
-    );
-    let line = ratatui::text::Line::from(spans);
-    p.buf.set_line(x, y, &line, p.r.width.saturating_sub(2));
-    p.y += 2;
+    for (row, cursor) in &input_rows {
+        if p.y >= p.r.bottom() {
+            break;
+        }
+        let mut spans = Vec::new();
+        for (i, c) in row.chars().enumerate() {
+            let style = if *cursor == Some(i) {
+                Style::default().fg(theme.panel).bg(theme.fg)
+            } else {
+                Style::default().fg(theme.fg)
+            };
+            spans.push(ratatui::text::Span::styled(c.to_string(), style));
+        }
+        if *cursor == Some(row.chars().count()) {
+            spans.push(ratatui::text::Span::styled(
+                "█",
+                Style::default().fg(theme.fg),
+            ));
+        }
+        let line = ratatui::text::Line::from(spans);
+        let y = p.y;
+        p.buf.set_line(x, y, &line, p.r.width.saturating_sub(2));
+        p.y += 1;
+    }
+    p.y += 1;
     p.text(0, "Enter add · paste a list · Esc done", bg.fg(theme.dim));
+}
+
+/// `text` cut into rows of `width` chars (after spaces where it can), each
+/// with the cursor's column when it's on that row.
+fn wrap_input(text: &str, cursor: usize, width: usize) -> Vec<(String, Option<usize>)> {
+    let chars: Vec<char> = text.chars().collect();
+    let cursor = text[..cursor.min(text.len())].chars().count();
+    let mut rows = Vec::new();
+    let mut start = 0;
+    while chars.len() - start > width {
+        let mut end = start + width;
+        if let Some(sp) = (start + 1..end).rev().find(|&i| chars[i - 1] == ' ') {
+            end = sp;
+        }
+        rows.push((start, end));
+        start = end;
+    }
+    rows.push((start, chars.len()));
+    let last = rows.len() - 1;
+    let mut out: Vec<(String, Option<usize>)> = rows
+        .iter()
+        .enumerate()
+        .map(|(n, &(a, b))| {
+            let here = cursor >= a && (cursor < b || (n == last && cursor == b));
+            (chars[a..b].iter().collect(), here.then(|| cursor - a))
+        })
+        .collect();
+    // The cursor at the end of a full row starts the next one.
+    if let Some((row, Some(col))) = out.last()
+        && *col >= width
+        && row.chars().count() >= width
+    {
+        if let Some(r) = out.last_mut() {
+            r.1 = None;
+        }
+        out.push((String::new(), Some(0)));
+    }
+    out
 }
 
 /// "Every step is done — is the task?": a small box over everything, `y`
@@ -822,6 +878,17 @@ mod tests {
         }
         assert!(screen(&app).contains("item number 0"));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_long_checklist_item_wraps_as_you_type() {
+        let rows = wrap_input("buy milk and eggs", 17, 10);
+        assert_eq!(rows[0].0, "buy milk ");
+        assert_eq!(rows[1], ("and eggs".to_string(), Some(8)));
+        assert_eq!(wrap_input("", 0, 10), vec![(String::new(), Some(0))]);
+        // A full row with the cursor at its end: the cursor starts a new row.
+        let rows = wrap_input("abcd", 4, 4);
+        assert_eq!(rows.last(), Some(&(String::new(), Some(0))));
     }
 
     #[test]
