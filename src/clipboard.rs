@@ -10,13 +10,66 @@ pub fn format_osc52(content: &str) -> String {
     format!("\x1b]52;c;{encoded}\x1b\\")
 }
 
-/// Write `content` to the system clipboard via OSC 52. Errors only surface
-/// I/O problems on stdout; whether the terminal actually honored the
-/// sequence is not observable from here.
+/// Put `content` on the system clipboard. On this machine that's the
+/// platform's own tool (`pbcopy`, `wl-copy`, `xclip`, `xsel`, `clip`): it
+/// works inside tmux or zellij, which drop OSC 52 by default. OSC 52 is
+/// sent as well, for a session over SSH, whose clipboard is the terminal's
+/// end. Errors only surface when neither way could be tried.
 pub fn copy(content: &str) -> io::Result<()> {
+    let native = native_copy(content);
     let mut stdout = io::stdout();
-    stdout.write_all(format_osc52(content).as_bytes())?;
-    stdout.flush()
+    let osc = stdout
+        .write_all(format_osc52(content).as_bytes())
+        .and_then(|()| stdout.flush());
+    if native { Ok(()) } else { osc }
+}
+
+/// The clipboard tools to try here, in order. None over SSH: there the
+/// clipboard that matters is the one on the other end.
+fn native_tools() -> Vec<(&'static str, &'static [&'static str])> {
+    let env = |k: &str| std::env::var_os(k).is_some_and(|v| !v.is_empty());
+    if env("SSH_CONNECTION") || env("SSH_TTY") {
+        return Vec::new();
+    }
+    let mut tools: Vec<(&'static str, &'static [&'static str])> = Vec::new();
+    if cfg!(target_os = "macos") {
+        tools.push(("pbcopy", &[]));
+    } else if cfg!(windows) {
+        tools.push(("clip", &[]));
+    } else {
+        if env("WAYLAND_DISPLAY") {
+            tools.push(("wl-copy", &[]));
+        }
+        if env("DISPLAY") {
+            tools.push(("xclip", &["-selection", "clipboard"]));
+            tools.push(("xsel", &["--clipboard", "--input"]));
+        }
+    }
+    tools
+}
+
+/// Pipe `content` into the first clipboard tool that takes it.
+fn native_copy(content: &str) -> bool {
+    use std::process::{Command, Stdio};
+    for (tool, args) in native_tools() {
+        let Ok(mut child) = Command::new(tool)
+            .args(args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+        else {
+            continue;
+        };
+        let wrote = child
+            .stdin
+            .take()
+            .is_some_and(|mut stdin| stdin.write_all(content.as_bytes()).is_ok());
+        if child.wait().is_ok_and(|s| s.success()) && wrote {
+            return true;
+        }
+    }
+    false
 }
 
 fn base64_encode(input: &[u8]) -> String {
