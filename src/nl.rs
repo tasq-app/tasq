@@ -1224,6 +1224,20 @@ fn pass_repeat_end(scratch: &mut Scratch, p: &mut ParsedNl, today: NaiveDate) {
             p.until = Some(date);
             continue;
         }
+        // "for 5 weeks" after a repeat: it ends then.
+        if p.until.is_none()
+            && w == "for"
+            && i + 2 < words.len()
+            && scratch.is_live(words[i + 1].0, words[i + 2].1)
+            && let Some(n) = parse_number(scratch.word_lc(words[i + 1]))
+            && n > 0
+            && let Some(end) =
+                advance_from(today, n, scratch.word_lc(words[i + 2])).and_then(|d| d.pred_opt())
+        {
+            scratch.mark(words[i].0, words[i + 2].1);
+            p.until = Some(end);
+            continue;
+        }
         if p.times.is_some() {
             continue;
         }
@@ -1305,6 +1319,16 @@ fn parse_every_phrase(
     if let Some(n) = parse_number(w1) {
         if i + 2 >= words.len() {
             return None;
+        }
+        // "every 2 mondays", "every 3 mondays and thursdays".
+        if let Some((mask, count)) = weekday_list(scratch, words, i + 2) {
+            if mask.count_ones() > 1 {
+                let days = crate::recurrence::format_days(mask);
+                return Some((format!("+{n}w:{days}"), 2 + count, None));
+            }
+            let wd = parse_weekday(scratch.word_lc(words[i + 2]))
+                .or_else(|| plural_weekday(scratch.word_lc(words[i + 2])))?;
+            return Some((format!("+{n}w"), 3, Some(wd)));
         }
         let unit = match scratch.word_lc(words[i + 2]) {
             "day" | "days" => 'd',
@@ -2709,6 +2733,71 @@ mod tests {
         let p = detect_in("repasar tema 3 en exámenes", today, &[], &spaces).parsed;
         assert_eq!(p.projects, ["Uni/Exámenes"]);
         assert_eq!(p.body, "repasar tema 3");
+    }
+
+    #[test]
+    fn spanish_dates_and_repeats_however_theyre_written() {
+        // 2026-10-07 is a wednesday.
+        let today = d("2026-10-07");
+        for (text, plan) in [
+            ("pan el día 15 de noviembre", "2026-11-15"),
+            ("pan el dia 15 de noviembre", "2026-11-15"),
+            ("pan el 15nov", "2026-11-15"),
+            ("pan el 15 nov", "2026-11-15"),
+            ("pan 15 nov", "2026-11-15"),
+            ("pan el 15 noviembre", "2026-11-15"),
+            ("pan 15 de nov", "2026-11-15"),
+            ("pan noviembre 15", "2026-11-15"),
+            ("pan nov15", "2026-11-15"),
+            ("pan el 15/11", "2026-11-15"),
+            ("pan el 15/11/2027", "2027-11-15"),
+            ("pan el 15 de noviembre de 2027", "2027-11-15"),
+            ("pan el lunes 16", "2026-10-16"),
+            ("pan el día 20", "2026-10-20"),
+        ] {
+            let p = detect(text, today, &[]).parsed;
+            assert_eq!(p.planned, Some(d(plan)), "{text}");
+            assert_eq!(p.body, "pan", "{text}");
+        }
+        for (text, rec) in [
+            ("gym cada dos lunes", "+2w"),
+            ("gym cada 2 lunes", "+2w"),
+            ("gym cada dos martes y jueves", "+2w:tue,thu"),
+            ("gym cada lunes, miércoles y viernes", "+1w:mon,wed,fri"),
+            ("gym lunes y miércoles", "+1w:mon,wed"),
+            ("gym los martes y jueves", "+1w:tue,thu"),
+            ("gym todos los lunes y jueves", "+1w:mon,thu"),
+            ("gym cada semana el lunes", "+1w"),
+            ("gym cada tres semanas", "+3w"),
+            ("gym cada 15 días", "+15d"),
+            ("gym cada dos meses", "+2m"),
+            ("gym a diario", "+1d"),
+            ("gym una vez a la semana", "+1w"),
+            ("gym de lunes a viernes", "+1b"),
+            ("gym cada día laborable", "+1b"),
+            ("gym cada fin de semana", "+1w:sat,sun"),
+            ("gym cada día 15", "+1m"),
+            ("gym el 1 de cada mes", "+1m"),
+        ] {
+            let p = detect(text, today, &[]).parsed;
+            assert_eq!(p.rec.as_deref(), Some(rec), "{text}");
+            assert_eq!(p.body, "gym", "{text}");
+        }
+        let p = detect("gym cada día 15", today, &[]).parsed;
+        assert_eq!(p.planned, Some(d("2026-10-15")));
+        let p = detect("gym cada lunes durante 5 semanas", today, &[]).parsed;
+        assert_eq!(p.until, Some(d("2026-11-10")));
+        let p = detect("gym de martes a jueves", today, &[]).parsed;
+        assert_eq!(
+            (p.planned, p.end),
+            (Some(d("2026-10-13")), Some(d("2026-10-15")))
+        );
+        // The same in English.
+        let p = detect("gym every 2 mondays", today, &[]).parsed;
+        assert_eq!((p.rec.as_deref(), p.body.as_str()), (Some("+2w"), "gym"));
+        let p = detect("gym every monday for 5 weeks", today, &[]).parsed;
+        assert_eq!(p.until, Some(d("2026-11-10")));
+        assert_eq!(p.body, "gym");
     }
 
     #[test]
