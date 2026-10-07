@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/tasq-app/tasq/compare/v0.2.0...v0.3.0) (2026-10-07)
+
+
+### Features
+
+* **capture:** the add dialog understands Spanish ([#62](https://github.com/tasq-app/tasq/issues/62)) ([a92a0b8](https://github.com/tasq-app/tasq/commit/a92a0b82c5959a911f6f25624c93f4df99bceaab))
+* **spaces:** delete a space after asking, and offer to when an edit empties it ([#63](https://github.com/tasq-app/tasq/issues/63)) ([27b03e1](https://github.com/tasq-app/tasq/commit/27b03e1408df8c5759e59d1541939ffc6f0332ff))
+
 ## [0.2.0](https://github.com/tasq-app/tasq/compare/v0.1.0-alpha.9...v0.2.0) (2026-10-07)
 
 
