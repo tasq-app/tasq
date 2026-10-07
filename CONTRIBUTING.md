@@ -36,9 +36,20 @@ snapshots`, then review `git diff tests/snapshots/`.
 
 ## Releases
 
-Versions follow [semver](https://semver.org/): `MAJOR.MINOR.PATCH`, with
-pre-releases while tasq is young — `0.1.0-alpha.1`, `0.1.0-alpha.2`, …,
-then `-beta.N`, `-rc.N`, and finally `0.1.0`.
+Versions follow [semver](https://semver.org/): `MAJOR.MINOR.PATCH`. While
+tasq is young it stays on `0.x` — the leading zero says things may still
+change — and the commits decide each bump:
+
+| Since the last release | Next version |
+| --- | --- |
+| only `fix:` / `perf:` | patch: `0.2.0` → `0.2.1` |
+| any `feat:` | minor: `0.2.1` → `0.3.0` |
+| a breaking change (`feat!:` or a `BREAKING CHANGE:` footer) | minor too, until `1.0.0` |
+| only `docs:`, `chore:`, `ci:`, `test:`, `refactor:` | no release |
+
+The first versions were `0.1.0-alpha.1` … `0.1.0-alpha.9`, previews of
+`0.1.0`. `1.0.0` is a deliberate step, taken with a `Release-As: 1.0.0`
+footer once the data format and the keys are settled.
 
 Releasing is automatic, driven by
 [release-please](https://github.com/googleapis/release-please):
@@ -58,13 +69,6 @@ access to this repository); the Homebrew step with `HOMEBREW_TAP_TOKEN`
 
 Users then get it with `brew upgrade tasq` (or `brew install
 tasq-app/tap/tasq`).
-
-**Moving between stages** is a one-line change in
-`release-please-config.json`:
-
-- alpha → beta: set `"prerelease-type": "beta"`;
-- beta → release candidate: `"prerelease-type": "rc"`;
-- stable: remove `"prerelease"`, `"prerelease-type"` and `"versioning"`.
 
 A specific version can also be forced from any commit merged to `main` with
 a `Release-As: 0.2.0` footer.
