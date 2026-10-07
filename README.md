@@ -384,7 +384,7 @@ another theme is skipped with a warning at startup.
 | `selected` | selected-row background (visual mode) and the active filter |
 | `matched` | search-match highlight |
 | `ok` | optional: ticked checklist items and done marks (default: `pri_c`) |
-| `palette` | optional: up to 8 comma-separated colours spaces are painted in (default: made from the colours above) |
+| `palette` | optional: up to 16 comma-separated colours spaces are painted in (default: made from the colours above; past the eighth, the same ones turned round the colour wheel) |
 
 </details>
 
@@ -712,7 +712,7 @@ The modal keys below apply in Normal mode:
 | `f` | filter popover: type to search spaces (sub-spaces included), tags, deadlines and priority; `↑` / `↓` move, `Enter` adds the filter (or removes it, if it's on), `⌫` with nothing typed drops the last chip, `Esc` closes. With filters on, it can save them as a view or clear them all |
 | `X` | clear every filter on the list (or click a chip to take just that one off) |
 | `Tab` | list → details → sidebar; `Shift-Tab` goes straight to the sidebar |
-| `c` / `C` / `H` / `r` / `d` (sidebar, on a space) | next colour / automatic colour, hide / show, rename, delete an empty one |
+| `a` / `c` / `C` / `H` / `r` / `d` (sidebar, on a space) | new space inside it, colour picker, automatic colour, hide / show, rename, delete an empty one |
 | `S` | cycle sort: priority → due → file order |
 | `v` | enter visual / multi-select; `space` toggles a row |
 | `x` / `dd` (in visual) | bulk-complete / bulk-delete the selection |
@@ -763,9 +763,15 @@ you delete it from the sidebar (`Tab` to it, then `d` on the space).
 Renaming a space (`r` on it in the sidebar) takes its sub-spaces along:
 `Uni` → `School` moves `Uni/Exams` to `School/Exams`.
 Each space has a colour from the theme's palette, picked from its name
-until you choose one (`c` on it in the sidebar for the next colour, `C`
-back to automatic). A sub-space without a colour of its own takes its
-parent's.
+until you choose one: `c` on it in the sidebar opens a grid of sixteen
+colours made from the theme (arrows or a click to pick, `c` again to type
+a hex of your own, `C` back to automatic). A sub-space without a colour of
+its own takes its parent's.
+`a` on a space in the sidebar makes a new space inside it (`Uni/` is
+typed for you). Typing `+Uni/` in the add dialog suggests the spaces in
+Uni, and after "in uni" `↑` / `↓` choose between Uni and the spaces in it.
+On a task, a space chip shows just the last part of its path (`Exams`,
+not `Uni › Exams`).
 To keep a part of your life out of Today, Upcoming and All, hide its space
 (`H` on it in the sidebar). Its sub-spaces go with it, and a single
 sub-space can be hidden on its own. A hidden space stays dimmed in the

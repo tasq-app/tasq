@@ -343,6 +343,13 @@ impl Db {
         Ok(())
     }
 
+    /// Keep the space `path` and every space above it.
+    pub fn create_space(&mut self, path: &str) -> std::io::Result<()> {
+        add_spaces(&self.conn, &[path.to_string()], &now_rfc3339()).map_err(io_err)?;
+        self.data_version = self.read_data_version().map_err(io_err)?;
+        Ok(())
+    }
+
     /// Set the colour of the space `path` (see `SpaceColor`), or go back
     /// to the automatic one with `None`.
     pub fn set_space_color(&mut self, path: &str, color: Option<&str>) -> std::io::Result<()> {
@@ -1029,6 +1036,18 @@ mod tests {
             crate::core::RenameOutcome::Done { renamed: 0 }
         ));
         assert_eq!(paths(&s), ["Uni"]);
+    }
+
+    #[test]
+    fn a_new_space_is_kept_empty_with_the_ones_above_it() {
+        let mut s = Store::in_memory_db("2026-10-03");
+        assert!(matches!(
+            s.create_space("Uni/Labs"),
+            crate::core::SpaceSettingOutcome::Done
+        ));
+        let mut kept: Vec<&str> = s.known_spaces().iter().map(|k| k.path.as_str()).collect();
+        kept.sort_unstable();
+        assert_eq!(kept, ["Uni", "Uni/Labs"]);
     }
 
     #[test]

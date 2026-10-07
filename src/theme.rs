@@ -46,20 +46,33 @@ pub use crate::core::spaces::PALETTE_SLOTS;
 impl Theme {
     /// The colours spaces are painted in: the theme's own `palette`, or one
     /// made of its accent colours (red is left out — it means overdue).
+    /// Past the first eight, a theme that doesn't list more gets the same
+    /// colours turned a little round the colour wheel: new hues, as light
+    /// and as vivid as the theme's own.
     pub fn palette(&self) -> [Color; PALETTE_SLOTS] {
-        if !self.palette.is_empty() {
-            return std::array::from_fn(|i| self.palette[i % self.palette.len()]);
-        }
-        [
-            self.project,
-            self.context,
-            self.pri_c,
-            self.pri_b,
-            self.pri_other,
-            self.accent,
-            self.pri_d,
-            self.matched,
-        ]
+        let base: [Color; 8] = if self.palette.is_empty() {
+            [
+                self.project,
+                self.context,
+                self.pri_c,
+                self.pri_b,
+                self.pri_other,
+                self.accent,
+                self.pri_d,
+                self.matched,
+            ]
+        } else {
+            std::array::from_fn(|i| self.palette[i % self.palette.len()])
+        };
+        std::array::from_fn(|i| {
+            if let Some(c) = self.palette.get(i).filter(|_| i >= 8) {
+                return *c;
+            }
+            if i < 8 {
+                return base[i];
+            }
+            hue_turn(base[i - 8], 30.0)
+        })
     }
 
     /// The terminal colour of a space colour.
@@ -80,6 +93,45 @@ impl Theme {
             _ => self.pri_other,
         }
     }
+}
+
+/// `c` with its hue turned by `deg` degrees, lightness and saturation kept.
+fn hue_turn(c: Color, deg: f32) -> Color {
+    let (r, g, b) = crate::ui::mode_colors::rgb(c);
+    let (r, g, b) = (
+        f32::from(r) / 255.0,
+        f32::from(g) / 255.0,
+        f32::from(b) / 255.0,
+    );
+    let max = r.max(g).max(b);
+    let min = r.min(g).min(b);
+    let l = (max + min) / 2.0;
+    let d = max - min;
+    if d == 0.0 {
+        return c;
+    }
+    let s = d / (1.0 - (2.0 * l - 1.0).abs());
+    let h = if max == r {
+        60.0 * (((g - b) / d).rem_euclid(6.0))
+    } else if max == g {
+        60.0 * ((b - r) / d + 2.0)
+    } else {
+        60.0 * ((r - g) / d + 4.0)
+    };
+    let h = (h + deg).rem_euclid(360.0);
+    let c2 = (1.0 - (2.0 * l - 1.0).abs()) * s;
+    let x = c2 * (1.0 - ((h / 60.0).rem_euclid(2.0) - 1.0).abs());
+    let m = l - c2 / 2.0;
+    let (r1, g1, b1) = match h as u32 / 60 {
+        0 => (c2, x, 0.0),
+        1 => (x, c2, 0.0),
+        2 => (0.0, c2, x),
+        3 => (0.0, x, c2),
+        4 => (x, 0.0, c2),
+        _ => (c2, 0.0, x),
+    };
+    let to = |v: f32| ((v + m) * 255.0).round().clamp(0.0, 255.0) as u8;
+    Color::Rgb(to(r1), to(g1), to(b1))
 }
 
 const fn rgb(r: u8, g: u8, b: u8) -> Color {

@@ -529,12 +529,48 @@ fn is_exit_key(key: KeyEvent) -> bool {
         || (key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL)
 }
 
+/// The colour picker: arrows (or hjkl) walk the grid, Enter picks, `c`
+/// types a hex, `C` goes back to the automatic colour, Esc closes.
+fn handle_color_pick(app: &mut App, key: KeyEvent) {
+    let typing = app.color_pick.as_ref().is_some_and(|p| p.hex.is_some());
+    if typing {
+        match key.code {
+            KeyCode::Esc => {
+                if let Some(p) = app.color_pick.as_mut() {
+                    p.hex = None;
+                }
+            }
+            KeyCode::Enter => app.color_pick_accept(),
+            KeyCode::Backspace => app.color_pick_backspace(),
+            KeyCode::Char(c) => app.color_pick_type(c),
+            _ => {}
+        }
+        return;
+    }
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('q') => app.color_pick = None,
+        KeyCode::Char('h') | KeyCode::Left => app.color_pick_move(-1, 0),
+        KeyCode::Char('l') | KeyCode::Right => app.color_pick_move(1, 0),
+        KeyCode::Char('k') | KeyCode::Up => app.color_pick_move(0, -1),
+        KeyCode::Char('j') | KeyCode::Down => app.color_pick_move(0, 1),
+        KeyCode::Enter | KeyCode::Char(' ') => app.color_pick_accept(),
+        KeyCode::Char('c' | '#') => app.color_pick_begin_hex(),
+        KeyCode::Char('C') => app.color_pick_auto(),
+        _ => {}
+    }
+}
+
 fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     app.notes_cache.clear();
     // Detect external edits before processing the key. On detection the
     // file is reloaded, the keystroke is consumed (re-press to act on the
     // new state), and the per-mutator checks become no-ops downstream.
     if !app.check_external_changes() {
+        return;
+    }
+    // A space's colour picker takes every key while it's open.
+    if app.color_pick.is_some() {
+        handle_color_pick(app, key);
         return;
     }
     // "All its steps are done — is the task?" takes the next key.
@@ -608,6 +644,7 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         | Mode::PromptContext
         | Mode::PromptRenameProject
         | Mode::PromptRenameContext
+        | Mode::PromptNewSpace
         | Mode::PromptSaveFilter
         | Mode::PromptChecklist => handle_prompt(app, key),
         Mode::PickProject | Mode::PickContext | Mode::PickSavedFilter => handle_pick(app, key),
@@ -965,17 +1002,18 @@ fn handle_sidebar(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         }
         // On a space: colour, hide, rename, delete — what the space picker
         // did, where the spaces are.
-        KeyCode::Char(k @ ('c' | 'C' | 'H' | 'r' | 'd'))
+        KeyCode::Char(k @ ('c' | 'C' | 'H' | 'r' | 'd' | 'a'))
             if matches!(app.sidebar_current(), Some(tasq::app::NavItem::Space(_))) =>
         {
             if let Some(item) = app.sidebar_current() {
                 app.sidebar_open(&item);
             }
             match k {
-                'c' => app.cycle_current_space_color(false),
-                'C' => app.cycle_current_space_color(true),
+                'c' => app.open_color_pick(),
+                'C' => app.reset_current_space_color(),
                 'H' => app.toggle_current_space_hidden(),
                 'r' => app.begin_rename_project(),
+                'a' => app.begin_new_space(),
                 _ => app.delete_current_space(),
             }
             // A deleted space leaves the cursor past the end.
@@ -2009,8 +2047,8 @@ fn handle_pick(app: &mut App, key: KeyEvent) {
         },
         KeyCode::Char('d') if app.mode == Mode::PickProject => app.delete_current_space(),
         KeyCode::Char('h') if app.mode == Mode::PickProject => app.toggle_current_space_hidden(),
-        KeyCode::Char('c') if app.mode == Mode::PickProject => app.cycle_current_space_color(false),
-        KeyCode::Char('C') if app.mode == Mode::PickProject => app.cycle_current_space_color(true),
+        KeyCode::Char('c') if app.mode == Mode::PickProject => app.open_color_pick(),
+        KeyCode::Char('C') if app.mode == Mode::PickProject => app.reset_current_space_color(),
         KeyCode::Enter => app.pick_accept(),
         KeyCode::Esc => app.pick_cancel(),
         _ => {}
@@ -2175,6 +2213,7 @@ fn handle_prompt(app: &mut App, key: KeyEvent) {
                 Mode::PromptChecklist => app.add_check_item(&value),
                 Mode::PromptRenameProject => app.rename_current_project_as(&value),
                 Mode::PromptRenameContext => app.rename_current_context_as(&value),
+                Mode::PromptNewSpace => app.create_space(&value),
                 _ => {}
             }
         }

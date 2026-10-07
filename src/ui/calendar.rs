@@ -1170,7 +1170,7 @@ fn agenda(
                 }
                 let space = t.and_then(|t| t.projects.first()).cloned();
                 let space_w = space.as_ref().map_or(0, |p| {
-                    crate::core::spaces::display(p).chars().count() as u16 + 3
+                    crate::core::spaces::leaf(p).chars().count() as u16 + 3
                 });
                 let tw = w.saturating_sub(8 + space_w);
                 let fg = if dim { theme.dim } else { theme.fg };
@@ -1183,7 +1183,7 @@ fn agenda(
                 }
                 put(buf, x + 8, y, &fit(&text, usize::from(tw)), tw, ts);
                 if let Some(p) = space {
-                    let label = format!("● {}", crate::core::spaces::display(&p));
+                    let label = format!("● {}", crate::core::spaces::leaf(&p));
                     let lw = label.chars().count() as u16;
                     let color = if dim { theme.dim } else { app.space_color(&p) };
                     put(

@@ -366,31 +366,24 @@ impl App {
         }
     }
 
-    /// Give the space the picker is on the next colour of the palette
-    /// (`reset`: back to the automatic one).
-    pub fn cycle_current_space_color(&mut self, reset: bool) {
-        use crate::core::spaces::{PALETTE_SLOTS, SpaceColor};
-        let Some(path) = self.filter.project.clone() else {
-            return;
-        };
-        let next = if reset {
-            None
-        } else {
-            Some(match self.store.space_color(&path) {
-                SpaceColor::Slot(n) => SpaceColor::Slot((n + 1) % PALETTE_SLOTS),
-                SpaceColor::Rgb(..) => SpaceColor::Slot(0),
-            })
-        };
-        let name = crate::core::spaces::display(&path);
-        match self.store.set_space_color(&path, next) {
-            SpaceSettingOutcome::Done => match next {
-                Some(SpaceColor::Slot(n)) => {
-                    self.flash(format!(
-                        "{name}: colour {}/{PALETTE_SLOTS} · C automatic",
-                        n + 1
-                    ));
-                }
-                _ => self.flash(format!("{name}: automatic colour")),
+    /// `C` on a space: back to its automatic colour.
+    pub fn reset_current_space_color(&mut self) {
+        if let Some(path) = self.filter.project.clone() {
+            self.set_space_color_to(&path, None);
+        }
+    }
+
+    /// Paint the space `path` (`None`: back to the automatic colour).
+    pub fn set_space_color_to(
+        &mut self,
+        path: &str,
+        color: Option<crate::core::spaces::SpaceColor>,
+    ) {
+        let name = crate::core::spaces::display(path);
+        match self.store.set_space_color(path, color) {
+            SpaceSettingOutcome::Done => match color {
+                Some(_) => self.flash(format!("{name}: new colour")),
+                None => self.flash(format!("{name}: automatic colour")),
             },
             SpaceSettingOutcome::NotKept => self.flash("space colours need the database"),
             SpaceSettingOutcome::Aborted(r) => self.handle_reconcile_abort(r),
@@ -568,7 +561,19 @@ mod tests {
     #[test]
     fn done_tasks_go_to_the_archive_the_day_after() {
         // Today is 2026-05-06 in tests.
-        let mut app = build_app("x 2026-05-05 yesterday's\nx 2026-05-06 today's\nstill open\n");
+        let raw = "x 2026-05-05 yesterday's\nx 2026-05-06 today's\nstill open\n";
+        let mut app = build_app(raw);
+        // An archive of its own: the default done.txt is shared by the tests.
+        let dir = std::env::temp_dir().join(format!(
+            "tasq-auto-archive-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("todo.txt");
+        std::fs::write(&path, raw).expect("seed");
+        app.open_file(path, dir.join("done.txt"), raw.into());
         app.auto_archive();
         let left: Vec<&str> = app.tasks().iter().map(|t| t.raw.as_str()).collect();
         assert_eq!(left, ["x 2026-05-06 today's", "still open"]);
@@ -582,6 +587,7 @@ mod tests {
         app.prefs.archive_done = crate::app::ArchiveWhen::Now;
         app.auto_archive();
         assert_eq!(app.tasks().len(), 1);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

@@ -7,6 +7,7 @@ use crate::app::{App, Mode, View};
 
 pub mod archive;
 pub mod calendar;
+mod color_pick;
 pub mod command_palette;
 pub mod detail;
 pub mod dialog;
@@ -167,7 +168,12 @@ pub fn draw(frame: &mut Frame, app: &App) {
                 .clamp(u32::from(DIALOG_MIN_W), u32::from(DIALOG_MAX_W))
                 .min(u32::from(area.width.saturating_sub(2))) as u16;
             // Live capture: toast, input, gap, chips, padding.
-            let dlg_h = if app.live_add_active() { 7 } else { DIALOG_H };
+            // Chips that don't fit on one row take a second.
+            let dlg_h = if app.live_add_active() {
+                6 + dialog::live_chip_rows(app, dlg_w.saturating_sub(2))
+            } else {
+                DIALOG_H
+            };
             // On Home a new task is typed in its own bar.
             let dlg = match app.home_bar.get() {
                 Some(bar) if app.home && app.selection.editing().is_none() => Rect {
@@ -207,7 +213,8 @@ pub fn draw(frame: &mut Frame, app: &App) {
         | Mode::PromptContext
         | Mode::PromptSaveFilter
         | Mode::PromptRenameProject
-        | Mode::PromptRenameContext => {
+        | Mode::PromptRenameContext
+        | Mode::PromptNewSpace => {
             let w: u16 = PROMPT_MAX_W.min(area.width.saturating_sub(4));
             let r = centered_in(area, w, PROMPT_H);
             frame.render_widget(Clear, r);
@@ -270,6 +277,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
     if let Some(abs) = app.confirm_done {
         detail::render_confirm_done(frame, area, app, abs);
     }
+    color_pick::render(frame, area, app);
     let pinned = pomodoro::render(frame, area, app, 1);
     toast::render(frame, area, app, 1 + pinned);
     // OSC 8 hyperlinks are applied post-draw by the caller (see

@@ -17,6 +17,7 @@ mod bulk;
 mod calendar;
 mod checklist;
 mod chord;
+mod color_pick;
 mod draft;
 mod draft_overlay;
 mod filter_pop;
@@ -55,6 +56,7 @@ pub use autocomplete::{ActiveToken, AutocompleteTarget, TokenKind, active_token}
 pub use calendar::{CalScreen, CalStyle, CalView, month_bounds, week_start};
 pub use checklist::{CHECKLIST_FILE, CheckItem, InspectorRow, NoteCard, NotesCache, TaskNotes};
 pub use chord::Chord;
+pub use color_pick::{ColorPick, PICK_COLS};
 pub use draft::{DialogInputMode, DraftCursor, DraftState};
 pub use draft_overlay::{
     BuilderField, CalendarState, CalendarTarget, DraftOverlay, OverlayKind, PriorityChooserState,
@@ -171,6 +173,8 @@ pub struct App {
     pub home_bar: std::cell::Cell<Option<ratatui::layout::Rect>>,
     /// The Notes screen, when it's up.
     pub notes_screen: Option<NotesScreen>,
+    /// A space's colour picker (`c` on a space).
+    pub color_pick: Option<ColorPick>,
     /// The Trash screen, when it's up.
     pub trash_screen: Option<TrashScreen>,
     /// Where the cursor is on the settings screen.
@@ -359,6 +363,7 @@ impl App {
             screen_w: std::cell::Cell::new(0),
             home_bar: std::cell::Cell::new(None),
             notes_screen: None,
+            color_pick: None,
             trash_screen: None,
             settings: SettingsState::default(),
             pomodoro: None,
