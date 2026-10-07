@@ -183,8 +183,14 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             "y delete this note · any other key keeps it".into()
         } else if ns.searching {
             "type to search · Enter done · Esc clear".into()
+        } else if ns.naming.is_some() {
+            "type a name · Enter make it · Esc cancel".into()
+        } else if ns.reading && app.prefs.hints {
+            "j/k scroll · ␣/b page · gg/G top/end · Tab next note · e edit · Esc back".into()
+        } else if ns.task.is_some() && app.prefs.hints {
+            "Enter read · e edit · a new note · * main note · d delete · t its task".into()
         } else if app.prefs.hints {
-            "Enter edit · / search · n next hit · d delete · E $EDITOR · p pin · t its task".into()
+            "Enter read · e edit · / search · n next hit · d delete · p pin · t its task".into()
         } else {
             "".into()
         };

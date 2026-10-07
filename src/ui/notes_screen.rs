@@ -22,19 +22,32 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         return;
     }
     let entries = app.note_entries();
-    let list_w = LIST_W.min(area.width / 2);
+    // Reading a note: it takes the whole screen.
+    let list_w = if state.reading {
+        0
+    } else {
+        LIST_W.min(area.width / 2)
+    };
     let list = Rect {
         width: list_w,
         ..area
     };
-    let doc = Rect {
-        x: area.x + list_w + 1,
-        width: area.width - list_w - 1,
-        ..area
+    let doc = if state.reading {
+        Rect {
+            x: area.x + area.width / 8,
+            width: area.width - area.width / 4,
+            ..area
+        }
+    } else {
+        Rect {
+            x: area.x + list_w + 1,
+            width: area.width - list_w - 1,
+            ..area
+        }
     };
     let buf = frame.buffer_mut();
     let bg = Style::default().bg(theme.bg);
-    for y in area.top()..area.bottom() {
+    for y in (area.top()..area.bottom()).filter(|_| !state.reading) {
         if let Some(c) = buf.cell_mut((area.x + list_w, y)) {
             c.set_symbol("│");
             c.set_style(bg.fg(theme.border));
@@ -48,34 +61,58 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         width: list.width.saturating_sub(2),
         height: 3,
     };
-    let border = if state.searching {
+    let border = if state.searching || state.naming.is_some() {
         theme.accent
     } else {
         theme.border
     };
-    rounded(buf, q, bg.fg(border));
-    let text = if state.query.is_empty() && !state.searching {
-        "⌕ search notes   /".to_string()
+    if !state.reading {
+        rounded(buf, q, bg.fg(border));
+    }
+    let text = if let Some(name) = &state.naming {
+        format!("+ new note: {name}▏")
+    } else if state.query.is_empty() && !state.searching {
+        match &state.task {
+            Some(t) => format!("⌕ notes of {}", t.title),
+            None => "⌕ search notes   /".to_string(),
+        }
     } else if state.searching {
         format!("⌕ {}▏", state.query)
     } else {
         format!("⌕ {}", state.query)
     };
-    let color = if state.query.is_empty() && !state.searching {
+    let color = if state.naming.is_some() {
+        theme.accent
+    } else if state.query.is_empty() && !state.searching {
         theme.dim
     } else {
         theme.fg
     };
-    put(buf, q.x + 2, q.y + 1, &text, q.width - 4, bg.fg(color));
+    if !state.reading {
+        put(
+            buf,
+            q.x + 2,
+            q.y + 1,
+            &fit(&text, q.width - 4),
+            q.width - 4,
+            bg.fg(color),
+        );
+    }
 
     // The notes, two rows each.
     let top = q.bottom() + 1;
-    let room = usize::from(list.bottom().saturating_sub(top) / 2);
-    if entries.is_empty() {
-        let msg = if state.query.is_empty() {
-            "no notes yet — o on a task"
-        } else {
+    let room = if state.reading {
+        0
+    } else {
+        usize::from(list.bottom().saturating_sub(top) / 2)
+    };
+    if entries.is_empty() && !state.reading {
+        let msg = if !state.query.is_empty() {
             "nothing matches"
+        } else if state.task.is_some() {
+            "no notes yet — a adds one"
+        } else {
+            "no notes yet — o on a task"
         };
         put(buf, list.x + 2, top, msg, list.width - 3, bg.fg(theme.dim));
     }
@@ -97,12 +134,19 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             put(buf, list.x + 1, y + 1, "▎", 1, row.fg(theme.accent));
         }
         let w = list.width.saturating_sub(5);
+        // The task's main note wears a star.
+        let main = app.is_main_note(&e.path);
+        let mut tx = list.x + 3;
+        if main {
+            tx += put(buf, tx, y, "★ ", 2, row.fg(theme.matched));
+        }
+        let tw = w.saturating_sub(tx - list.x - 3);
         put(
             buf,
-            list.x + 3,
+            tx,
             y,
-            &fit(&e.title, w),
-            w,
+            &fit(&e.title, tw),
+            tw,
             row.fg(theme.fg).add_modifier(Modifier::BOLD),
         );
         let mut x = list.x + 3;
@@ -154,10 +198,22 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         buf,
         inner.x,
         inner.y + 1,
-        &format!(
-            "edited {} · Enter edit · E $EDITOR · p pin · t its task",
-            e.when
-        ),
+        &if state.reading {
+            format!(
+                "edited {} · e edit · Tab next note · G end · t its task · Esc back",
+                e.when
+            )
+        } else if state.task.is_some() {
+            format!(
+                "edited {} · Enter read · e edit · a new · * main · t its task",
+                e.when
+            )
+        } else {
+            format!(
+                "edited {} · Enter read · e edit · E $EDITOR · p pin · t its task",
+                e.when
+            )
+        },
         inner.width,
         bg.fg(theme.dim),
     );
@@ -211,7 +267,15 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         .hit
         .filter(|_| !hit_lines.is_empty())
         .map(|h| hit_lines[h % hit_lines.len()]);
-    let scroll = current.map_or(state.scroll, |l| l.saturating_sub(2) as u16);
+    // How far it can go, for the keys and the wheel.
+    let max = rendered
+        .lines
+        .len()
+        .saturating_sub(usize::from(body.height));
+    state.max_scroll.set(max.min(usize::from(u16::MAX)) as u16);
+    let scroll = current
+        .map_or(state.scroll, |l| l.saturating_sub(2) as u16)
+        .min(state.max_scroll.get());
     let para = Paragraph::new(rendered.lines)
         .style(bg.fg(theme.fg))
         .wrap(Wrap { trim: false })

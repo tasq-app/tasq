@@ -148,12 +148,8 @@ impl App {
 
     /// The wheel: up and down through whatever's under the pointer.
     pub fn wheel(&mut self, down: bool) -> Option<Action> {
-        if let Some(s) = self.notes_screen.as_mut() {
-            s.scroll = if down {
-                s.scroll.saturating_add(2)
-            } else {
-                s.scroll.saturating_sub(2)
-            };
+        if self.notes_screen.is_some() {
+            self.notes_screen_scroll_by(if down { 2 } else { -2 });
             return None;
         }
         Some(if down {

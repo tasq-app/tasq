@@ -628,7 +628,12 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
                 && (app.home
                     || app.trash_screen.is_some()
                     || app.notes_screen.as_ref().is_some_and(|s| {
-                        s.editor.is_none() && !s.searching && !s.confirm_delete
+                        s.editor.is_none()
+                            && !s.searching
+                            && !s.confirm_delete
+                            && s.naming.is_none()
+                            // Ctrl-D / Ctrl-U scroll a note being read.
+                            && !(s.reading && matches!(key.code, KeyCode::Char('d' | 'u')))
                     })) =>
         {
             global_key(app, key, keybinds);
@@ -770,6 +775,33 @@ fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         }
         return;
     }
+    // Naming a new note for the task.
+    if app
+        .notes_screen
+        .as_ref()
+        .is_some_and(|s| s.naming.is_some())
+    {
+        match key.code {
+            KeyCode::Esc => {
+                if let Some(s) = app.notes_screen.as_mut() {
+                    s.naming = None;
+                }
+            }
+            KeyCode::Enter => app.notes_screen_create(),
+            KeyCode::Backspace => {
+                if let Some(name) = app.notes_screen.as_mut().and_then(|s| s.naming.as_mut()) {
+                    name.pop();
+                }
+            }
+            KeyCode::Char(c) => {
+                if let Some(name) = app.notes_screen.as_mut().and_then(|s| s.naming.as_mut()) {
+                    name.push(c);
+                }
+            }
+            _ => {}
+        }
+        return;
+    }
     let searching = app.notes_screen.as_ref().is_some_and(|s| s.searching);
     if searching {
         match key.code {
@@ -790,6 +822,39 @@ fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         }
         return;
     }
+    let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+    // Reading a note across the screen: the keys scroll it.
+    if app.notes_screen.as_ref().is_some_and(|s| s.reading) {
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') => app.notes_screen_read(false),
+            KeyCode::Char('d') if ctrl => app.notes_screen_scroll_by(10),
+            KeyCode::Char('u') if ctrl => app.notes_screen_scroll_by(-10),
+            KeyCode::Char('j') | KeyCode::Down => app.notes_screen_scroll_by(1),
+            KeyCode::Char('k') | KeyCode::Up => app.notes_screen_scroll_by(-1),
+            KeyCode::Char('J' | ' ') | KeyCode::PageDown => app.notes_screen_scroll_by(10),
+            KeyCode::Char('K' | 'b') | KeyCode::PageUp => app.notes_screen_scroll_by(-10),
+            KeyCode::Char('G') | KeyCode::End => app.notes_screen_scroll_edge(true),
+            KeyCode::Home => app.notes_screen_scroll_edge(false),
+            KeyCode::Char('g') => {
+                if app.chord.consume('g') {
+                    app.notes_screen_scroll_edge(false);
+                } else {
+                    app.chord.arm('g');
+                }
+            }
+            KeyCode::Tab => app.notes_screen_move(true),
+            KeyCode::BackTab => app.notes_screen_move(false),
+            KeyCode::Enter | KeyCode::Char('e' | 'i') => app.notes_screen_open_editor(),
+            KeyCode::Char('E') => app.notes_screen_edit(),
+            KeyCode::Char('n') => app.notes_screen_next_hit(true),
+            KeyCode::Char('N') => app.notes_screen_next_hit(false),
+            KeyCode::Char('p') => app.notes_screen_pin(),
+            KeyCode::Char('t') => app.notes_screen_open_task(),
+            KeyCode::Char('*') => app.notes_screen_toggle_main(),
+            _ => {}
+        }
+        return;
+    }
     match key.code {
         KeyCode::Esc => app.close_notes_screen(),
         KeyCode::Char('/') => {
@@ -801,9 +866,22 @@ fn handle_notes_screen(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         KeyCode::Char('k') | KeyCode::Up => app.notes_screen_move(false),
         KeyCode::Char('J') | KeyCode::PageDown => app.notes_screen_scroll(true),
         KeyCode::Char('K') | KeyCode::PageUp => app.notes_screen_scroll(false),
-        KeyCode::Enter | KeyCode::Char('e' | 'l') | KeyCode::Right => {
-            app.notes_screen_open_editor();
+        KeyCode::Char('G') => app.notes_screen_scroll_edge(true),
+        KeyCode::Char('g') => {
+            if app.chord.consume('g') {
+                app.notes_screen_scroll_edge(false);
+            } else {
+                app.chord.arm('g');
+            }
         }
+        KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => {
+            if app.current_note_entry().is_some() {
+                app.notes_screen_read(true);
+            }
+        }
+        KeyCode::Char('e' | 'i') => app.notes_screen_open_editor(),
+        KeyCode::Char('a') => app.notes_screen_begin_new(),
+        KeyCode::Char('*') => app.notes_screen_toggle_main(),
         KeyCode::Char('E') => app.notes_screen_edit(),
         KeyCode::Char('n') => app.notes_screen_next_hit(true),
         KeyCode::Char('N') => app.notes_screen_next_hit(false),
@@ -2461,7 +2539,16 @@ fn apply_action(app: &mut App, action: Action) {
         }
         Action::CopyLine => copy_current_task(app, false),
         Action::CopyBody => copy_current_task(app, true),
-        Action::OpenNotes => app.open_notes_for_current(),
+        // `o`: the task's notes, on the Notes screen.
+        Action::OpenNotes => {
+            if let Some(abs) = app.cur_abs()
+                && app.view() == View::List
+            {
+                app.open_notes_for_task(abs);
+            } else {
+                app.open_notes_for_current();
+            }
+        }
         Action::OpenShare => match app.ensure_share_started() {
             Ok(_) => {
                 app.mode = Mode::Share;
@@ -3540,7 +3627,8 @@ mod tests {
     fn open_notes_action_enters_notes_mode() {
         let mut app = build_app();
         apply_action(&mut app, Action::OpenNotes);
-        assert_eq!(app.mode, Mode::Notes);
+        let ns = app.notes_screen.as_ref().expect("notes screen open");
+        assert!(ns.task.is_some(), "filtered to the task");
     }
 
     #[test]
@@ -4250,6 +4338,10 @@ mod tests {
             Mode::Normal,
             "must not have opened Insert or Notes"
         );
+        assert!(
+            app.notes_screen.is_none(),
+            "o did not open the Notes screen"
+        );
         assert!(app.pinned_focus, "still focused on the pinned note");
 
         let _ = std::fs::remove_dir_all(&dir);
@@ -4377,7 +4469,7 @@ mod tests {
         handle_key(&mut app, key('z'), &KeyBindings::default());
         assert!(!app.pinned_focus, "focus handed back to the main app");
 
-        handle_key(&mut app, key('o'), &KeyBindings::default()); // reopen popup
+        app.open_notes_for_current(); // reopen popup
         assert_eq!(app.mode, Mode::Notes);
         handle_notes(&mut app, key('j')); // select b.md
         handle_notes(&mut app, key('e')); // open b.md
@@ -4404,7 +4496,7 @@ mod tests {
         // of the pinned editor's own Normal sub-mode (see the doc comment
         // on `build_notes_app_with_two_pinned_tabs`).
         handle_key(&mut app, key('z'), &KeyBindings::default());
-        handle_key(&mut app, key('o'), &KeyBindings::default());
+        app.open_notes_for_current();
         handle_notes(&mut app, key('e')); // a.md, cursor is back at 0
         handle_notes(&mut app, key('z')); // pin as tab 2, active
         assert_eq!(app.pinned_notes.len(), 3);
@@ -4586,7 +4678,7 @@ mod tests {
         handle_key(&mut app, key('z'), &KeyBindings::default()); // unfocus, hand focus back to the main app
         assert!(!app.pinned_focus);
 
-        handle_key(&mut app, key('o'), &KeyBindings::default()); // reopen the popup
+        app.open_notes_for_current(); // reopen the popup
         assert_eq!(app.mode, Mode::Notes);
         handle_notes(&mut app, key('j')); // select b.md
         handle_notes(&mut app, key('z')); // pin b.md directly too, tab 1
@@ -4640,14 +4732,14 @@ mod tests {
         };
         let mut app = App::new(path, raw.into(), "2026-05-07".into(), cfg);
 
-        handle_key(&mut app, key('o'), &KeyBindings::default()); // open notes for task 0
+        app.open_notes_for_current(); // open notes for task 0
         handle_notes(&mut app, key('z')); // pin a.md directly, focused
         assert_eq!(app.pinned_notes.len(), 1);
         handle_key(&mut app, key('z'), &KeyBindings::default()); // unfocus
         assert!(!app.pinned_focus);
 
         handle_key(&mut app, key('j'), &KeyBindings::default()); // move to task 1 (no notes)
-        handle_key(&mut app, key('o'), &KeyBindings::default()); // open its (empty) notes popup
+        app.open_notes_for_current(); // open its (empty) notes popup
         assert_eq!(app.mode, Mode::Notes);
         assert!(app.notes_popup.files.is_empty(), "task 1 has no notes");
 

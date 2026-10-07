@@ -141,7 +141,11 @@ pub fn build_line<'a>(task: &'a Task, opts: RowOpts<'a>, theme: &Theme) -> Line<
         let token = &rest[..tok_end];
         // Tags drawn as chips after the title, and the star (a glyph above),
         // leave the title itself plain words.
-        if is_hidden_kv(token, opts.hidden_keys) || is_star_token(token) || is_chip_token(token) {
+        if is_hidden_kv(token, opts.hidden_keys)
+            || is_star_token(token)
+            || is_main_note_token(token)
+            || is_chip_token(token)
+        {
             // Drop the separator we just emitted for this token...
             if pushed_ws {
                 spans.pop();
@@ -270,6 +274,13 @@ fn push_token_spans<'a>(
     if cursor < token.len() {
         spans.push(Span::styled(&token[cursor..], base_style));
     }
+}
+
+/// `main:<file>`, the task's main note: bookkeeping, never shown.
+fn is_main_note_token(token: &str) -> bool {
+    token
+        .split_once(':')
+        .is_some_and(|(k, v)| k == crate::app::MAIN_NOTE_KEY && !v.is_empty())
 }
 
 /// Tag keys shown as chips after the title instead of inside it.
@@ -630,6 +641,14 @@ mod tests {
         let text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
         assert!(text.contains("★ Book hotel"), "{text}");
         assert!(!text.contains("star:1"), "{text}");
+    }
+
+    #[test]
+    fn the_main_note_tag_is_not_shown() {
+        let task = parse_line("Thesis notes:abc/ main:dudas.md").unwrap();
+        let line = build_line(&task, RowOpts::default(), &MUTED);
+        let text: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
+        assert!(!text.contains("main:"), "{text}");
     }
 
     #[test]
