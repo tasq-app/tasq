@@ -132,6 +132,14 @@ local database, notes, live natural-language capture and more, listed below.
   shows as a pill, never as a raw `due:` token), `Ctrl+Z` undoes the last
   detection, one `Enter` adds the task and keeps the dialog open for the next
   one.
+- **In Spanish too**: "comprar pan mañana a las 6 de la tarde", "gimnasio
+  cada lunes y miércoles", "examen el 15 de noviembre prioridad alta",
+  "viaje evento del 16 al 17 de nov", "limpiar garaje este finde",
+  "terminar la memoria la semana que viene", "repasar durante 2 horas
+  recuérdame 15 min antes", "repasar en exámenes". English and Spanish
+  mix freely, and the title stays as you typed it. The Spanish is a
+  vocabulary over the English reader (`src/nl_es.rs`), so another language
+  is another table.
 - **Starred tasks**: `*` stars a task (a `star:1` tag), which floats it to
   the top of its own priority group — a starred (B) task sits above the other
   (B) tasks, never above an (A).
