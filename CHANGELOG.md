@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/tasq-app/tasq/compare/v0.3.0...v0.3.1) (2026-10-08)
+
+
+### Bug Fixes
+
+* **capture:** more ways to write dates and repeats ([#65](https://github.com/tasq-app/tasq/issues/65)) ([2a7cb7b](https://github.com/tasq-app/tasq/commit/2a7cb7b41511ba522cb901611ad7a4a6dd408bb1))
+
 ## [0.3.0](https://github.com/tasq-app/tasq/compare/v0.2.0...v0.3.0) (2026-10-07)
 
 
