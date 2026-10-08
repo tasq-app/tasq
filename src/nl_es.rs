@@ -44,6 +44,64 @@ const RULES: &[Rule] = &[
     (&["todos", "los", "@"], &["every", "@"]),
     (&["los", "@"], &["every", "@"]),
     (&["el", "@"], &["on", "@"]),
+    // "El día 15 de noviembre", "el 15 nov", "el lunes 16", "el 15 de
+    // noviembre de 2027".
+    (&["el", "dia", "#", "de", "!", "de", "#"], &["!", "#", "#"]),
+    (&["el", "#", "de", "!", "de", "#"], &["!", "#", "#"]),
+    (&["#", "de", "!", "de", "#"], &["!", "#", "#"]),
+    (&["el", "dia", "#", "de", "!"], &["!", "#"]),
+    (&["dia", "#", "de", "!"], &["!", "#"]),
+    (&["el", "dia", "#", "!"], &["!", "#"]),
+    (&["el", "#", "!"], &["!", "#"]),
+    (&["el", "dia", "#"], &["the", "#"]),
+    (&["el", "!", "#", "#"], &["!", "#", "#"]),
+    (&["el", "!", "#"], &["!", "#"]),
+    (&["el", "@", "#"], &["the", "#"]),
+    (&["el", "@", "dia", "#"], &["the", "#"]),
+    // Repeats with a number: "cada dos lunes", "cada 3 martes y jueves",
+    // "cada día 15" (of each month), "una vez a la semana".
+    (&["cada", "#", "@"], &["every", "#", "@"]),
+    (
+        &["cada", "dia", "#", "del", "mes"],
+        &["the", "#", "every", "month"],
+    ),
+    (
+        &["cada", "dia", "#", "de", "cada", "mes"],
+        &["the", "#", "every", "month"],
+    ),
+    (
+        &["el", "#", "de", "cada", "mes"],
+        &["the", "#", "every", "month"],
+    ),
+    (
+        &["el", "dia", "#", "de", "cada", "mes"],
+        &["the", "#", "every", "month"],
+    ),
+    (
+        &["todos", "los", "#", "de", "mes"],
+        &["the", "#", "every", "month"],
+    ),
+    (&["cada", "dia", "#"], &["the", "#", "every", "month"]),
+    (&["una", "vez", "a", "la", "semana"], &["every", "week"]),
+    (&["una", "vez", "por", "semana"], &["every", "week"]),
+    (&["una", "vez", "al", "mes"], &["every", "month"]),
+    (&["una", "vez", "al", "dia"], &["every", "day"]),
+    (&["una", "vez", "al", "ano"], &["every", "year"]),
+    (&["a", "diario"], &["daily"]),
+    (
+        &["todos", "los", "dias", "de", "lunes", "a", "viernes"],
+        &["every", "weekday"],
+    ),
+    (
+        &["cada", "dia", "de", "lunes", "a", "viernes"],
+        &["every", "weekday"],
+    ),
+    (&["de", "lunes", "a", "viernes"], &["every", "weekday"]),
+    (&["de", "@", "a", "@"], &["from", "@", "to", "@"]),
+    // "Lunes y miércoles" with no date before: every monday and wednesday.
+    (&["@", "y", "@"], &["every", "@", "and", "@"]),
+    // How long a repeat lasts: "durante 5 semanas".
+    (&["durante", "#", "&"], &["for", "#", "&"]),
     (&["el", "#", "de", "!"], &["!", "#"]),
     (&["#", "de", "!"], &["#", "!"]),
     (&["el", "#"], &["the", "#"]),
@@ -279,6 +337,70 @@ fn single(w: &str) -> Option<String> {
         .or_else(|| number(w).filter(|_| !w.starts_with(|c: char| c.is_ascii_digit())))
 }
 
+/// "3horas" → `3 hours`, "1.5hours" → `1.5 hours`, "15nov" → `15 nov`,
+/// "nov15" → `nov 15`: a number stuck to a unit spelled out or to a month.
+/// Short units ("3h", "90m") are left to the parser, which reads them.
+fn glued(w: &str) -> Option<Vec<String>> {
+    let digits = |s: &str| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit());
+    // Month first: "nov15".
+    if let Some(at) = w.find(|c: char| c.is_ascii_digit()) {
+        let (m, d) = w.split_at(at);
+        if let Some(m) = month(m)
+            && digits(d)
+        {
+            return Some(vec![m.to_string(), d.to_string()]);
+        }
+    }
+    let split = w.find(|c: char| c.is_ascii_alphabetic())?;
+    let (n, u) = w.split_at(split);
+    if n.is_empty()
+        || !n
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == '.' || c == ',')
+    {
+        return None;
+    }
+    if let Some(m) = month(u).filter(|_| digits(n)) {
+        return Some(vec![n.to_string(), m.to_string()]);
+    }
+    let unit = match u {
+        "hours" | "hour" | "hrs" | "hr" | "minutes" | "minute" | "mins" | "days" | "day"
+        | "weeks" | "week" | "months" | "month" => u,
+        u if u.len() >= 3 => self::unit(u)?,
+        _ => return None,
+    };
+    Some(vec![n.replace(',', "."), unit.to_string()])
+}
+
+/// "15/11" → `15 nov`, "15/11/2027" → `nov 15 2027`: day first, the
+/// Spanish way.
+fn slash_date(w: &str) -> Option<Vec<String>> {
+    let parts: Vec<&str> = w.split('/').collect();
+    if !(2..=3).contains(&parts.len())
+        || parts
+            .iter()
+            .any(|p| p.is_empty() || !p.chars().all(|c| c.is_ascii_digit()))
+    {
+        return None;
+    }
+    let (d, m): (u32, u32) = (parts[0].parse().ok()?, parts[1].parse().ok()?);
+    if !(1..=31).contains(&d) || !(1..=12).contains(&m) {
+        return None;
+    }
+    const NAMES: [&str; 12] = [
+        "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
+    ];
+    let month = NAMES[m as usize - 1].to_string();
+    match parts.get(2) {
+        Some(y) => {
+            let y: u32 = y.parse().ok()?;
+            let y = if y < 100 { 2000 + y } else { y };
+            Some(vec![month, d.to_string(), y.to_string()])
+        }
+        None => Some(vec![d.to_string(), month]),
+    }
+}
+
 /// The text as the parser reads it, and where each of its tokens came from.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Shadow {
@@ -337,11 +459,42 @@ fn trailing_punct(w: &str) -> &str {
 
 /// Read `typed` into the [`Shadow`] the parser works on.
 pub fn shadow(typed: &str) -> Shadow {
-    let ws = words(typed);
-    let folded: Vec<String> = ws
-        .iter()
-        .map(|&(s, e)| fold(typed[s..e].trim_end_matches([',', '.', ';', ':', '!', '?'])))
-        .collect();
+    /// One piece of what was typed: a word, or part of one run together
+    /// ("15nov" is `15` and `nov`), all from the same typed range.
+    struct Piece<'a> {
+        from: (usize, usize),
+        raw: std::borrow::Cow<'a, str>,
+        folded: String,
+        punct: &'a str,
+    }
+    let mut pieces: Vec<Piece> = Vec::new();
+    for (s, e) in words(typed) {
+        let raw = &typed[s..e];
+        let punct = trailing_punct(raw);
+        let folded = fold(&raw[..raw.len() - punct.len()]);
+        let split = (!raw.starts_with(['+', '@']))
+            .then(|| glued(&folded).or_else(|| slash_date(&folded)))
+            .flatten();
+        match split {
+            Some(toks) => {
+                let n = toks.len();
+                for (k, t) in toks.into_iter().enumerate() {
+                    pieces.push(Piece {
+                        from: (s, e),
+                        raw: t.clone().into(),
+                        folded: t,
+                        punct: if k + 1 == n { punct } else { "" },
+                    });
+                }
+            }
+            None => pieces.push(Piece {
+                from: (s, e),
+                raw: raw.into(),
+                folded,
+                punct,
+            }),
+        }
+    }
     let mut rules: Vec<&Rule> = RULES.iter().collect();
     rules.sort_by_key(|(p, _)| std::cmp::Reverse(p.len()));
 
@@ -356,27 +509,39 @@ pub fn shadow(typed: &str) -> Shadow {
         map.push(((s, text.len()), from));
     };
     let mut i = 0;
-    while i < ws.len() {
+    while i < pieces.len() {
         // A sigiled tag is never translated: `+Uni`, `@casa`.
-        let raw = &typed[ws[i].0..ws[i].1];
-        if raw.starts_with(['+', '@']) {
-            push(&mut text, raw, ws[i]);
+        if pieces[i].raw.starts_with(['+', '@']) {
+            push(&mut text, &pieces[i].raw, pieces[i].from);
             i += 1;
             continue;
         }
         let mut done = false;
         for (pat, rep) in &rules {
-            if i + pat.len() > ws.len() {
+            if i + pat.len() > pieces.len() {
+                continue;
+            }
+            // "Lunes y miércoles" on its own is every monday and wednesday;
+            // inside a list ("cada lunes, miércoles y viernes") it's left
+            // to the list.
+            if pat.first() == Some(&"@")
+                && i > 0
+                && (weekday(&pieces[i - 1].folded).is_some()
+                    || matches!(
+                        pieces[i - 1].folded.as_str(),
+                        "cada" | "los" | "todos" | "el" | "de" | "entre" | "y"
+                    ))
+            {
                 continue;
             }
             let mut slots: Vec<(char, String)> = Vec::new();
             let fits = pat.iter().enumerate().all(|(k, p)| {
-                let w = folded[i + k].as_str();
+                let piece = &pieces[i + k];
                 // Only the last word may carry punctuation.
-                if k + 1 < pat.len() && !trailing_punct(&typed[ws[i + k].0..ws[i + k].1]).is_empty()
-                {
+                if k + 1 < pat.len() && !piece.punct.is_empty() {
                     return false;
                 }
+                let w = piece.folded.as_str();
                 let got = match *p {
                     "#" => number(w),
                     "@" => weekday(w).map(str::to_string),
@@ -396,13 +561,29 @@ pub fn shadow(typed: &str) -> Shadow {
             if !fits {
                 continue;
             }
-            let from = (ws[i].0, ws[i + pat.len() - 1].1);
-            let last = &typed[ws[i + pat.len() - 1].0..ws[i + pat.len() - 1].1];
-            let punct = trailing_punct(last);
+            let last = &pieces[i + pat.len() - 1];
+            let from = (pieces[i].from.0, last.from.1);
+            let punct = last.punct;
+            // Each slot kind can be used twice ("de @ a @"): fill in order.
+            let mut used: Vec<usize> = Vec::new();
             for (n, r) in rep.iter().enumerate() {
-                let mut tok = (*r).to_string();
-                for (c, v) in &slots {
-                    tok = tok.replace(*c, v);
+                let mut tok = String::new();
+                for ch in r.chars() {
+                    if matches!(ch, '#' | '@' | '!' | '&') {
+                        let pick = slots
+                            .iter()
+                            .enumerate()
+                            .find(|(k, (c, _))| *c == ch && !used.contains(k))
+                            .or_else(|| {
+                                slots.iter().enumerate().rev().find(|(_, (c, _))| *c == ch)
+                            });
+                        if let Some((k, (_, v))) = pick {
+                            used.push(k);
+                            tok.push_str(v);
+                            continue;
+                        }
+                    }
+                    tok.push(ch);
                 }
                 if n + 1 == rep.len() {
                     tok.push_str(punct);
@@ -416,11 +597,12 @@ pub fn shadow(typed: &str) -> Shadow {
         if done {
             continue;
         }
-        let tok = match single(&folded[i]) {
-            Some(t) => format!("{t}{}", trailing_punct(raw)),
-            None => raw.to_string(),
+        let p = &pieces[i];
+        let tok = match single(&p.folded) {
+            Some(t) => format!("{t}{}", p.punct),
+            None => p.raw.to_string(),
         };
-        push(&mut text, &tok, ws[i]);
+        push(&mut text, &tok, p.from);
         i += 1;
     }
     Shadow { text, map }
@@ -474,6 +656,10 @@ mod tests {
                 "llamar a mamá next week",
             ),
             ("pagar +Casa este finde", "pagar +Casa this weekend"),
+            ("pan durante 3horas", "pan for 3 hours"),
+            ("pan for 2hours", "pan for 2 hours"),
+            ("pan el 15nov", "pan nov 15"),
+            ("pan el 15/11/2027", "pan nov 15 2027"),
         ] {
             assert_eq!(shadow(typed).text, read, "{typed}");
         }
