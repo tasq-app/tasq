@@ -47,6 +47,29 @@ pub struct CalScreen {
     pub selected: usize,
     pub week_style: CalStyle,
     pub month_style: CalStyle,
+    /// The month grid's first row (a Monday) once the arrows have scrolled
+    /// it a week at a time; `None`: the selected day's month, whole.
+    pub month_top: Option<NaiveDate>,
+    /// How many weeks the scrolled grid shows (kept from the month it
+    /// started at, so the grid doesn't change height as it scrolls).
+    pub month_rows: u16,
+}
+
+impl CalScreen {
+    /// The month grid: its first Monday and how many weeks. Scrolled by
+    /// the arrows while the selected day stays in it; else the selected
+    /// day's month.
+    pub fn month_window(&self) -> (NaiveDate, u16) {
+        if let Some(top) = self.month_top {
+            let end = top + Days::new(u64::from(self.month_rows) * 7);
+            if top <= self.date && self.date < end {
+                return (top, self.month_rows);
+            }
+        }
+        let (first, last) = month_bounds(self.date);
+        let top = week_start(first);
+        (top, ((last - top).num_days() / 7 + 1) as u16)
+    }
 }
 
 /// A change made to one occurrence in the calendar.
@@ -171,6 +194,8 @@ impl App {
                 selected: 0,
                 week_style: CalStyle::default(),
                 month_style: CalStyle::default(),
+                month_top: None,
+                month_rows: 0,
             },
         };
         self.calendar = Some(state);
@@ -218,13 +243,26 @@ impl App {
         }
     }
 
-    /// Move the selected day by `days`.
+    /// Move the selected day by `days`. In the month, going past the
+    /// grid's top or bottom row scrolls it a week, not a month.
     pub fn cal_move(&mut self, days: i64) {
         if let Some(c) = self.calendar.as_mut()
             && let Some(d) = c.date.checked_add_signed(chrono::Duration::days(days))
         {
+            let (mut top, rows) = c.month_window();
+            let week = week_start(d);
+            let last_row = top + Days::new(u64::from(rows.saturating_sub(1)) * 7);
+            if week < top {
+                top = week;
+            } else if week > last_row {
+                top = week - Days::new(u64::from(rows.saturating_sub(1)) * 7);
+            }
             c.date = d;
             c.selected = 0;
+            if c.view == CalView::Month {
+                c.month_top = Some(top);
+                c.month_rows = rows;
+            }
         }
         self.cal_clamp();
     }
@@ -245,6 +283,8 @@ impl App {
         }
         .unwrap_or(d);
         c.selected = 0;
+        // A whole month again.
+        c.month_top = None;
         self.cal_clamp();
     }
 
@@ -253,6 +293,7 @@ impl App {
         if let Some(c) = self.calendar.as_mut() {
             c.date = today;
             c.selected = 0;
+            c.month_top = None;
         }
         self.cal_clamp();
     }
@@ -701,6 +742,41 @@ mod tests {
             (CalView::Day, "2026-05-20".into())
         );
         assert_eq!(app.cal_selected().unwrap().abs, 0);
+    }
+
+    #[test]
+    fn arrows_scroll_the_month_a_week_at_a_time() {
+        // Today is 2026-05-06; May's grid is the five weeks from Apr 27.
+        let mut app = build_app("a plan:2026-05-20\n");
+        app.open_cal(CalView::Month);
+        let window = |app: &App| {
+            let (top, rows) = app.calendar.as_ref().unwrap().month_window();
+            (top.to_string(), rows)
+        };
+        assert_eq!(window(&app), ("2026-04-27".into(), 5));
+        // Inside the grid: it stays.
+        app.cal_move(21);
+        assert_eq!(window(&app), ("2026-04-27".into(), 5));
+        // Down off the last row: one week on, not June whole.
+        app.cal_move(7);
+        assert_eq!(
+            app.calendar.as_ref().unwrap().date.to_string(),
+            "2026-06-03"
+        );
+        assert_eq!(window(&app), ("2026-05-04".into(), 5));
+        // Back up inside it, then off the top: one week back.
+        app.cal_move(-28);
+        assert_eq!(window(&app), ("2026-05-04".into(), 5));
+        app.cal_move(-7);
+        assert_eq!(window(&app), ("2026-04-27".into(), 5));
+        // `>` goes to the next month whole.
+        app.cal_move(28);
+        app.cal_page(true);
+        assert_eq!(
+            app.calendar.as_ref().unwrap().date.to_string(),
+            "2026-06-27"
+        );
+        assert_eq!(window(&app), ("2026-06-01".into(), 5));
     }
 
     #[test]

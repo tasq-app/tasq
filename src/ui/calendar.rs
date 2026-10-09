@@ -1490,9 +1490,10 @@ fn month(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
         return;
     };
     let today = app.today_naive();
-    let (first, last) = crate::app::month_bounds(cal.date);
-    let grid_from = crate::app::week_start(first);
-    let weeks = ((last - grid_from).num_days() / 7 + 1) as u16;
+    // The selected day's month is the one in full colour; the grid may be
+    // scrolled a few weeks off it.
+    let first = crate::app::month_bounds(cal.date).0;
+    let (grid_from, weeks) = cal.month_window();
     let grid_to = grid_from + chrono::Days::new(u64::from(weeks) * 7 - 1);
     let occs = app.cal_occurrences(grid_from, grid_to);
     let titles = cal.month_style == crate::app::CalStyle::List;
