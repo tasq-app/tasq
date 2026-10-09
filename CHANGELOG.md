@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/tasq-app/tasq/compare/v0.4.0...v0.5.0) (2026-10-09)
+
+
+### Features
+
+* arrows scroll the month view a week at a time ([#69](https://github.com/tasq-app/tasq/issues/69)) ([5a0fad2](https://github.com/tasq-app/tasq/commit/5a0fad2ee5407402df53b916d80a1d766aec15c7))
+
 ## [0.4.0](https://github.com/tasq-app/tasq/compare/v0.3.1...v0.4.0) (2026-10-09)
 
 
