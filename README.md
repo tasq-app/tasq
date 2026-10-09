@@ -1006,6 +1006,51 @@ next session. Plain shell appends are useful for lightweight capture,
 but they do not take that lock; use the capture server or the same lock
 if a producer must be serialized with the TUI drain.
 
+## Google Calendar
+
+tasq can keep your dated tasks in Google Calendar, each in its space's
+colour. Open Settings (`,`) → **Connected calendars** → **Google
+Calendar** and press Enter: your browser opens on Google's consent page,
+you allow tasq, and that's it.
+
+- tasq makes one calendar called **tasq** in your account and only ever
+  touches that calendar (it asks for the `calendar.app.created` scope: it
+  can't read or change your other calendars).
+- Every task with a day goes there: timed ones as timed events (30 min
+  unless they have a `dur:`), the rest as all-day events, multi-day ones
+  across their days, repeats as repeating events and reminders as popups.
+  A task with only a deadline shows on its due day as `◷ title`.
+- Each event takes the nearest of Google's 11 event colours to its
+  space's colour, so a space looks the same in both places (with many
+  spaces, colours repeat).
+- Done or deleted tasks leave the calendar. Changes go a couple of seconds
+  after you make them, straight from your computer to Google; Enter on the
+  row syncs at once.
+- It's one way: tasq → Google. Edit tasks in tasq; edits made in Google
+  are overwritten on the next change.
+- **Disconnect Google** revokes the access and forgets it; the tasq
+  calendar stays in Google until you delete it.
+
+The access is kept in the system keychain (macOS Keychain, or the Secret
+Service via `secret-tool` on Linux), else in a private file next to the
+config. Sync needs the database (`tasq` without a todo.txt path), since
+it follows tasks by their ids. `TASQ_NO_GOOGLE=1` turns it off for a run.
+
+### Your own Google client
+
+Release builds come with tasq's Google client. Building from source, or
+to use a client of your own, create a **Desktop app** OAuth client in the
+Google Cloud console (Calendar API enabled) and set it in the config:
+
+```toml
+google_client_id = "1234-abc.apps.googleusercontent.com"
+google_client_secret = "GOCSPX-..."
+```
+
+or in the environment as `TASQ_GOOGLE_CLIENT_ID` / `TASQ_GOOGLE_CLIENT_SECRET`
+(at build time, too, to build them in). Publish the consent screen ("In
+production"): while it's in "Testing", Google drops the access after 7 days.
+
 ## Configuration
 
 Persisted to `${XDG_CONFIG_HOME:-$HOME/.config}/tasq/config.toml`. Cycling

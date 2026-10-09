@@ -471,6 +471,7 @@ impl App {
                 self.flash("undo");
                 self.recompute_visible();
                 self.clamp_cursor();
+                self.gcal_touch(false);
             }
             UndoOutcome::Nothing => {}
             UndoOutcome::Aborted(r) => self.handle_reconcile_abort(r),
@@ -486,6 +487,7 @@ impl App {
         if self.store.roll_events() > 0 {
             self.recompute_visible();
             self.clamp_cursor();
+            self.gcal_touch(false);
         }
         let before = match self.prefs.archive_done {
             super::ArchiveWhen::Never => return,

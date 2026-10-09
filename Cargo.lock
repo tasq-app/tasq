@@ -1592,6 +1592,7 @@ dependencies = [
  "qrcode",
  "ratatui",
  "rusqlite",
+ "serde_json",
  "tiny_http",
  "unicode-width",
 ]
