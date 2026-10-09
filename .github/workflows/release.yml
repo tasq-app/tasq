@@ -104,6 +104,11 @@ jobs:
           echo "CARGO_TARGET_${target_upper}_LINKER=${{ matrix.linker }}" >> "$GITHUB_ENV"
 
       - name: Build
+        env:
+          # The app's Google OAuth client (a desktop client: not a secret in
+          # the real sense, but kept out of the repo).
+          TASQ_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          TASQ_GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: cargo build --release --locked --target ${{ matrix.target }}
 
       - name: Package (unix)

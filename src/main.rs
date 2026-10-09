@@ -141,6 +141,10 @@ fn main() -> Result<()> {
     {
         app_state.set_update_check(update::spawn_check());
     }
+    // A kept Google Calendar connection comes back on, and syncs.
+    if std::env::var_os("TASQ_NO_GOOGLE").is_none() {
+        app_state.gcal_resume();
+    }
 
     let terminal = ratatui::init();
     enable_bracketed_paste();
@@ -240,6 +244,11 @@ fn run(
         // Pick up the update-check result so the status-bar indicator can
         // appear without waiting for a keystroke.
         if app.poll_update_check() {
+            dirty = true;
+        }
+        // Google Calendar: a sync that's due goes, and what the sync
+        // thread says comes in.
+        if app.gcal_poll() {
             dirty = true;
         }
         // Poll the config hot-reload watcher. On signal, reload strictly
@@ -514,6 +523,10 @@ fn open_path_in_editor(path: &std::path::Path) -> Result<()> {
 fn next_timeout(app: &App) -> Duration {
     let earliest = match (app.flash_deadline(), app.chord.deadline()) {
         (Some(f), Some(c)) => Some(f.min(c)),
+        (a, b) => a.or(b),
+    };
+    let earliest = match (earliest, app.gcal_deadline()) {
+        (Some(a), Some(b)) => Some(a.min(b)),
         (a, b) => a.or(b),
     };
     let wait = match earliest {

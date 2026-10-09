@@ -10,6 +10,7 @@ pub mod config_watcher;
 pub mod core;
 pub mod due_filter;
 pub mod duration;
+pub mod gcal;
 pub mod inbox;
 pub mod keybinds;
 pub mod nl;

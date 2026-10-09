@@ -13,10 +13,10 @@ expression: buffer_to_text(&buf)
    Data & trash              │                                                                      
    Keys                      │  ╭────────────────────────────────────────────────────────────────╮  
    About                     │  │ CONNECTED CALENDARS                                            │  
-                             │  │  Google Calendar    coming soon                                │  
+                             │  │  Google Calendar    needs a Google client (see README) ›       │  
                              │  │  Apple Calendar     coming soon                                │  
-                             │  │  Local .ics feed    coming soon                                │  
                              │  ╰────────────────────────────────────────────────────────────────╯  
+                             │                                                                      
                              │                                                                      
                              │                                                                      
                              │                                                                      

@@ -38,6 +38,10 @@ pub struct Config {
     /// a future launch, the server falls back to an OS-assigned port
     /// and rewrites this field.
     pub share_port: Option<u16>,
+    /// Your own Google Cloud OAuth client for Google Calendar (a desktop
+    /// client), instead of the one a release build comes with.
+    pub google_client_id: Option<String>,
+    pub google_client_secret: Option<String>,
     /// User-defined saved searches, as `(name, query)` pairs in file
     /// order. Serialized one-per-line as `filter.<name> = <query>`.
     /// The query is a `/`-search needle (subsequence match on the task
@@ -185,6 +189,12 @@ fn parse(s: &str) -> Config {
                 c.share_token = Some(v.to_ascii_lowercase());
             }
             "share_port" => c.share_port = v.parse().ok(),
+            "google_client_id" if !v.trim().is_empty() => {
+                c.google_client_id = Some(v.trim().to_string());
+            }
+            "google_client_secret" if !v.trim().is_empty() => {
+                c.google_client_secret = Some(v.trim().to_string());
+            }
             "notes_dir" if !v.trim().is_empty() => c.notes_dir = Some(v.to_string()),
             // Comma-separated key list; surrounding whitespace trimmed and
             // empty entries (trailing/double comma) dropped so a hand-
@@ -266,6 +276,12 @@ fn serialize(c: &Config) -> String {
     }
     if let Some(v) = c.share_port {
         let _ = writeln!(out, "share_port = {v}");
+    }
+    if let Some(v) = &c.google_client_id {
+        let _ = writeln!(out, "google_client_id = {v}");
+    }
+    if let Some(v) = &c.google_client_secret {
+        let _ = writeln!(out, "google_client_secret = {v}");
     }
     for (name, query) in &c.filters {
         let _ = writeln!(out, "filter.{name} = {query}");
@@ -361,6 +377,8 @@ mod tests {
             week_start: Some(WeekStart::Sunday),
             recurrence_builder: Some(false),
             icons: Some("nerd".to_string()),
+            google_client_id: Some("id.apps.googleusercontent.com".into()),
+            google_client_secret: None,
         };
 
         let s = serialize(&c);
@@ -527,6 +545,8 @@ mod tests {
             week_start: Some(WeekStart::Sunday),
             recurrence_builder: Some(false),
             icons: Some("nerd".to_string()),
+            google_client_id: None,
+            google_client_secret: None,
         };
         written.save_to(&path).expect("save should succeed");
         assert!(path.exists());

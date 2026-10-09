@@ -47,6 +47,8 @@ pub enum SetKey {
     ChecklistCompletes,
     ArchiveDone,
     PhoneCapture,
+    GoogleCalendar,
+    GoogleDisconnect,
     Trash,
     Help,
 }
@@ -104,10 +106,30 @@ impl App {
                     },
                     None,
                 ),
-                soon("Connected calendars", "Google Calendar", "coming soon"),
-                soon("Connected calendars", "Apple Calendar", "coming soon"),
-                soon("Connected calendars", "Local .ics feed", "coming soon"),
-            ],
+                row(
+                    "Connected calendars",
+                    "Google Calendar",
+                    self.gcal_label(),
+                    Some(SetKey::GoogleCalendar),
+                ),
+            ]
+            .into_iter()
+            .chain(
+                matches!(
+                    self.gcal_status,
+                    super::GcalStatus::Connected { .. } | super::GcalStatus::Failed(_)
+                )
+                .then(|| {
+                    row(
+                        "Connected calendars",
+                        "Disconnect Google",
+                        "stops syncing · your calendar stays in Google".to_string(),
+                        Some(SetKey::GoogleDisconnect),
+                    )
+                }),
+            )
+            .chain([soon("Connected calendars", "Apple Calendar", "coming soon")])
+            .collect(),
             1 => vec![
                 row(
                     "Look",
@@ -358,6 +380,26 @@ impl App {
             SetKey::Sort => Some(Action::CycleSort),
             SetKey::Help => Some(Action::OpenHelp),
             SetKey::PhoneCapture => Some(Action::OpenShare),
+            SetKey::GoogleCalendar => {
+                match &self.gcal_status {
+                    super::GcalStatus::Connected { .. } => {
+                        self.gcal_touch(true);
+                        self.flash("syncing with Google Calendar…");
+                    }
+                    super::GcalStatus::Connecting => {
+                        self.flash("waiting for the browser…");
+                    }
+                    super::GcalStatus::Failed(_) if crate::gcal::auth::kept_email().is_some() => {
+                        self.gcal_touch(true);
+                    }
+                    _ => self.gcal_connect(),
+                }
+                None
+            }
+            SetKey::GoogleDisconnect => {
+                self.gcal_disconnect();
+                None
+            }
             SetKey::Icons => {
                 self.prefs.nerd_icons = !self.prefs.nerd_icons;
                 None

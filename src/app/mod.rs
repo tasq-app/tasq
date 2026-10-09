@@ -23,6 +23,7 @@ mod draft;
 mod draft_overlay;
 mod filter_pop;
 mod flash;
+mod gcal_link;
 mod home;
 mod live_add;
 mod menu;
@@ -68,6 +69,7 @@ pub use draft_overlay::{
 };
 pub use filter_pop::{DUE_TERMS, FilterPop, PopPick, PopRow, search_label};
 pub use flash::Flash;
+pub use gcal_link::GcalStatus;
 pub use home::{HOME_TILES, HeatDay, HomeItem, HomeSel, RecentNote};
 pub use live_add::{CHIP_ORDER, Chip, describe_rec};
 pub use menu::{MenuDo, MenuEntry, entries as menu_entries};
@@ -181,6 +183,13 @@ pub struct App {
     pub color_pick: Option<ColorPick>,
     /// A space waiting for "delete it?".
     pub space_ask: Option<SpaceAsk>,
+    /// The thread that talks to Google Calendar, once connected.
+    pub(crate) gcal: Option<gcal_link::GcalLink>,
+    pub gcal_status: GcalStatus,
+    /// When the next sync to Google goes (a change asks for one).
+    pub(crate) gcal_due: Option<std::time::Instant>,
+    /// Your own Google OAuth client from the config (id, secret).
+    pub(crate) google_client: (Option<String>, Option<String>),
     /// The spaces tasks had after the last change, to notice one emptied.
     pub spaces_in_use: Option<std::collections::BTreeSet<String>>,
     /// A change to a repeating task asking "only this one?".
@@ -344,6 +353,10 @@ impl App {
 
     fn from_store(store: Store, file_path: PathBuf, cfg: Config) -> Self {
         // Read saved filters before `cfg` is moved into `Prefs::from_config`.
+        let google_client = (
+            cfg.google_client_id.clone(),
+            cfg.google_client_secret.clone(),
+        );
         let note_dir = note::notes_dir_from_config(cfg.notes_dir.as_deref());
         let saved_filters = cfg
             .filters
@@ -379,6 +392,10 @@ impl App {
             notes_screen: None,
             color_pick: None,
             space_ask: None,
+            gcal: None,
+            gcal_status: GcalStatus::Off,
+            gcal_due: None,
+            google_client,
             spaces_in_use: None,
             series_ask: None,
             cal_cols: std::cell::RefCell::new(Vec::new()),
@@ -820,6 +837,7 @@ impl App {
         self.recompute_visible();
         self.follow_cursor(follow_abs);
         self.notice_emptied_space();
+        self.gcal_touch(false);
     }
 
     /// Handle a store reconcile that reloaded the file from disk: reset
