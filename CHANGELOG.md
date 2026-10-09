@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/tasq-app/tasq/compare/v0.3.1...v0.4.0) (2026-10-09)
+
+
+### Features
+
+* sync dated tasks to Google Calendar ([#67](https://github.com/tasq-app/tasq/issues/67)) ([f22a5f7](https://github.com/tasq-app/tasq/commit/f22a5f7c7d6b577a1c68815623c54bca0d339da5))
+
 ## [0.3.1](https://github.com/tasq-app/tasq/compare/v0.3.0...v0.3.1) (2026-10-08)
 
 
