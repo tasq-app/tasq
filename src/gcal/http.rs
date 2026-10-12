@@ -115,6 +115,22 @@ pub fn b64url(data: &[u8]) -> String {
     out
 }
 
+/// Standard base64 with padding (RFC 4648 §4), for Basic auth.
+pub fn b64(data: &[u8]) -> String {
+    let mut out: String = b64url(data)
+        .chars()
+        .map(|c| match c {
+            '-' => '+',
+            '_' => '/',
+            c => c,
+        })
+        .collect();
+    while !out.len().is_multiple_of(4) {
+        out.push('=');
+    }
+    out
+}
+
 /// base64url (padding or not) back to bytes.
 pub fn b64url_decode(s: &str) -> Option<Vec<u8>> {
     let mut bits = 0u32;
@@ -228,6 +244,7 @@ mod tests {
             "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
         );
         assert_eq!(b64url(b"hi"), "aGk");
+        assert_eq!(b64(b"user:pa?ss>"), "dXNlcjpwYT9zcz4=");
         assert_eq!(b64url_decode("aGk").as_deref(), Some(&b"hi"[..]));
         assert_eq!(percent("a b@c/d"), "a%20b%40c%2Fd");
         assert_eq!(form(&[("x", "1 2"), ("y", "&")]), "x=1%202&y=%26");

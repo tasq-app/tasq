@@ -145,6 +145,9 @@ fn main() -> Result<()> {
     if std::env::var_os("TASQ_NO_GOOGLE").is_none() {
         app_state.gcal_resume();
     }
+    if std::env::var_os("TASQ_NO_APPLE").is_none() {
+        app_state.acal_resume();
+    }
 
     let terminal = ratatui::init();
     enable_bracketed_paste();
@@ -249,6 +252,9 @@ fn run(
         // Google Calendar: a sync that's due goes, and what the sync
         // thread says comes in.
         if app.gcal_poll() {
+            dirty = true;
+        }
+        if app.acal_poll() {
             dirty = true;
         }
         // Poll the config hot-reload watcher. On signal, reload strictly
@@ -404,6 +410,10 @@ fn disable_bracketed_paste() {
 /// bracketed paste, so pasting into the task dialog, search, prompts… works
 /// exactly as before.
 fn handle_paste(app: &mut App, text: &str, keybinds: &KeyBindings) {
+    if app.apple_input.is_some() {
+        app.apple_input_paste(text);
+        return;
+    }
     let insert_editor = if let Some(e) = app.notes_screen.as_mut().and_then(|s| s.editor.as_mut()) {
         Some(e)
     } else if app.pinned_focus {
@@ -526,6 +536,10 @@ fn next_timeout(app: &App) -> Duration {
         (a, b) => a.or(b),
     };
     let earliest = match (earliest, app.gcal_deadline()) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (a, b) => a.or(b),
+    };
+    let earliest = match (earliest, app.acal_deadline()) {
         (Some(a), Some(b)) => Some(a.min(b)),
         (a, b) => a.or(b),
     };
@@ -2052,6 +2066,19 @@ fn handle_help(app: &mut App, key: KeyEvent) {
 }
 
 fn handle_settings(app: &mut App, key: KeyEvent) {
+    // Typing the Apple ID or its password: keys are text.
+    if app.apple_input.is_some() {
+        match key.code {
+            KeyCode::Esc => app.apple_input_cancel(),
+            KeyCode::Enter => app.apple_input_submit(),
+            KeyCode::Backspace => app.apple_input_backspace(),
+            KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.apple_input_char(c);
+            }
+            _ => {}
+        }
+        return;
+    }
     if is_exit_key(key) {
         app.mode = Mode::Normal;
         return;
