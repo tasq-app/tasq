@@ -79,6 +79,13 @@ pub struct Access {
     pub until: Instant,
 }
 
+/// `n` random bytes as hex: an id for a URL.
+pub fn random_id(n: usize) -> String {
+    let mut bytes = vec![0u8; n];
+    let _ = getrandom::getrandom(&mut bytes);
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
 fn random(n: usize) -> String {
     let mut bytes = vec![0u8; n];
     let _ = getrandom::getrandom(&mut bytes);
@@ -302,7 +309,7 @@ fn file_path() -> Option<std::path::PathBuf> {
     crate::xdg::config_home().map(|d| d.join("tasq").join("google.json"))
 }
 
-fn run(cmd: &str, args: &[&str], input: Option<&str>) -> Option<String> {
+pub(crate) fn run(cmd: &str, args: &[&str], input: Option<&str>) -> Option<String> {
     let mut child = std::process::Command::new(cmd)
         .args(args)
         .stdin(std::process::Stdio::piped())
@@ -330,14 +337,14 @@ fn email_path() -> Option<std::path::PathBuf> {
 
 /// Whether a refresh token is safe to hand to `security -i` unquoted
 /// (Google's are letters, digits and `-_./`).
-fn plain(token: &str) -> bool {
+pub(crate) fn plain(token: &str) -> bool {
     !token.is_empty()
         && token
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | '/'))
 }
 
-fn write_private(path: &std::path::Path, text: &str) -> Result<()> {
+pub(crate) fn write_private(path: &std::path::Path, text: &str) -> Result<()> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }

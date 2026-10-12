@@ -278,7 +278,7 @@ Each release is usable on its own and worth a short video.
 | 4 | **Routines** ✅ | Full recurrence (weekdays, every N, until a date or N times); the calendar: the day in time blocks, the week in blocks or as an agenda, the month with counts or titles; tasks shown as their title and chips, a colour per space. |
 | 5 | **The tasq look** ✅ | The interface redesign: main menu, home screen, panels with focus, filters as chips, a quiet bottom line with a which-key menu, the profile, mouse; the repeat editor and adding in a free slot. Mock-ups first. |
 | 6 | **Capture in Spanish** ✅ | The second capture language ("mañana a las 6", "cada lunes", "en exámenes"), as a vocabulary; more follow the same way. |
-| 7 | **Calendar, local** | `.ics` feed from your machine, per-space calendars. |
+| 7 | **Calendar, local** ✅ | Google Calendar (OAuth, one "tasq" calendar, an event colour per space) and Apple Calendar (CalDAV, a calendar per top-level space in its colour), pushed straight from your machine. |
 | 8 | **Accounts and sync** | Optional sign-in, end-to-end encrypted sync — the paid plan. |
 | 9 | **Phone and web** | Offline-capable web app on the same sync. |
 | 10 | **Connected calendars** | Server-side Google / Apple, set up from the profile. |

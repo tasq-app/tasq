@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 9 October 2026_
+_Last updated: 12 October 2026_
 
 tasq is a to-do app that runs on your computer. It has no servers and no
 accounts of its own, and it collects nothing about you: no analytics, no
@@ -39,6 +39,17 @@ including the Limited Use requirements.
 from your computer. You can also revoke it at
 [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 To remove the events, delete the "tasq" calendar in Google Calendar.
+
+## Apple Calendar (optional)
+
+If you connect Apple Calendar, you give tasq your Apple ID and an
+app-specific password, which tasq keeps on your computer (in the system
+keychain, or a file only your user can read). With them tasq creates
+calendars named "tasq" and "tasq · <space>" in your iCloud account and
+sends them the same task details as to Google. It goes straight from your
+computer to Apple's CalDAV server; nobody else receives the password or
+the tasks. **Disconnect Apple** deletes the password from your computer;
+you can also revoke it at account.apple.com.
 
 ## Update check and phone capture
 
