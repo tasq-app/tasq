@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tasq — your tasks, in the terminal</title>
+<meta name="description" content="tasq is a fast, keyboard-first to-do app for the terminal: type tasks the way you'd say them, plan your day and week, and keep Google and Apple Calendar in step. Local-first, free and open source.">
+<meta property="og:title" content="tasq — your tasks, in the terminal">
+<meta property="og:description" content="Type tasks the way you'd say them, plan your week, sync to Google and Apple Calendar. Local-first, free and open source.">
+<meta property="og:image" content="img/poster.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%23c6a0f6'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#181926; --bg2:#1e2030; --panel:#24273a; --line:#ffffff14; --line2:#ffffff24;
+  --fg:#cad3f5; --dim:#a5adcb; --mute:#6e738d;
+  --accent:#c6a0f6; --green:#a6da95; --blue:#8aadf4; --pink:#f5bde6; --peach:#f5a97f; --red:#ed8796; --yellow:#eed49f;
+  --r:14px; --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 var(--mono);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+img,video{display:block;max-width:100%;height:auto}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.glow{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.glow::before,.glow::after{content:"";position:absolute;border-radius:50%;filter:blur(90px);opacity:.35}
+.glow::before{width:620px;height:420px;left:-120px;top:-160px;background:#c6a0f6}
+.glow::after{width:560px;height:420px;right:-160px;top:280px;background:#8aadf4;opacity:.2}
+
+/* Nav */
+nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);background:#181926cc;border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:24px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;text-decoration:none;letter-spacing:-.5px}
+.sq{width:16px;height:16px;border-radius:4px;background:var(--accent);display:inline-block}
+nav .links{margin-left:auto;display:flex;gap:22px;align-items:center;font-size:14px}
+nav .links a{text-decoration:none;color:var(--dim)}
+nav .links a:hover{color:var(--fg)}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:9px 16px;font:600 14px var(--mono);text-decoration:none;border:1px solid var(--line2);background:var(--bg2);color:var(--fg);cursor:pointer}
+.btn:hover{border-color:#ffffff40}
+.btn.primary{background:var(--accent);color:#1e2030;border-color:transparent}
+.btn.primary:hover{filter:brightness(1.07)}
+
+/* Hero */
+header{position:relative;padding:84px 0 40px;text-align:center}
+header .wrap{position:relative;z-index:1}
+.badge{display:inline-flex;gap:8px;align-items:center;font-size:13px;color:var(--dim);border:1px solid var(--line2);border-radius:99px;padding:5px 14px;background:#1e2030aa}
+.badge b{color:var(--green);font-weight:600}
+h1{font-size:clamp(38px,7vw,76px);line-height:1.05;letter-spacing:-2.5px;margin:22px 0 18px;font-weight:800}
+h1 em{font-style:normal;color:var(--accent)}
+.lede{max-width:720px;margin:0 auto;color:var(--dim);font-size:clamp(15px,2vw,18px)}
+
+/* Install */
+.install{max-width:620px;margin:34px auto 0;text-align:left}
+.tabs{display:flex;gap:4px;font-size:13px}
+.tabs button{font:600 13px var(--mono);color:var(--mute);background:none;border:0;padding:8px 12px;border-radius:8px 8px 0 0;cursor:pointer}
+.tabs button[aria-selected=true]{color:var(--fg);background:var(--bg2)}
+.term{position:relative;background:var(--bg2);border:1px solid var(--line2);border-radius:0 var(--r) var(--r) var(--r);padding:18px 64px 18px 20px;font-size:15px;box-shadow:0 20px 60px #0007}
+.term pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit}
+.term .p{color:var(--green);user-select:none}
+.term .c{color:var(--mute)}
+.copy{position:absolute;right:12px;top:12px;font:600 12px var(--mono);color:var(--dim);background:var(--panel);border:1px solid var(--line2);border-radius:8px;padding:6px 10px;cursor:pointer}
+.copy:hover{color:var(--fg)}
+.note{font-size:13px;color:var(--mute);margin:10px 4px 0}
+.note a{color:var(--dim)}
+
+/* Video */
+.film{position:relative;z-index:1;margin:56px auto 0;max-width:1040px;border-radius:18px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 40px 120px #000a;background:#000}
+.film video{width:100%;aspect-ratio:16/9;height:auto}
+
+/* Sections */
+section{padding:96px 0 0}
+.kicker{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:600}
+h2{font-size:clamp(28px,4.4vw,44px);line-height:1.12;letter-spacing:-1.2px;margin:10px 0 14px}
+.sub{color:var(--dim);max-width:640px}
+.feature{display:grid;grid-template-columns:1fr 1.35fr;gap:48px;align-items:center;margin-top:72px}
+.feature.flip{grid-template-columns:1.35fr 1fr}
+.feature.flip .text{order:2}
+.feature h3{font-size:26px;letter-spacing:-.6px;margin:0 0 10px;line-height:1.2}
+.feature p{color:var(--dim);margin:0 0 14px}
+.feature ul{margin:0;padding:0;list-style:none;color:var(--dim);font-size:14px}
+.feature li{padding-left:20px;position:relative;margin:6px 0}
+.feature li::before{content:"›";position:absolute;left:4px;color:var(--accent)}
+.shot{border-radius:var(--r);overflow:hidden;border:1px solid var(--line2);box-shadow:0 24px 70px #0009;background:var(--panel)}
+.shot .bar{height:28px;background:#1e2030;display:flex;gap:7px;align-items:center;padding-left:12px}
+.shot .bar i{width:10px;height:10px;border-radius:50%;background:#ed8796}
+.shot .bar i:nth-child(2){background:#eed49f}.shot .bar i:nth-child(3){background:#a6da95}
+code.k{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line2);border-radius:6px;padding:1px 6px;font-size:.92em}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.card h4{margin:0 0 6px;font-size:16px}
+.card p{margin:0;color:var(--dim);font-size:14px}
+.card .ic{font-size:20px;margin-bottom:10px;display:block}
+
+/* Waitlist */
+.wait{position:relative;margin-top:96px;border-radius:22px;border:1px solid var(--line2);background:linear-gradient(135deg,#2a2440,#1e2030 55%,#1e2a40);padding:56px 40px;text-align:center;overflow:hidden}
+.wait h2{margin-top:6px}
+.wait .sub{margin:0 auto}
+form.join{display:flex;gap:10px;max-width:520px;margin:28px auto 0}
+form.join input{flex:1;min-width:0;font:15px var(--mono);color:var(--fg);background:#181926;border:1px solid var(--line2);border-radius:10px;padding:12px 14px}
+form.join input:focus{outline:2px solid #c6a0f655;border-color:var(--accent)}
+form.join .btn{padding:12px 18px;font-size:15px}
+.hp{position:absolute;left:-9999px}
+.msg{min-height:24px;margin-top:12px;font-size:14px;color:var(--dim)}
+.msg.ok{color:var(--green)}.msg.err{color:var(--red)}
+.perks{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;margin-top:22px;font-size:13px;color:var(--mute)}
+.perks span::before{content:"✓ ";color:var(--green)}
+
+footer{margin-top:96px;border-top:1px solid var(--line);padding:28px 0 40px;color:var(--mute);font-size:13px}
+footer .wrap{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+footer .r{margin-left:auto;display:flex;gap:18px}
+footer a{color:var(--dim);text-decoration:none}
+
+@media (max-width:860px){
+  .feature,.feature.flip{grid-template-columns:1fr;gap:22px;margin-top:56px}
+  .feature.flip .text{order:0}
+  .grid{grid-template-columns:1fr}
+  nav .links a.hide{display:none}
+  .wait{padding:40px 20px}
+  form.join{flex-direction:column}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="brand" href="#"><span class="sq"></span>tasq</a>
+  <div class="links">
+    <a class="hide" href="#features">Features</a>
+    <a class="hide" href="#calendars">Calendars</a>
+    <a href="#waitlist">Waitlist</a>
+    <a class="btn" href="https://github.com/tasq-app/tasq">GitHub</a>
+  </div>
+</div></nav>
+
+<header>
+  <div class="glow"></div>
+  <div class="wrap">
+    <span class="badge"><b>new</b> Google &amp; Apple Calendar sync</span>
+    <h1>Your tasks,<br><em>in the terminal.</em></h1>
+    <p class="lede">tasq is a fast, keyboard-first to-do app. Type tasks the way you'd say them, see your day and your week, and keep your calendars in step. Local-first, free and open source.</p>
+
+    <div class="install" id="install">
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="brew">Homebrew</button>
+        <button role="tab" aria-selected="false" data-tab="source">From source</button>
+        <button role="tab" aria-selected="false" data-tab="bin">Binaries</button>
+      </div>
+      <div class="term">
+        <pre data-pane="brew"><span class="p">$ </span>brew trust tasq-app/tap
+<span class="p">$ </span>brew install tasq-app/tap/tasq
+<span class="p">$ </span>tasq</pre>
+        <pre data-pane="source" hidden><span class="p">$ </span>git clone https://github.com/tasq-app/tasq
+<span class="p">$ </span>cd tasq &amp;&amp; ./install.sh</pre>
+        <pre data-pane="bin" hidden><span class="c"># macOS (Apple silicon, Intel), Linux (x86_64, arm64), Windows</span>
+<span class="p">→ </span><a href="https://github.com/tasq-app/tasq/releases/latest">github.com/tasq-app/tasq/releases</a></pre>
+        <button class="copy" type="button">copy</button>
+      </div>
+      <p class="note">macOS and Linux · early alpha: keep your todo.txt around, tasq only reads it.</p>
+    </div>
+
+    <div class="film">
+      <video src="tasq-trailer.mp4" poster="img/poster.jpg" controls playsinline muted preload="metadata"></video>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section id="features">
+  <span class="kicker">Features</span>
+  <h2>Everything a day needs.<br>Nothing it doesn't.</h2>
+  <p class="sub">A list, a calendar and a capture box that understands you, in a terminal app that opens instantly and never leaves the keyboard.</p>
+
+  <div class="feature">
+    <div class="text">
+      <h3>Type it like you say it.</h3>
+      <p>Write <code class="k">exam friday at 9am for 2h in exams</code> and tasq picks out the day, the time, the duration and the space as you type, each as a chip you can fix.</p>
+      <ul>
+        <li>Repeats: “every other monday”, “every mon and fri for 6 weeks”</li>
+        <li>Deadlines, reminders, priorities, tags</li>
+        <li>Spaces and subspaces: <code class="k">+Uni/Exams</code></li>
+      </ul>
+    </div>
+    <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="img/capture.jpg" alt="The add box picking out friday, 9am, 2h and the Exams space as chips" width="1600" height="997" loading="lazy"></div>
+  </div>
+
+  <div class="feature flip">
+    <div class="text">
+      <h3>Your day, at a glance.</h3>
+      <p>Today shows what's overdue, then your morning, afternoon and evening in order, with the free time between your blocks.</p>
+      <ul>
+        <li>Today · Upcoming · All, plus an inbox for the undated</li>
+        <li>Filters as chips, search across tasks and notes</li>
+        <li>Checklists and Markdown notes on any task</li>
+      </ul>
+    </div>
+    <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="img/today.jpg" alt="The Today view with overdue, morning and afternoon tasks and a YOUR DAY timeline" width="1600" height="997" loading="lazy"></div>
+  </div>
+
+  <div class="feature">
+    <div class="text">
+      <h3>Plan the week. See the month.</h3>
+      <p>Day, week and month views over the same tasks. Drag a block to move it, stretch it to change how long it takes, and scroll the month a week at a time.</p>
+      <ul>
+        <li>Time blocks or an agenda, a key away</li>
+        <li>Multi-day events across their days</li>
+        <li>Edit one occurrence of a repeat, or all of them</li>
+      </ul>
+    </div>
+    <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="img/week.jpg" alt="The week view with time blocks for each day" width="1600" height="997" loading="lazy"></div>
+  </div>
+
+  <div class="feature flip">
+    <div class="text">
+      <h3>…y también en español.</h3>
+      <p>Capture understands Spanish too: <code class="k">llamar al dentista mañana a las 6 cada lunes</code>. More languages follow the same way.</p>
+    </div>
+    <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="img/spanish.jpg" alt="Spanish capture: mañana, a las 6 and cada lunes picked out as chips" width="1600" height="997" loading="lazy"></div>
+  </div>
+</section>
+
+<section id="calendars">
+  <span class="kicker">Connected calendars</span>
+  <h2>In Google &amp; Apple Calendar,<br>in your colours.</h2>
+  <p class="sub">Connect once from Settings. Your dated tasks show up next to your meetings, each in its space's colour, and stay in step as you work. They go straight from your computer to Google or iCloud, with no server of ours in between.</p>
+  <div class="feature">
+    <div class="text">
+      <ul>
+        <li><b>Google Calendar</b>: one “tasq” calendar, each event in the nearest Google colour to its space</li>
+        <li><b>Apple Calendar</b>: a calendar per space (“tasq · Uni”), in its colour, over iCloud CalDAV</li>
+        <li>Timed blocks, all-day and multi-day events, repeats and reminders</li>
+        <li>Only what changed is sent, a moment after you change it</li>
+      </ul>
+    </div>
+    <div class="shot"><div class="bar"><i></i><i></i><i></i></div><img src="img/calendars.jpg" alt="Settings with Google Calendar and a connected Apple Calendar" width="1600" height="997" loading="lazy"></div>
+  </div>
+</section>
+
+<section>
+  <span class="kicker">Yours</span>
+  <h2>Local-first. Open source.<br>Made to be lived in.</h2>
+  <div class="grid">
+    <div class="card"><span class="ic">◆</span><h4>Your data stays with you</h4><p>A local database on your machine. Import and export todo.txt any time, no account needed.</p></div>
+    <div class="card"><span class="ic">⌘</span><h4>Keyboard first, mouse too</h4><p>Vim-style keys, a which-key menu on <code class="k">space</code>, and a mouse when you want one.</p></div>
+    <div class="card"><span class="ic">◐</span><h4>Themes and layouts</h4><p>Catppuccin, Nord, Dawn and more. Panels, density and icons the way you like them.</p></div>
+    <div class="card"><span class="ic">↻</span><h4>Routines that stick</h4><p>Real repeats with streaks, skipped days and series you can split.</p></div>
+    <div class="card"><span class="ic">✎</span><h4>Notes in place</h4><p>Markdown notes on any task, edited in an embedded editor.</p></div>
+    <div class="card"><span class="ic">{}</span><h4>MIT licensed</h4><p>Read the code, file an issue, send a pull request. Built in the open.</p></div>
+  </div>
+</section>
+
+<div class="wait" id="waitlist">
+  <span class="kicker">Coming next</span>
+  <h2>tasq on all your devices.</h2>
+  <p class="sub">End-to-end encrypted sync between your computers, and an app for your phone. Calendars that update even when your laptop is closed. Join the waitlist to hear first and get early access.</p>
+  <form class="join" id="join" novalidate>
+    <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required aria-label="Email address">
+    <input class="hp" type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <button class="btn primary" type="submit">Join the waitlist</button>
+  </form>
+  <div class="msg" id="msg" role="status"></div>
+  <div class="perks"><span>One email when it's ready</span><span>No spam, ever</span><span>Leave any time</span></div>
+</div>
+
+</main>
+
+<footer><div class="wrap">
+  <a class="brand" href="#" style="font-size:16px"><span class="sq" style="width:12px;height:12px"></span>tasq</a>
+  <span>Free and open source, MIT.</span>
+  <div class="r">
+    <a href="https://github.com/tasq-app/tasq">GitHub</a>
+    <a href="https://github.com/tasq-app/tasq/releases">Releases</a>
+    <a href="https://github.com/tasq-app/tasq/blob/main/PRIVACY.md">Privacy</a>
+  </div>
+</div></footer>
+
+<script>
+// Where waitlist sign-ups go: a Formspree-style endpoint (POST, JSON back).
+// Empty: the form opens an email instead.
+const WAITLIST_ENDPOINT = "";
+const WAITLIST_EMAIL = "jfgm299@gmail.com";
+
+// Install tabs and copy.
+const panes = document.querySelectorAll('[data-pane]');
+document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', x === b));
+  panes.forEach(p => p.hidden = p.dataset.pane !== b.dataset.tab);
+}));
+document.querySelector('.copy').addEventListener('click', async e => {
+  const pane = [...panes].find(p => !p.hidden);
+  const text = pane.dataset.pane === 'bin'
+    ? 'https://github.com/tasq-app/tasq/releases/latest'
+    : pane.innerText.split('\n').map(l => l.replace(/^\$ /, '')).join('\n');
+  try { await navigator.clipboard.writeText(text); e.target.textContent = 'copied'; }
+  catch { e.target.textContent = 'select'; }
+  setTimeout(() => e.target.textContent = 'copy', 1600);
+});
+
+// Waitlist.
+const form = document.getElementById('join'), msg = document.getElementById('msg');
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = form.email.value.trim();
+  msg.className = 'msg';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    msg.textContent = 'That email doesn\'t look right.'; msg.classList.add('err'); return;
+  }
+  if (form._gotcha.value) return;
+  if (!WAITLIST_ENDPOINT) {
+    location.href = `mailto:${WAITLIST_EMAIL}?subject=${encodeURIComponent('tasq waitlist')}&body=${encodeURIComponent('Add me to the tasq waitlist: ' + email)}`;
+    return;
+  }
+  const btn = form.querySelector('button'); btn.disabled = true; msg.textContent = 'Joining…';
+  try {
+    const r = await fetch(WAITLIST_ENDPOINT, { method: 'POST', headers: { 'Accept': 'application/json' }, body: new FormData(form) });
+    if (!r.ok) throw new Error(r.status);
+    form.reset(); msg.textContent = 'You\'re on the list. Thanks!'; msg.classList.add('ok');
+  } catch {
+    msg.textContent = 'Couldn\'t sign you up just now, try again in a moment.'; msg.classList.add('err');
+  } finally { btn.disabled = false; }
+});
+</script>
+</body>
+</html>

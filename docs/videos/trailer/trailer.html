@@ -1,0 +1,148 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+@font-face{font-family:JBM;src:url(file:///root/.local/share/fonts/JetBrainsMono-Regular.ttf)}
+@font-face{font-family:JBM;font-weight:bold;src:url(file:///root/.local/share/fonts/JetBrainsMono-Bold.ttf)}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#181926;font-family:JBM,monospace}
+#bg{position:absolute;inset:0;background:
+  radial-gradient(1200px 700px at 20% 0%, #c6a0f633, transparent 60%),
+  radial-gradient(1000px 700px at 100% 100%, #8aadf42b, transparent 60%),
+  #181926}
+#grain{position:absolute;inset:0;opacity:.05;background-image:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px)}
+#win{position:absolute;left:50%;top:244px;width:1152px;height:754px;margin-left:-576px;border-radius:16px;
+  background:#24273a;box-shadow:0 40px 120px #000a,0 0 0 1px #ffffff14;overflow:hidden;transform-origin:50% 0}
+#bar{height:36px;background:#1e2030;display:flex;align-items:center;gap:9px;padding-left:16px;position:relative;z-index:3}
+#bar i{width:12px;height:12px;border-radius:50%;display:block}
+#bar span{position:absolute;left:0;right:0;text-align:center;color:#6e738d;font-size:14px}
+#view{position:absolute;top:36px;left:0;width:1152px;height:718px;overflow:hidden}
+#cam{position:absolute;left:0;top:0;width:1200px;height:748px;transform-origin:0 0}
+#cam img{position:absolute;left:0;top:0;width:1200px;height:748px;opacity:0}
+#cap{position:absolute;left:0;right:0;top:78px;text-align:center;color:#cad3f5;font-weight:bold;font-size:60px;letter-spacing:-1px;white-space:nowrap}
+#cap b{color:#c6a0f6}
+#sub{position:absolute;left:0;right:0;top:160px;text-align:center;color:#8087a2;font-size:26px}
+.card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0}
+.logo{font-size:150px;font-weight:bold;color:#cad3f5;letter-spacing:-4px;display:flex;align-items:center;gap:28px}
+.logo .sq{width:84px;height:84px;background:#c6a0f6;border-radius:12px;display:inline-block}
+.cursor{display:inline-block;width:56px;height:118px;background:#c6a0f6;margin-left:8px;vertical-align:-14px}
+.tag{margin-top:26px;font-size:38px;color:#a5adcb}
+.pill{margin-top:56px;font-size:40px;color:#cad3f5;background:#1e2030;border:1px solid #ffffff1f;border-radius:16px;padding:22px 40px;box-shadow:0 20px 60px #0008}
+.pill em{color:#a6da95;font-style:normal}
+.small{margin-top:30px;font-size:26px;color:#6e738d}
+</style></head><body>
+<div id="bg"></div>
+<div id="cap"></div><div id="sub"></div>
+<div id="win"><div id="bar"><i style="background:#ed8796"></i><i style="background:#eed49f"></i><i style="background:#a6da95"></i><span>tasq</span></div>
+  <div id="view"><div id="cam"></div></div></div>
+<div class="card" id="intro"><div class="logo"><span class="sq"></span><span id="word"></span><span class="cursor" id="cur"></span></div>
+  <div class="tag" id="tag">Your tasks, in the terminal.</div></div>
+<div class="card" id="outro"><div class="logo"><span class="sq"></span>tasq</div>
+  <div class="tag">Capture · plan · sync. Free and open source.</div>
+  <div class="pill"><em>$</em> brew install tasq-app/tap/tasq</div>
+  <div class="small">github.com/tasq-app/tasq</div></div>
+<script>
+const SCENES = __SCENES__;
+const S = Object.fromEntries(SCENES.map(s => [s.name, s]));
+// The cut: scene, where in the take it starts, how long it plays, the
+// caption, and camera keys (ms into the clip, zoom, centre x/y in terminal px).
+const CUT = [
+  {name:'capture', from:0, len:7200, cap:'Type it like you <b>say it.</b>', sub:'Dates, times, durations, spaces — picked out as you type',
+   cam:[[0,1,600,374],[900,1,600,374],[1900,1.3,600,345],[5600,1.3,600,345],[6400,1,600,374]]},
+  {name:'today', from:0, len:3000, cap:'Your day, <b>at a glance.</b>', sub:'Today, the day in order, and the gaps between',
+   cam:[[0,1,600,374],[500,1,600,374],[1700,1.9,1040,560],[3000,1.95,1040,560]]},
+  {name:'spanish', from:0, len:4900, cap:'…y también <b>en español.</b>', sub:'“mañana a las 6 cada lunes” — understood',
+   cam:[[0,1.3,600,345],[4900,1.36,600,345]]},
+  {name:'week', from:0, len:3000, cap:'Plan the <b>week.</b>', sub:'Time blocks, drag to move, the agenda a key away',
+   cam:[[0,1,600,374],[3000,1.18,700,330]]},
+  {name:'month', from:1300, len:2900, cap:'See the <b>month.</b>', sub:'Scroll it a week at a time',
+   cam:[[0,1.12,700,374],[2900,1,600,374]]},
+  {name:'calendars', from:0, len:2800, cap:'In <b>Google</b> & <b>Apple</b> Calendar.', sub:'Every space in its own colour, synced straight from your machine',
+   cam:[[0,1,600,374],[600,1,600,374],[1600,1.6,660,262],[2800,1.64,660,262]]},
+  {name:'themes', from:600, len:3900, cap:'Make it <b>yours.</b>', sub:'Themes, layouts, your keys',
+   cam:[[0,1,600,374],[3900,1,600,374]]},
+];
+const INTRO = 3000, OUTRO = 5000, FADE = 350;
+let t0 = INTRO; for (const c of CUT) { c.start = t0; t0 += c.len; }
+const TOTAL = t0 + OUTRO;
+window.TOTAL = TOTAL;
+
+const cam = document.getElementById('cam');
+const imgs = {};
+for (const s of SCENES) for (const [, h] of s.frames) if (!imgs[h]) {
+  const im = new Image(); im.src = 'frames/' + h + '.png'; cam.appendChild(im); imgs[h] = im;
+}
+const ease = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x+2, 3)/2;
+const clamp = (x, a=0, b=1) => Math.max(a, Math.min(b, x));
+function frameAt(scene, ms) {
+  let h = scene.frames[0][1];
+  for (const [ft, fh] of scene.frames) if (ft <= ms) h = fh;
+  return h;
+}
+function camAt(keys, ms) {
+  if (ms <= keys[0][0]) return keys[0].slice(1);
+  for (let i = 1; i < keys.length; i++) {
+    const [a, b] = [keys[i-1], keys[i]];
+    if (ms <= b[0]) {
+      const k = ease((ms - a[0]) / (b[0] - a[0]));
+      return [1,2,3].map(j => a[j] + (b[j] - a[j]) * k);
+    }
+  }
+  return keys[keys.length-1].slice(1);
+}
+const $ = id => document.getElementById(id);
+window.render = function (t) {
+  // Intro: the name types itself, the tagline rises.
+  const iv = t < INTRO ? 1 : clamp(1 - (t - INTRO) / 500);
+  $('intro').style.opacity = iv;
+  $('word').textContent = 'tasq'.slice(0, Math.floor(clamp((t - 300) / 600) * 4));
+  $('cur').style.opacity = (Math.floor(t / 400) % 2 === 0 || t < 1000) ? 1 : 0;
+  const tg = clamp((t - 1200) / 600);
+  $('tag').style.opacity = tg; $('tag').style.transform = `translateY(${(1-ease(tg))*20}px)`;
+
+  // The window comes up after the intro and leaves before the end.
+  const end = TOTAL - OUTRO;
+  const wIn = ease(clamp((t - INTRO + 300) / 700)), wOut = ease(clamp((t - end) / 500));
+  const win = $('win');
+  win.style.opacity = wIn * (1 - wOut);
+  win.style.transform = `translateY(${(1-wIn)*120 + wOut*-40}px) scale(${0.96 + 0.04*wIn - 0.03*wOut})`;
+
+  // Which take, where in it, the camera.
+  const c = CUT.find(c => t >= c.start && t < c.start + c.len) || (t < INTRO ? CUT[0] : CUT[CUT.length-1]);
+  const local = clamp(t - c.start, 0, c.len);
+  const scene = S[c.name];
+  const show = frameAt(scene, c.from + local);
+  // Crossfade from the previous take at a cut.
+  const idx = CUT.indexOf(c), prev = CUT[idx-1];
+  const fadeIn = prev ? clamp(local / FADE) : 1;
+  for (const [h, im] of Object.entries(imgs)) im.style.opacity = 0;
+  imgs[show].style.opacity = 1;
+  if (prev && fadeIn < 1) {
+    const ph = frameAt(S[prev.name], prev.from + prev.len);
+    if (ph !== show) { imgs[ph].style.opacity = 1 - fadeIn; imgs[show].style.opacity = fadeIn; }
+  }
+  let [z, cx, cy] = camAt(c.cam, local);
+  if (prev && fadeIn < 1) {
+    const [pz, px, py] = camAt(prev.cam, prev.len);
+    const k = ease(fadeIn); z = pz + (z-pz)*k; cx = px + (cx-px)*k; cy = py + (cy-py)*k;
+  }
+  // Fit the 1200×748 take to the 1280×798 view, then zoom on (cx, cy),
+  // never past its edges.
+  const base = 1152 / 1200, s = base * z;
+  let x = 576 - cx * s, y = 359 - cy * s;
+  x = Math.min(0, Math.max(1152 - 1200 * s, x)); y = Math.min(0, Math.max(718 - 748 * s, y));
+  cam.style.transform = `translate(${x}px,${y}px) scale(${s})`;
+
+  // Captions: in with the take, out before the next.
+  const capIn = ease(clamp((local - 150) / 450)), capOut = ease(clamp((local - (c.len - 350)) / 300));
+  const on = t >= INTRO - 200 && t < end;
+  const cap = $('cap'), sub = $('sub');
+  if (cap.dataset.n !== c.name) { cap.innerHTML = c.cap; sub.textContent = c.sub; cap.dataset.n = c.name; }
+  const cv = on ? capIn * (1 - capOut) : 0;
+  cap.style.opacity = cv; cap.style.transform = `translateY(${(1-capIn)*24 - capOut*12}px)`;
+  sub.style.opacity = cv * 0.95; sub.style.transform = cap.style.transform;
+
+  // Outro.
+  const ov = ease(clamp((t - end - 250) / 600));
+  $('outro').style.opacity = ov;
+  $('outro').style.transform = `scale(${0.97 + 0.03*ov})`;
+};
+render(0);
+</script></body></html>
