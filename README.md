@@ -1050,11 +1050,14 @@ if a producer must be serialized with the TUI drain.
 Your tasks, notes and spaces on every computer, end-to-end encrypted:
 
 ```sh
-tasq sync login --server https://sync.example.com you@example.com
+tasq sync login you@example.com
 tasq sync          # send what changed here, receive the rest
 tasq sync status
 tasq sync logout   # your tasks stay on the computer
 ```
+
+Release builds sync through tasq's server; `--server https://…` on
+`login` (or `TASQ_SYNC_URL`) picks another, such as your own.
 
 The first `login` with an email creates the account (it asks for the
 password twice); on another computer, the same email and password sign in
