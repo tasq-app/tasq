@@ -148,6 +148,14 @@ fn main() -> Result<()> {
     if std::env::var_os("TASQ_NO_APPLE").is_none() {
         app_state.acal_resume();
     }
+    // A kept sync sign-in comes back on, and syncs. A first start on an
+    // empty computer asks whether to bring tasks from another one.
+    if std::env::var_os("TASQ_NO_SYNC").is_none() {
+        app_state.sync_resume();
+        if imported.is_none() && app_state.should_onboard() {
+            app_state.mode = Mode::Onboard;
+        }
+    }
 
     let terminal = ratatui::init();
     enable_bracketed_paste();
@@ -255,6 +263,9 @@ fn run(
             dirty = true;
         }
         if app.acal_poll() {
+            dirty = true;
+        }
+        if app.sync_poll() {
             dirty = true;
         }
         // Poll the config hot-reload watcher. On signal, reload strictly
@@ -414,6 +425,10 @@ fn handle_paste(app: &mut App, text: &str, keybinds: &KeyBindings) {
         app.apple_input_paste(text);
         return;
     }
+    if app.sync_input.is_some() {
+        app.sync_input_paste(text);
+        return;
+    }
     let insert_editor = if let Some(e) = app.notes_screen.as_mut().and_then(|s| s.editor.as_mut()) {
         Some(e)
     } else if app.pinned_focus {
@@ -540,6 +555,10 @@ fn next_timeout(app: &App) -> Duration {
         (a, b) => a.or(b),
     };
     let earliest = match (earliest, app.acal_deadline()) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (a, b) => a.or(b),
+    };
+    let earliest = match (earliest, app.sync_deadline()) {
         (Some(a), Some(b)) => Some(a.min(b)),
         (a, b) => a.or(b),
     };
@@ -706,6 +725,7 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         Mode::Share => handle_share(app, key),
         Mode::Notes => handle_notes(app, key),
         Mode::Welcome => handle_welcome(app, key),
+        Mode::Onboard => handle_onboard(app, key),
         Mode::Menu => handle_menu(app, key),
         Mode::Filters => handle_filters(app, key),
         Mode::SearchAll => handle_search_all(app, key),
@@ -1128,6 +1148,27 @@ fn handle_calendar(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
 /// `file_path`) and edits it; `s` opens the bundled sample; `q`/`Esc` quits
 /// without creating anything. Any other key is ignored so a stray press
 /// doesn't silently pick an option.
+/// The first-start choice on an empty computer.
+fn handle_onboard(app: &mut App, key: KeyEvent) {
+    if is_exit_key(key) {
+        app.should_quit = true;
+        return;
+    }
+    match key.code {
+        KeyCode::Char('s') | KeyCode::Enter => {
+            tasq::app::mark_onboarded();
+            app.open_settings();
+            app.settings_enter_rows();
+            app.sync_begin();
+        }
+        KeyCode::Char('l') | KeyCode::Esc => {
+            tasq::app::mark_onboarded();
+            app.mode = Mode::Normal;
+        }
+        _ => {}
+    }
+}
+
 fn handle_welcome(app: &mut App, key: KeyEvent) {
     if is_exit_key(key) {
         app.should_quit = true;
@@ -2066,6 +2107,19 @@ fn handle_help(app: &mut App, key: KeyEvent) {
 }
 
 fn handle_settings(app: &mut App, key: KeyEvent) {
+    // Typing the sync email or password: keys are text.
+    if app.sync_input.is_some() {
+        match key.code {
+            KeyCode::Esc => app.sync_input_cancel(),
+            KeyCode::Enter => app.sync_input_submit(),
+            KeyCode::Backspace => app.sync_input_backspace(),
+            KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.sync_input_char(c);
+            }
+            _ => {}
+        }
+        return;
+    }
     // Typing the Apple ID or its password: keys are text.
     if app.apple_input.is_some() {
         match key.code {

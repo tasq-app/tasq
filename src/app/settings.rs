@@ -50,6 +50,8 @@ pub enum SetKey {
     GoogleCalendar,
     GoogleDisconnect,
     AppleCalendar,
+    SyncAccount,
+    SyncSignOut,
     AppleDisconnect,
     Trash,
     Help,
@@ -97,7 +99,13 @@ impl App {
         let p = &self.prefs;
         match s {
             0 => vec![
-                soon("Sync", "Sync", "end-to-end encrypted sync · coming soon"),
+                row(
+                    "Sync",
+                    "Your computers",
+                    self.sync_label(),
+                    Some(SetKey::SyncAccount),
+                ),
+                row("Sync", "Encryption", "end-to-end".to_string(), None),
                 row(
                     "Sync",
                     "This device",
@@ -108,14 +116,22 @@ impl App {
                     },
                     None,
                 ),
-                row(
-                    "Connected calendars",
-                    "Google Calendar",
-                    self.gcal_label(),
-                    Some(SetKey::GoogleCalendar),
-                ),
             ]
             .into_iter()
+            .chain(self.sync_signed_in().then(|| {
+                row(
+                    "Sync",
+                    "Sign out",
+                    "your tasks stay here".to_string(),
+                    Some(SetKey::SyncSignOut),
+                )
+            }))
+            .chain([row(
+                "Connected calendars",
+                "Google Calendar",
+                self.gcal_label(),
+                Some(SetKey::GoogleCalendar),
+            )])
             .chain(
                 matches!(
                     self.gcal_status,
@@ -435,6 +451,23 @@ impl App {
                     }
                     _ => self.acal_begin(),
                 }
+                None
+            }
+            SetKey::SyncAccount => {
+                match &self.sync_status {
+                    super::SyncStatus::On { .. } | super::SyncStatus::Failed(_)
+                        if self.sync_signed_in() =>
+                    {
+                        self.sync_touch(true);
+                        self.flash("syncing…");
+                    }
+                    super::SyncStatus::Working => self.flash("signing in…"),
+                    _ => self.sync_begin(),
+                }
+                None
+            }
+            SetKey::SyncSignOut => {
+                self.sync_sign_out();
                 None
             }
             SetKey::AppleDisconnect => {

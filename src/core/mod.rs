@@ -186,6 +186,11 @@ impl Store {
 
     /// Re-read the kept spaces after a write. A failed read keeps the old
     /// list; the tasks themselves are already saved.
+    /// Read the spaces from the database again (another writer, sync).
+    pub fn reload_spaces(&mut self) {
+        self.refresh_spaces();
+    }
+
     pub(crate) fn refresh_spaces(&mut self) {
         if let Some(Ok(spaces)) = self.db.as_ref().map(db::Db::load_spaces) {
             self.spaces = spaces;

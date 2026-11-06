@@ -26,6 +26,7 @@ pub mod mode_colors;
 pub mod note_editor;
 pub mod notes_popup;
 pub mod notes_screen;
+pub mod onboard;
 pub mod pomodoro;
 pub mod search_all;
 pub mod settings;
@@ -269,6 +270,11 @@ pub fn draw(frame: &mut Frame, app: &App) {
             let r = centered_in(area, welcome::WIDTH, welcome::HEIGHT);
             frame.render_widget(Clear, r);
             welcome::render(frame, r, app);
+        }
+        Mode::Onboard => {
+            let r = centered_in(area, onboard::WIDTH, onboard::HEIGHT);
+            frame.render_widget(Clear, r);
+            onboard::render(frame, r, app);
         }
         _ => {}
     }

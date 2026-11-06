@@ -202,8 +202,9 @@ impl App {
     /// "Sync now", or after a change: a sync soon (a burst of changes is
     /// one sync).
     pub fn gcal_touch(&mut self, now: bool) {
-        // Apple Calendar follows the same changes.
+        // Apple Calendar, and the other computers, follow the same changes.
         self.acal_touch(now);
+        self.sync_touch(now);
         if matches!(self.gcal_status, GcalStatus::Connected { .. })
             || matches!(self.gcal_status, GcalStatus::Failed(_)) && self.gcal.is_some()
         {

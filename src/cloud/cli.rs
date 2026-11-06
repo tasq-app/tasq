@@ -11,65 +11,14 @@
 //! `TASQ_SYNC_PASSWORD`, for scripts) and never kept: only the keys made
 //! from it are, in a file only you can read.
 
-use std::io::Write;
-use std::path::PathBuf;
-
 use anyhow::{Context, Result, anyhow, bail};
-use serde_json::{Value, json};
+use std::io::Write;
 
 use super::client::{Http, Remote};
 use super::keys::{Keys, normalize_email};
 use super::run::sync_once;
+use super::session::{self, Session};
 use crate::core::db::Db;
-
-/// A signed-in account on this device.
-#[derive(Debug, Clone)]
-pub struct Session {
-    pub server: String,
-    pub email: String,
-    pub keys: Keys,
-}
-
-fn session_path() -> Option<PathBuf> {
-    crate::xdg::config_home().map(|d| d.join("tasq").join("sync.json"))
-}
-
-impl Session {
-    pub fn load() -> Option<Self> {
-        let text = std::fs::read_to_string(session_path()?).ok()?;
-        let v: Value = serde_json::from_str(&text).ok()?;
-        Some(Self {
-            server: v["server"].as_str()?.to_string(),
-            email: v["email"].as_str()?.to_string(),
-            keys: Keys::from_secret(v["keys"].as_str()?)?,
-        })
-    }
-
-    fn save(&self) -> Result<()> {
-        let path = session_path().ok_or_else(|| anyhow!("no config directory"))?;
-        let body = json!({
-            "server": self.server,
-            "email": self.email,
-            "keys": self.keys.to_secret(),
-        });
-        crate::gcal::auth::write_private(&path, &body.to_string())
-    }
-
-    fn forget() {
-        if let Some(p) = session_path() {
-            let _ = std::fs::remove_file(p);
-        }
-    }
-}
-
-/// The server to use when none is given: `TASQ_SYNC_URL`, else the one this
-/// build was made with.
-fn default_server() -> Option<String> {
-    std::env::var("TASQ_SYNC_URL")
-        .ok()
-        .or_else(|| option_env!("TASQ_SYNC_URL").map(str::to_string))
-        .filter(|s| !s.is_empty())
-}
 
 /// A password, typed without echo (or from `TASQ_SYNC_PASSWORD`).
 fn ask_password(prompt: &str) -> Result<String> {
@@ -142,7 +91,7 @@ fn run_inner(args: &[String]) -> Result<i32> {
 }
 
 fn login(args: &[String]) -> Result<i32> {
-    let mut server = default_server();
+    let mut server = Some(session::server(None));
     let mut email = None;
     let mut it = args.iter();
     while let Some(a) = it.next() {
@@ -158,6 +107,7 @@ fn login(args: &[String]) -> Result<i32> {
     let Some(server) = server else {
         bail!("which sync server? tasq sync login --server https://… {email}");
     };
+    let server = server.trim_end_matches('/').to_string();
     let email = normalize_email(&email);
     let password = ask_password("Password: ")?;
     eprintln!("making the keys (a second)…");

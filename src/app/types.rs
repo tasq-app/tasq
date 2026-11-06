@@ -60,6 +60,8 @@ pub enum Mode {
     /// The shortcut menu (`space`): what you can do from here, with a key
     /// each; some open a submenu (see `App::menu_page`).
     Menu,
+    /// First start on an empty computer: sign in to sync, or carry on here.
+    Onboard,
 }
 
 /// Which page of the shortcut menu is showing.

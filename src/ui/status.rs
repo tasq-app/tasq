@@ -34,7 +34,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
         Mode::CommandPalette => "COMMAND".into(),
         Mode::Share => "SHARE".into(),
         Mode::PickTheme => "PICK THEME".into(),
-        Mode::Welcome => "WELCOME".into(),
+        Mode::Welcome | Mode::Onboard => "WELCOME".into(),
         // A note editor's own sub-mode overrides this just below.
         Mode::Notes => "NOTES".into(),
         Mode::Menu => "MENU".into(),
@@ -121,6 +121,7 @@ pub fn render(frame: &mut Frame, area: Rect, app: &App) {
             Mode::CommandPalette => "type to filter · Enter run · Esc cancel",
             Mode::Share => "scan the QR · any key dismisses",
             Mode::Welcome => "c create ./todo.txt · s open sample · q quit",
+            Mode::Onboard => "s sign in or create an account · l continue on this computer",
             // With an editor open, the focused-editor branch above wins.
             Mode::Menu => "press a key · Esc close",
             Mode::SearchAll => "type to search · ↑↓ move · Enter go · Esc close",
