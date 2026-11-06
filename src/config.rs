@@ -42,6 +42,8 @@ pub struct Config {
     /// client), instead of the one a release build comes with.
     pub google_client_id: Option<String>,
     pub google_client_secret: Option<String>,
+    /// A CalDAV server for "Apple Calendar" other than iCloud's.
+    pub caldav_url: Option<String>,
     /// User-defined saved searches, as `(name, query)` pairs in file
     /// order. Serialized one-per-line as `filter.<name> = <query>`.
     /// The query is a `/`-search needle (subsequence match on the task
@@ -192,6 +194,9 @@ fn parse(s: &str) -> Config {
             "google_client_id" if !v.trim().is_empty() => {
                 c.google_client_id = Some(v.trim().to_string());
             }
+            "caldav_url" if !v.trim().is_empty() => {
+                c.caldav_url = Some(v.trim().to_string());
+            }
             "google_client_secret" if !v.trim().is_empty() => {
                 c.google_client_secret = Some(v.trim().to_string());
             }
@@ -279,6 +284,9 @@ fn serialize(c: &Config) -> String {
     }
     if let Some(v) = &c.google_client_id {
         let _ = writeln!(out, "google_client_id = {v}");
+    }
+    if let Some(v) = &c.caldav_url {
+        let _ = writeln!(out, "caldav_url = {v}");
     }
     if let Some(v) = &c.google_client_secret {
         let _ = writeln!(out, "google_client_secret = {v}");
@@ -379,6 +387,7 @@ mod tests {
             icons: Some("nerd".to_string()),
             google_client_id: Some("id.apps.googleusercontent.com".into()),
             google_client_secret: None,
+            caldav_url: None,
         };
 
         let s = serialize(&c);
@@ -547,6 +556,7 @@ mod tests {
             icons: Some("nerd".to_string()),
             google_client_id: None,
             google_client_secret: None,
+            caldav_url: None,
         };
         written.save_to(&path).expect("save should succeed");
         assert!(path.exists());

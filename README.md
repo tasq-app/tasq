@@ -1036,6 +1036,29 @@ Service via `secret-tool` on Linux), else in a private file next to the
 config. Sync needs the database (`tasq` without a todo.txt path), since
 it follows tasks by their ids. `TASQ_NO_GOOGLE=1` turns it off for a run.
 
+### Apple Calendar
+
+Settings → **Connected calendars** → **Apple Calendar**, Enter: tasq asks
+for your Apple ID and an **app-specific password** — make one at
+[account.apple.com](https://account.apple.com) → Sign-In and Security →
+App-Specific Passwords (your real password isn't accepted there, and
+tasq never sees it).
+
+- Apple colours whole calendars, not single events, so tasq makes a
+  calendar per top-level space — **tasq · Uni**, **tasq · Work** — in that
+  space's colour, and **tasq** for tasks in no space. Spaces inside one
+  (`Uni/Exams`) go in their top space's calendar.
+- The same tasks go as to Google: dated ones, timed or all-day, repeats,
+  reminders; done ones leave. Times are your local time.
+- A space renamed or gone takes its empty calendar with it; a calendar
+  you delete by hand comes back on the next change.
+- **Disconnect Apple** forgets the password; the calendars stay in iCloud.
+
+The password is kept in the system keychain like Google's access.
+Another CalDAV server (Fastmail, Nextcloud…) works the same with
+`caldav_url = "https://…"` in the config. `TASQ_NO_APPLE=1` turns it off
+for a run.
+
 ### Your own Google client
 
 Release builds come with tasq's Google client. Building from source, or

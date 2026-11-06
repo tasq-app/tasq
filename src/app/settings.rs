@@ -49,6 +49,8 @@ pub enum SetKey {
     PhoneCapture,
     GoogleCalendar,
     GoogleDisconnect,
+    AppleCalendar,
+    AppleDisconnect,
     Trash,
     Help,
 }
@@ -128,7 +130,26 @@ impl App {
                     )
                 }),
             )
-            .chain([soon("Connected calendars", "Apple Calendar", "coming soon")])
+            .chain([row(
+                "Connected calendars",
+                "Apple Calendar",
+                self.acal_label(),
+                Some(SetKey::AppleCalendar),
+            )])
+            .chain(
+                matches!(
+                    self.acal_status,
+                    super::GcalStatus::Connected { .. } | super::GcalStatus::Failed(_)
+                )
+                .then(|| {
+                    row(
+                        "Connected calendars",
+                        "Disconnect Apple",
+                        "stops syncing · the calendars stay in iCloud".to_string(),
+                        Some(SetKey::AppleDisconnect),
+                    )
+                }),
+            )
             .collect(),
             1 => vec![
                 row(
@@ -398,6 +419,26 @@ impl App {
             }
             SetKey::GoogleDisconnect => {
                 self.gcal_disconnect();
+                None
+            }
+            SetKey::AppleCalendar => {
+                match &self.acal_status {
+                    super::GcalStatus::Connected { .. } => {
+                        self.acal_touch(true);
+                        self.flash("syncing with Apple Calendar…");
+                    }
+                    super::GcalStatus::Connecting => self.flash("signing in…"),
+                    super::GcalStatus::Failed(_)
+                        if self.acal.is_some() && crate::gcal::apple::kept_user().is_some() =>
+                    {
+                        self.acal_touch(true);
+                    }
+                    _ => self.acal_begin(),
+                }
+                None
+            }
+            SetKey::AppleDisconnect => {
+                self.acal_disconnect();
                 None
             }
             SetKey::Icons => {

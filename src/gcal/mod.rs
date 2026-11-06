@@ -5,11 +5,14 @@
 //! between. [`desired`] says what each task looks like as an event;
 //! [`sync::sync`] sends only what changed since last time.
 
+pub mod apple;
 pub mod auth;
+pub mod caldav;
 pub mod colors;
 pub mod event;
 pub mod google;
 pub mod http;
+pub mod ics;
 pub mod sync;
 
 use std::collections::BTreeMap;

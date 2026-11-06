@@ -12,6 +12,7 @@ use crate::serve::{self, ShareInfo};
 use crate::theme::{self, Theme};
 use crate::todo::Task;
 
+mod acal_link;
 mod autocomplete;
 mod bulk;
 mod cal_drag;
@@ -55,6 +56,7 @@ pub(crate) mod test_support;
 pub use crate::core::Archive;
 pub use crate::core::History;
 pub use crate::core::filter::{ListDueBucket, ordered_unique};
+pub use acal_link::AppleInput;
 pub use autocomplete::{ActiveToken, AutocompleteTarget, TokenKind, active_token};
 pub use cal_drag::{CalCol, CalDrag};
 pub use calendar::{CalScreen, CalStyle, CalView, SeriesAsk, SeriesOp, month_bounds, week_start};
@@ -190,6 +192,14 @@ pub struct App {
     pub(crate) gcal_due: Option<std::time::Instant>,
     /// Your own Google OAuth client from the config (id, secret).
     pub(crate) google_client: (Option<String>, Option<String>),
+    /// The thread that talks to Apple Calendar (CalDAV), once connected.
+    pub(crate) acal: Option<acal_link::AcalLink>,
+    pub acal_status: GcalStatus,
+    pub(crate) acal_due: Option<std::time::Instant>,
+    /// The Apple ID and password being typed in Settings.
+    pub apple_input: Option<AppleInput>,
+    /// Another CalDAV server than iCloud, from the config.
+    pub(crate) caldav_url: Option<String>,
     /// The spaces tasks had after the last change, to notice one emptied.
     pub spaces_in_use: Option<std::collections::BTreeSet<String>>,
     /// A change to a repeating task asking "only this one?".
@@ -353,6 +363,7 @@ impl App {
 
     fn from_store(store: Store, file_path: PathBuf, cfg: Config) -> Self {
         // Read saved filters before `cfg` is moved into `Prefs::from_config`.
+        let caldav_url = cfg.caldav_url.clone();
         let google_client = (
             cfg.google_client_id.clone(),
             cfg.google_client_secret.clone(),
@@ -396,6 +407,11 @@ impl App {
             gcal_status: GcalStatus::Off,
             gcal_due: None,
             google_client,
+            acal: None,
+            acal_status: GcalStatus::Off,
+            acal_due: None,
+            apple_input: None,
+            caldav_url,
             spaces_in_use: None,
             series_ask: None,
             cal_cols: std::cell::RefCell::new(Vec::new()),

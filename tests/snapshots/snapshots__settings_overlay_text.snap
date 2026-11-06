@@ -14,7 +14,7 @@ expression: buffer_to_text(&buf)
    Keys                      │  ╭────────────────────────────────────────────────────────────────╮  
    About                     │  │ CONNECTED CALENDARS                                            │  
                              │  │  Google Calendar    needs a Google client (see README) ›       │  
-                             │  │  Apple Calendar     coming soon                                │  
+                             │  │  Apple Calendar     not connected · Enter connects ›           │  
                              │  ╰────────────────────────────────────────────────────────────────╯  
                              │                                                                      
                              │                                                                      
