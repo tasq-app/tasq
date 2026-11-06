@@ -2,12 +2,17 @@
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const fs = require('fs'), { spawn } = require('child_process');
 const dir = __dirname;
+const VERTICAL = process.argv.includes('--vertical');
+const [W, H] = VERTICAL ? [1080, 1350] : [1920, 1080];
+const OUT = dir + (VERTICAL ? '/tasq-trailer-vertical.mp4' : '/tasq-trailer.mp4');
+const TAG = VERTICAL ? 'v' : 'h';
 (async () => {
   const html = fs.readFileSync(dir + '/trailer.html', 'utf8')
-    .replace('__SCENES__', fs.readFileSync(dir + '/scenes.json', 'utf8'));
+    .replace('__SCENES__', fs.readFileSync(dir + '/scenes.json', 'utf8'))
+    .replace('__VERTICAL__', VERTICAL ? 'true' : 'false');
   fs.writeFileSync(dir + '/built.html', html);
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
-  const p = await b.newPage({ viewport: { width: 1920, height: 1080 } });
+  const p = await b.newPage({ viewport: { width: W, height: H } });
   await p.goto('file://' + dir + '/built.html');
   await p.evaluate(() => Promise.all([document.fonts.ready, ...[...document.images].map(i => i.complete ? 0 : new Promise(r => { i.onload = r; i.onerror = () => r(console.log('bad ' + i.src)); }))]));
   p.on('console', m => console.log(m.text()));
@@ -16,14 +21,14 @@ const dir = __dirname;
   if (stills > 0) {
     for (const t of process.argv[stills + 1].split(',')) {
       await p.evaluate(t => render(t), +t);
-      await p.screenshot({ path: `${dir}/still-${t}.png` });
+      await p.screenshot({ path: `${dir}/still-${TAG}-${t}.png` });
     }
     await b.close(); return;
   }
   const fps = 30, n = Math.ceil(total / 1000 * fps);
   const ff = spawn('ffmpeg', ['-y', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
-    dir + '/tasq-trailer.mp4'], { stdio: ['pipe', 'ignore', 'inherit'] });
+    OUT], { stdio: ['pipe', 'ignore', 'inherit'] });
   for (let i = 0; i < n; i++) {
     await p.evaluate(t => render(t), i * 1000 / fps);
     const buf = await p.screenshot({ type: 'jpeg', quality: 95 });
