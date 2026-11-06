@@ -68,8 +68,14 @@ h1 em{font-style:normal;color:var(--accent)}
 .note a{color:var(--dim)}
 
 /* Video */
-.film{position:relative;z-index:1;margin:56px auto 0;max-width:1040px;border-radius:18px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 40px 120px #000a;background:#000}
-.film video{width:100%;aspect-ratio:16/9;height:auto}
+/* Wider than the text column: the trailer is the page's centrepiece. */
+.film{position:relative;z-index:1;left:50%;transform:translateX(-50%);margin-top:56px;width:min(1280px,calc(100vw - 40px));border-radius:18px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 40px 120px #000a;background:#000}
+.film video{display:block;width:100%;aspect-ratio:16/9;height:auto}
+/* Phones get the portrait cut, close on the action. */
+@media (max-width:700px){
+  .film{width:calc(100vw - 32px);border-radius:14px}
+  .film video{aspect-ratio:4/5}
+}
 
 /* Sections */
 section{padding:96px 0 0}
@@ -141,7 +147,7 @@ footer a{color:var(--dim);text-decoration:none}
 <header>
   <div class="glow"></div>
   <div class="wrap">
-    <span class="badge"><b>new</b> Google &amp; Apple Calendar sync</span>
+    <span class="badge"><b>new</b> Sync between your computers, end-to-end encrypted</span>
     <h1>Your tasks,<br><em>in the terminal.</em></h1>
     <p class="lede">tasq is a fast, keyboard-first to-do app. Type tasks the way you'd say them, see your day and your week, and keep your calendars in step. Local-first, free and open source.</p>
 
@@ -165,7 +171,7 @@ footer a{color:var(--dim);text-decoration:none}
     </div>
 
     <div class="film">
-      <video src="tasq-trailer.mp4" poster="img/poster.jpg" controls playsinline muted preload="metadata"></video>
+      <video id="trailer" poster="img/poster.jpg" autoplay muted loop playsinline controls preload="metadata"></video>
     </div>
   </div>
 </header>
@@ -257,8 +263,8 @@ footer a{color:var(--dim);text-decoration:none}
 
 <div class="wait" id="waitlist">
   <span class="kicker">Coming next</span>
-  <h2>tasq on all your devices.</h2>
-  <p class="sub">End-to-end encrypted sync between your computers, and an app for your phone. Calendars that update even when your laptop is closed. Join the waitlist to hear first and get early access.</p>
+  <h2>tasq on your phone.</h2>
+  <p class="sub">Your computers already sync, end-to-end encrypted. Next: an app for your phone on the same sync, to capture a task the moment you think of it. Join the waitlist to hear first and get early access.</p>
   <form class="join" id="join" novalidate>
     <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required aria-label="Email address">
     <input class="hp" type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true">
@@ -285,6 +291,16 @@ footer a{color:var(--dim);text-decoration:none}
 // Empty: the form opens an email instead.
 const WAITLIST_ENDPOINT = "https://formspree.io/f/meaawjvy";
 const WAITLIST_EMAIL = "jfgm299@gmail.com";
+
+// The trailer: the portrait cut on a phone, the wide one elsewhere.
+(() => {
+  const v = document.getElementById('trailer');
+  const portrait = matchMedia('(max-width: 700px)').matches;
+  v.poster = portrait ? 'img/poster-vertical.jpg' : 'img/poster.jpg';
+  v.src = portrait ? 'tasq-trailer-vertical.mp4' : 'tasq-trailer.mp4';
+  // Autoplay is muted, and only where the browser allows it.
+  v.play().catch(() => {});
+})();
 
 // Install tabs and copy.
 const panes = document.querySelectorAll('[data-pane]');

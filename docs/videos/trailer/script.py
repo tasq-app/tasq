@@ -15,7 +15,7 @@ scene("spanish", [], [
 ])
 scene("week", ["5", "@400"], [("wait", "", 1500), ("key", "v", 1600)])
 scene("month", ["6", "@400"], [("wait", "", 1200), ("key", "j", 450), ("key", "j", 450), ("key", "j", 450), ("key", "j", 450), ("key", "j", 1200)])
-scene("calendars", [",", "Enter", "j", "j", "j", "@4000"], [("wait", "", 2600)])
+scene("calendars", [",", "Enter", "@5000"], [("wait", "", 2600)])
 scene("themes", [], [("wait", "", 900),
     ("key", "T", 0), ("key", "j", 0), ("key", "Enter", 0), ("settle", "", 0), ("wait", "", 1100),
     ("key", "T", 0), ("key", "j", 0), ("key", "Enter", 0), ("settle", "", 0), ("wait", "", 1100),
