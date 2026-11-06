@@ -1047,21 +1047,31 @@ if a producer must be serialized with the TUI drain.
 
 ## Sync between computers (beta)
 
-Your tasks, notes and spaces on every computer, end-to-end encrypted:
+Your tasks, notes and spaces on every computer, end-to-end encrypted.
+
+The first time you open tasq on a computer with no tasks yet, it asks:
+**sign in or create an account**, or **continue on this computer**. On a
+computer that already has tasks, sign in from Settings (`,`) → **Sync** →
+**Your computers**: type your email, then your password (an email with no
+account yet asks for the password again and makes one). From then on it
+syncs by itself: at start, a few seconds after each change, and every
+minute for what your other computers sent. Enter on the row syncs at once;
+**Sign out** stops syncing and leaves your tasks where they are.
+
+The same from a shell:
 
 ```sh
 tasq sync login you@example.com
 tasq sync          # send what changed here, receive the rest
 tasq sync status
-tasq sync logout   # your tasks stay on the computer
+tasq sync logout
 ```
 
-Release builds sync through tasq's server; `--server https://…` on
-`login` (or `TASQ_SYNC_URL`) picks another, such as your own.
+Release builds sync through tasq's server; `sync_url = https://…` in the
+config, `TASQ_SYNC_URL`, or `--server` on `tasq sync login` picks another,
+such as your own. `TASQ_NO_SYNC=1` turns it off for a run.
 
-The first `login` with an email creates the account (it asks for the
-password twice); on another computer, the same email and password sign in
-and bring everything down. Each computer keeps its full copy and works
+Each computer keeps its full copy and works
 offline; a sync sends what changed since the last one and folds in the
 others' changes. If the same task was changed on two computers, the later
 change wins on both; a task deleted on one goes to the trash on the

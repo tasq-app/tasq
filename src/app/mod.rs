@@ -45,6 +45,7 @@ mod selection;
 mod settings;
 mod sidebar;
 mod space_ask;
+mod sync_link;
 mod toast;
 mod trash;
 mod types;
@@ -91,6 +92,7 @@ pub use selection::Selection;
 pub use settings::{SECTIONS as SETTINGS_SECTIONS, SetKey, SetRow, SettingsState};
 pub use sidebar::{NavItem, NavRow, SIDEBAR_SLIDE, SIDEBAR_W};
 pub use space_ask::SpaceAsk;
+pub use sync_link::{SyncInput, SyncStatus, SyncStep, mark_onboarded};
 pub use toast::{Toast, ToastKind, Toasts};
 pub use trash::TrashScreen;
 pub use types::{
@@ -200,6 +202,16 @@ pub struct App {
     pub apple_input: Option<AppleInput>,
     /// Another CalDAV server than iCloud, from the config.
     pub(crate) caldav_url: Option<String>,
+    /// The thread that syncs with the other computers, once signed in.
+    pub(crate) sync: Option<sync_link::SyncLink>,
+    pub sync_status: SyncStatus,
+    pub(crate) sync_due: Option<std::time::Instant>,
+    /// The sign-in being typed in Settings.
+    pub sync_input: Option<SyncInput>,
+    /// A sign-in sent, kept in case the email has no account yet.
+    pub(crate) sync_pending_input: Option<SyncInput>,
+    /// Another sync server, from the config (`sync_url`).
+    pub(crate) sync_url: Option<String>,
     /// The spaces tasks had after the last change, to notice one emptied.
     pub spaces_in_use: Option<std::collections::BTreeSet<String>>,
     /// A change to a repeating task asking "only this one?".
@@ -368,6 +380,7 @@ impl App {
     fn from_store(store: Store, file_path: PathBuf, cfg: Config) -> Self {
         // Read saved filters before `cfg` is moved into `Prefs::from_config`.
         let caldav_url = cfg.caldav_url.clone();
+        let sync_url = cfg.sync_url.clone();
         let google_client = (
             cfg.google_client_id.clone(),
             cfg.google_client_secret.clone(),
@@ -417,6 +430,12 @@ impl App {
             acal_due: None,
             apple_input: None,
             caldav_url,
+            sync: None,
+            sync_status: SyncStatus::Off,
+            sync_due: None,
+            sync_input: None,
+            sync_pending_input: None,
+            sync_url,
             spaces_in_use: None,
             series_ask: None,
             cal_cols: std::cell::RefCell::new(Vec::new()),
