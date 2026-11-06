@@ -1045,6 +1045,34 @@ next session. Plain shell appends are useful for lightweight capture,
 but they do not take that lock; use the capture server or the same lock
 if a producer must be serialized with the TUI drain.
 
+## Sync between computers (beta)
+
+Your tasks, notes and spaces on every computer, end-to-end encrypted:
+
+```sh
+tasq sync login --server https://sync.example.com you@example.com
+tasq sync          # send what changed here, receive the rest
+tasq sync status
+tasq sync logout   # your tasks stay on the computer
+```
+
+The first `login` with an email creates the account (it asks for the
+password twice); on another computer, the same email and password sign in
+and bring everything down. Each computer keeps its full copy and works
+offline; a sync sends what changed since the last one and folds in the
+others' changes. If the same task was changed on two computers, the later
+change wins on both; a task deleted on one goes to the trash on the
+others.
+
+Everything is encrypted on your computers with a key made from your
+password (Argon2id, then XChaCha20-Poly1305), so the server stores only
+data it can't read, and doesn't even know your email. The flip side:
+**nobody can reset a forgotten password**, and without it the synced data
+can't be read.
+
+The server is `tasq-relay`, in this repository: run your own with the
+Docker image in [`deploy/relay`](deploy/relay/README.md).
+
 ## Google Calendar
 
 tasq can keep your dated tasks in Google Calendar, each in its space's

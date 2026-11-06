@@ -48,6 +48,12 @@ pub fn send(req: &Request) -> Result<(u16, String)> {
         config.push_str(&format!("data-binary = {}\n", quoted(b)));
     }
     config.push_str("silent\nshow-error\nmax-time = 30\nwrite-out = \"\\n%{http_code}\"\n");
+    // A server on this machine (a local sync server, tests) is reached
+    // directly, never through a proxy.
+    let host = req.url.split("://").nth(1).unwrap_or("");
+    if host.starts_with("127.0.0.1") || host.starts_with("localhost") || host.starts_with("[::1]") {
+        config.push_str("noproxy = \"*\"\n");
+    }
 
     let mut child = Command::new("curl")
         .args(["--config", "-"])
