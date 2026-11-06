@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.6.0](https://github.com/tasq-app/tasq/compare/v0.5.0...v0.6.0) (2026-11-06)
+
+
+### Features
+
+* capture from your phone through an inbox folder ([#77](https://github.com/tasq-app/tasq/issues/77)) ([b508494](https://github.com/tasq-app/tasq/commit/b50849483deb8aac2c2c563c878993e6633228bc))
+* landing page with the trailer, install and a waitlist ([#74](https://github.com/tasq-app/tasq/issues/74)) ([c8dd27f](https://github.com/tasq-app/tasq/commit/c8dd27f3cfaa08707c9351f50795c3bfc340c5ac))
+* sync dated tasks to Apple Calendar ([#73](https://github.com/tasq-app/tasq/issues/73)) ([5a124aa](https://github.com/tasq-app/tasq/commit/5a124aa785b0fed03bec4a334da2539358fcbf40))
+
 ## [0.5.0](https://github.com/tasq-app/tasq/compare/v0.4.0...v0.5.0) (2026-10-09)
 
 
