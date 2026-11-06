@@ -2383,6 +2383,7 @@ fn resolve_normal_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) -> O
         KeyCode::Char('u') => Action::Undo,
         KeyCode::Char('v') => Action::ToggleVisual,
         KeyCode::Char(' ') => Action::ToggleSelected,
+        KeyCode::Char('E') => Action::ToggleEvent,
         KeyCode::Char('A') => Action::ArchiveCompleted,
         // `f` opens the "+ filter" popover. (`ff`, `fp`, `fc` and `fs`
         // still work after a remapped `arm_f` key.)
@@ -2546,7 +2547,9 @@ fn apply_action(app: &mut App, action: Action) {
             }
         }
         Action::ToggleEvent => {
-            if let Some(abs) = app.calendar_or_list_abs() {
+            if app.mode == Mode::Visual && !app.selection.is_empty() {
+                app.toggle_event_selected();
+            } else if let Some(abs) = app.calendar_or_list_abs() {
                 app.toggle_event(abs);
             }
         }

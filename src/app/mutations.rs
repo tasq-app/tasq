@@ -59,10 +59,21 @@ impl App {
                 } else {
                     "an event · not ticked off, never overdue, moves on once it's over"
                 });
+                self.roll_past_events();
             }
             EditOutcome::Aborted(r) => self.handle_reconcile_abort(r),
             EditOutcome::Error(e) => self.flash(format!("couldn't save: {e}")),
             _ => {}
+        }
+    }
+
+    /// Events already over move on now (a repeat to its next day), not at
+    /// the next start.
+    pub(crate) fn roll_past_events(&mut self) {
+        if self.store.roll_events() > 0 {
+            self.recompute_visible();
+            self.clamp_cursor();
+            self.gcal_touch(false);
         }
     }
 

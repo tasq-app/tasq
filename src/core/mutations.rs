@@ -1,7 +1,7 @@
 use super::Store;
 use super::outcome::{
-    AddOutcome, BulkCompleteOutcome, BulkDeleteOutcome, CompleteOutcome, DeleteOutcome,
-    EditOutcome, MoveOutcome, PriorityOutcome, Reconcile, StoreError, TagOutcome,
+    AddOutcome, BulkCompleteOutcome, BulkDeleteOutcome, BulkEventOutcome, CompleteOutcome,
+    DeleteOutcome, EditOutcome, MoveOutcome, PriorityOutcome, Reconcile, StoreError, TagOutcome,
 };
 use crate::core::outcome::{DeleteSpaceOutcome, RenameOutcome, SpaceSettingOutcome};
 use crate::recurrence::{self, RecSpec};
@@ -720,6 +720,37 @@ impl Store {
         match self.persist() {
             Ok(()) => BulkCompleteOutcome::Done { completed, spawned },
             Err(e) => BulkCompleteOutcome::Error(e),
+        }
+    }
+
+    /// Make the given tasks events (`on`) or tasks again, as one undo step.
+    pub fn set_event_many(&mut self, indices: &[usize], on: bool) -> BulkEventOutcome {
+        use super::series::{self, EVENT_KEY};
+        match self.reconcile() {
+            Reconcile::Unchanged => {}
+            other => return BulkEventOutcome::Aborted(other),
+        }
+        let todo_now: Vec<usize> = indices
+            .iter()
+            .copied()
+            .filter(|&i| self.tasks.get(i).is_some_and(|t| t.event != on && !t.done))
+            .collect();
+        if todo_now.is_empty() {
+            return BulkEventOutcome::Nothing;
+        }
+        self.push_history();
+        for &abs in &todo_now {
+            let raw = series::set_kv(&self.tasks[abs].raw, EVENT_KEY, on.then_some("1"));
+            if let Ok(mut parsed) = todo::parse_line(&raw) {
+                parsed.id = self.tasks[abs].id.clone();
+                self.tasks[abs] = parsed;
+            }
+        }
+        match self.persist() {
+            Ok(()) => BulkEventOutcome::Done {
+                changed: todo_now.len(),
+            },
+            Err(e) => BulkEventOutcome::Error(e),
         }
     }
 

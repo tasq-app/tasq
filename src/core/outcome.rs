@@ -177,6 +177,17 @@ pub enum BulkCompleteOutcome {
 }
 
 #[derive(Debug)]
+pub enum BulkEventOutcome {
+    /// How many tasks changed.
+    Done {
+        changed: usize,
+    },
+    Nothing,
+    Aborted(Reconcile),
+    Error(StoreError),
+}
+
+#[derive(Debug)]
 pub enum BulkDeleteOutcome {
     Done { deleted: usize },
     Nothing,

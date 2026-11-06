@@ -1,6 +1,6 @@
 use super::App;
 use super::types::Mode;
-use crate::core::{BulkCompleteOutcome, BulkDeleteOutcome};
+use crate::core::{BulkCompleteOutcome, BulkDeleteOutcome, BulkEventOutcome};
 
 impl App {
     /// Bulk-complete every task in the selection that isn't already done.
@@ -33,6 +33,40 @@ impl App {
         }
     }
 
+    /// `E` on a selection: all of it events (classes, meetings: never
+    /// overdue, they move on once over), or all tasks again when every one
+    /// already is an event.
+    pub fn toggle_event_selected(&mut self) {
+        if self.selection.is_empty() {
+            return;
+        }
+        let indices: Vec<usize> = self.selection.iter().collect();
+        let on = !indices
+            .iter()
+            .all(|&i| self.store.tasks().get(i).is_some_and(|t| t.event));
+        match self.store.set_event_many(&indices, on) {
+            BulkEventOutcome::Done { changed } => {
+                self.selection.clear();
+                self.mode = Mode::Normal;
+                self.flash(if on {
+                    format!("{changed} now events · never overdue, they move on once over")
+                } else {
+                    format!("{changed} tasks again")
+                });
+                self.recompute_visible();
+                self.clamp_cursor();
+                self.gcal_touch(false);
+                self.roll_past_events();
+            }
+            BulkEventOutcome::Nothing => {
+                self.selection.clear();
+                self.mode = Mode::Normal;
+            }
+            BulkEventOutcome::Aborted(r) => self.handle_reconcile_abort(r),
+            BulkEventOutcome::Error(e) => self.flash(format!("write failed: {e}")),
+        }
+    }
+
     /// Bulk-delete every task in the selection.
     pub fn delete_selected(&mut self) {
         if self.selection.is_empty() {
@@ -61,6 +95,34 @@ impl App {
 mod tests {
     use super::*;
     use crate::app::test_support::build_app;
+
+    #[test]
+    fn a_selection_becomes_events_and_back() {
+        let mut app = build_app(
+            "Algebra plan:2026-05-04 at:09:00 rec:1w\nPhysics plan:2026-05-05 at:11:00 rec:1w\nLaundry\n",
+        );
+        app.selection.toggle(0);
+        app.selection.toggle(1);
+        app.mode = Mode::Visual;
+        app.toggle_event_selected();
+        assert!(app.tasks()[0].event && app.tasks()[1].event);
+        assert!(!app.tasks()[2].event);
+        assert_eq!(app.mode, Mode::Normal);
+        // Past ones move on to their next week at once (today is 2026-05-06).
+        assert_eq!(app.tasks()[0].planned.as_deref(), Some("2026-05-11"));
+        // Undo: first the move, then the marking.
+        app.undo();
+        app.undo();
+        assert!(!app.tasks()[0].event && !app.tasks()[1].event);
+        // All already events: the same key makes them tasks again.
+        app.selection.toggle(0);
+        app.selection.toggle(1);
+        app.toggle_event_selected();
+        app.selection.toggle(0);
+        app.selection.toggle(1);
+        app.toggle_event_selected();
+        assert!(!app.tasks()[0].event && !app.tasks()[1].event);
+    }
 
     #[test]
     fn complete_selected_clears_selection_and_flashes() {
