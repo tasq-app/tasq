@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/tasq-app/tasq/compare/v0.9.0...v0.9.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* AltGr symbols (@ # € [) type in every text box on Windows ([#89](https://github.com/tasq-app/tasq/issues/89)) ([fac9dbf](https://github.com/tasq-app/tasq/commit/fac9dbfe2b4e24bc486faadf9370505d25898230))
+
 ## [0.9.0](https://github.com/tasq-app/tasq/compare/v0.8.0...v0.9.0) (2026-11-06)
 
 
