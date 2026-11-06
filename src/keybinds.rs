@@ -415,8 +415,45 @@ fn strip_comment(line: &str) -> &str {
     line
 }
 
+/// A key typed with AltGr, as text. Windows reports AltGr as Ctrl+Alt, so
+/// on a Spanish, German or French keyboard `@`, `#`, `€`, `[` or `{` arrive
+/// with Ctrl held, and every text box would drop them as shortcuts. A
+/// Ctrl+Alt key that makes something other than a letter or a digit is
+/// that: the character, with no modifiers. Ctrl+Alt+letter shortcuts stay.
+pub fn altgr_as_text(key: KeyEvent) -> KeyEvent {
+    let altgr = KeyModifiers::CONTROL | KeyModifiers::ALT;
+    match key.code {
+        KeyCode::Char(c) if key.modifiers.contains(altgr) && !c.is_ascii_alphanumeric() => {
+            KeyEvent {
+                modifiers: key.modifiers - altgr,
+                ..key
+            }
+        }
+        _ => key,
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn altgr_symbols_are_text_and_shortcuts_stay() {
+        use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        let altgr = KeyModifiers::CONTROL | KeyModifiers::ALT;
+        // AltGr+2 on a Spanish keyboard, as Windows reports it.
+        let at = super::altgr_as_text(KeyEvent::new(KeyCode::Char('@'), altgr));
+        assert_eq!(
+            (at.code, at.modifiers),
+            (KeyCode::Char('@'), KeyModifiers::NONE)
+        );
+        let euro = super::altgr_as_text(KeyEvent::new(KeyCode::Char('€'), altgr));
+        assert_eq!(euro.modifiers, KeyModifiers::NONE);
+        // A real Ctrl+Alt+letter shortcut, and plain Ctrl+C, are left alone.
+        let shortcut = super::altgr_as_text(KeyEvent::new(KeyCode::Char('k'), altgr));
+        assert_eq!(shortcut.modifiers, altgr);
+        let ctrl_c = super::altgr_as_text(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL));
+        assert_eq!(ctrl_c.modifiers, KeyModifiers::CONTROL);
+    }
+
     use super::*;
 
     fn key(c: char) -> KeyEvent {

@@ -298,6 +298,8 @@ fn run(
         if event::poll(timeout)? {
             match event::read()? {
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
+                    // AltGr symbols (`@` on a Spanish keyboard) are text.
+                    let key = tasq::keybinds::altgr_as_text(key);
                     handle_key(app, key, keybinds);
                     if let Some(path) = app.take_pending_editor_path() {
                         tasq::note_store::edit_in(&path, open_path_in_editor)?;
