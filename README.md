@@ -960,6 +960,44 @@ you've typed canonical form and saves it directly on the first Enter.
 
 ## Phone capture
 
+### With your laptop closed: an inbox folder
+
+Point tasq at a folder your phone can write to and your computer syncs —
+iCloud Drive, Google Drive, Dropbox, Syncthing:
+
+```toml
+inbox_dir = ~/Dropbox/tasq
+```
+
+Anything you drop there as a text file becomes a task the next time tasq
+runs: one line, one task, read by the same natural-language pipeline as
+the `n` box, in English or Spanish. The phone needs no tasq and no
+connection to your computer; the folder syncs when it can, and tasq picks
+the files up and removes them. Name a file starting with its date
+(`2026-11-06 093015.txt`) and its "tomorrow" means the day after you wrote
+it, however late tasq sees it (otherwise the file's date is used). A file
+tasq can't make sense of is renamed `….txt.failed` and left for you.
+
+On an iPhone, a Shortcut does it in three actions (Shortcuts → `+`):
+
+1. **Ask for Input** (Text), prompt "Task".
+2. **Set Name** of *Provided Input* to the **Current Date**, with a custom
+   format `yyyy-MM-dd HHmmss` (the file comes out as a `.txt`).
+3. **Save File** of *Renamed Item*, with *Ask Where to Save* off and the
+   destination path `tasq/`. That's the `tasq` folder inside iCloud
+   Drive's **Shortcuts** folder, so on the Mac:
+
+   ```toml
+   inbox_dir = ~/Library/Mobile Documents/iCloud~is~workflow~my~workflows/Documents/tasq
+   ```
+
+Name it "tasq", then "Hey Siri, tasq" (or the Action button, a Home Screen
+widget, the Share sheet) asks for a task and files it, offline too. On
+Android, any app that saves a note as a text file to a synced folder works
+the same way.
+
+### On the same network: the capture server
+
 Press `s` to start a tiny capture server on your machine's LAN address and
 display a QR code for it. Scan it from your phone — any modern browser — to
 get a minimal PWA you can install to your home screen. Type a task, tap

@@ -147,25 +147,10 @@ impl Store {
         }
 
         // Step 3: snapshot for undo, append, persist atomically.
-        self.push_history();
         let merged = new_tasks.len();
-        self.tasks.extend(new_tasks);
-        let written = if self.db.is_some() {
-            self.persist().map_err(|e| e.to_string())
-        } else {
-            let body = todo::serialize(&self.tasks);
-            todo::write_atomic(&self.file_path, &body)
-                .map(|()| self.last_disk = body)
-                .map_err(|e| e.to_string())
-        };
-        match written {
-            Ok(()) => {}
-            Err(e) => {
-                // Roll back the in-memory append; leave staging for retry.
-                self.tasks.truncate(self.tasks.len() - merged);
-                self.history.pop();
-                return err(format!("inbox write failed: {e}"));
-            }
+        if let Err(e) = self.add_merged(new_tasks) {
+            // Staging stays for a retry.
+            return err(format!("inbox write failed: {e}"));
         }
 
         // Step 4: only after the write succeeds, delete staging.
@@ -180,6 +165,92 @@ impl Store {
             merged,
             skipped,
             error: None,
+        }
+    }
+    /// Append `new_tasks` (one undo step) and save; on a failed save the
+    /// append is rolled back.
+    fn add_merged(&mut self, new_tasks: Vec<todo::Task>) -> Result<(), String> {
+        self.push_history();
+        let merged = new_tasks.len();
+        self.tasks.extend(new_tasks);
+        let written = if self.db.is_some() {
+            self.persist().map_err(|e| e.to_string())
+        } else {
+            let body = todo::serialize(&self.tasks);
+            todo::write_atomic(&self.file_path, &body)
+                .map(|()| self.last_disk = body)
+                .map_err(|e| e.to_string())
+        };
+        if written.is_err() {
+            self.tasks.truncate(self.tasks.len() - merged);
+            self.history.pop();
+        }
+        written
+    }
+
+    /// Merge the captures waiting in the inbox folder `dir` (one text file
+    /// each, see [`inbox::scan_dir`]): each line becomes a task, its dates
+    /// read from the day it was captured. A file goes once its tasks are
+    /// saved; one with nothing usable in it is renamed `….txt.failed`, kept
+    /// for you to look at, and never read again.
+    pub fn drain_inbox_dir(&mut self, dir: &std::path::Path) -> DrainReport {
+        let drops = inbox::scan_dir(dir);
+        if drops.is_empty() {
+            return DrainReport::default();
+        }
+        let mut new_tasks = Vec::new();
+        let mut done = Vec::new();
+        let mut failed = Vec::new();
+        let mut skipped = 0usize;
+        for drop in drops {
+            // Not readable yet (still syncing): the next look.
+            let Ok(body) = std::fs::read_to_string(&drop.path) else {
+                continue;
+            };
+            let before = new_tasks.len();
+            for line in body.lines() {
+                let line = line.trim();
+                if line.is_empty() || line.starts_with('#') {
+                    continue;
+                }
+                match inbox::canonicalize_line(line, drop.captured) {
+                    Ok(task) => new_tasks.push(task),
+                    Err(_) => skipped += 1,
+                }
+            }
+            if new_tasks.len() > before || body.trim().is_empty() {
+                done.push(drop.path);
+            } else {
+                failed.push(drop.path);
+            }
+        }
+        let merged = new_tasks.len();
+        if merged > 0
+            && let Err(e) = self.add_merged(new_tasks)
+        {
+            return DrainReport {
+                error: Some(format!("inbox folder: couldn't save: {e}")),
+                ..Default::default()
+            };
+        }
+        let mut error = None;
+        for path in done {
+            if let Err(e) = std::fs::remove_file(&path) {
+                error = Some(format!(
+                    "inbox folder: couldn't remove {}: {e}",
+                    path.display()
+                ));
+            }
+        }
+        for path in failed {
+            let mut to = path.clone().into_os_string();
+            to.push(".failed");
+            let _ = std::fs::rename(&path, to);
+        }
+        DrainReport {
+            merged,
+            skipped,
+            error,
         }
     }
 }
@@ -290,6 +361,45 @@ mod tests {
         assert!(on_disk.contains("Call mom"));
         assert!(!dir.join("inbox.txt").exists());
         assert!(!dir.join("inbox.txt.tasq-staging").exists());
+    }
+
+    #[test]
+    fn the_inbox_folder_reads_dates_from_the_day_of_capture() {
+        let (mut store, dir, _) = build_store_with_dir("(A) 2026-05-01 existing\n");
+        let phone = dir.join("phone");
+        std::fs::create_dir_all(&phone).unwrap();
+        // Written down on the 10th, merged on the 13th: "tomorrow" is the 11th.
+        std::fs::write(
+            phone.join("2026-05-10 093000.txt"),
+            "Call the dentist tomorrow\n",
+        )
+        .unwrap();
+        std::fs::write(phone.join("2026-05-12 180000.txt"), "Buy milk\nPay rent\n").unwrap();
+        std::fs::write(phone.join("2026-05-12 190000.txt"), "\n").unwrap();
+        let report = store.drain_inbox_dir(&phone);
+        assert_eq!((report.merged, report.skipped), (3, 0));
+        assert!(report.error.is_none());
+        let dentist = &store.tasks()[1];
+        assert!(dentist.raw.starts_with("2026-05-10 Call the dentist"));
+        assert_eq!(dentist.planned.as_deref(), Some("2026-05-11"));
+        assert_eq!(store.tasks().len(), 4);
+        // All three files are gone; nothing comes in twice.
+        assert_eq!(std::fs::read_dir(&phone).unwrap().count(), 0);
+        assert!(store.drain_inbox_dir(&phone).is_noop());
+        // Spanish from the phone reads the same way.
+        std::fs::write(
+            phone.join("2026-05-10 100000.txt"),
+            "Llamar a mamá mañana a las 6\n",
+        )
+        .unwrap();
+        store.drain_inbox_dir(&phone);
+        let mama = store.tasks().last().unwrap();
+        assert_eq!(mama.planned.as_deref(), Some("2026-05-11"));
+        assert!(mama.raw.contains("at:18:00"), "{}", mama.raw);
+        store.undo();
+        // One undo takes the whole batch back.
+        store.undo();
+        assert_eq!(store.tasks().len(), 1);
     }
 
     #[test]

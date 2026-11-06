@@ -199,7 +199,8 @@ pub fn note_template(task: &Task) -> String {
     format!("# {title}\n\n")
 }
 
-fn expand_note_dir(value: &str) -> PathBuf {
+/// `value` with a leading `~` as your home directory.
+pub(crate) fn expand_note_dir(value: &str) -> PathBuf {
     if value == "~"
         && let Some(home) = std::env::var_os("HOME")
     {
