@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/tasq-app/tasq/compare/v0.8.0...v0.9.0) (2026-11-06)
+
+
+### Features
+
+* sign in and sync from Settings, and on a new computer's first start ([#86](https://github.com/tasq-app/tasq/issues/86)) ([e6f28e7](https://github.com/tasq-app/tasq/commit/e6f28e7242f177232f90c6075368649bbd16aaf0))
+
+
+### Bug Fixes
+
+* Linux binaries run on older distros again ([#85](https://github.com/tasq-app/tasq/issues/85)) ([d648e31](https://github.com/tasq-app/tasq/commit/d648e31a01c1040ded0acea63d0d36a36d2b0fd5))
+
 ## [0.8.0](https://github.com/tasq-app/tasq/compare/v0.7.0...v0.8.0) (2026-11-06)
 
 
