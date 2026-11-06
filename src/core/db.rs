@@ -21,7 +21,7 @@ use super::spaces::{self, Space};
 use crate::todo::{self, Task};
 
 /// The schema version this build reads and writes.
-const SCHEMA_VERSION: i64 = 5;
+const SCHEMA_VERSION: i64 = 6;
 
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS meta (
@@ -79,13 +79,13 @@ impl List {
 }
 
 pub struct Db {
-    conn: Connection,
+    pub(super) conn: Connection,
     path: PathBuf,
     /// `PRAGMA data_version` as of our last read or write.
-    data_version: i64,
+    pub(super) data_version: i64,
 }
 
-fn io_err(e: rusqlite::Error) -> std::io::Error {
+pub(super) fn io_err(e: rusqlite::Error) -> std::io::Error {
     std::io::Error::other(e)
 }
 
@@ -192,7 +192,7 @@ impl Db {
         .map_err(io_err)
     }
 
-    fn read_data_version(&self) -> rusqlite::Result<i64> {
+    pub(super) fn read_data_version(&self) -> rusqlite::Result<i64> {
         self.conn.query_row("PRAGMA data_version", [], |r| r.get(0))
     }
 
@@ -220,7 +220,7 @@ impl Db {
     pub fn load(&self, list: List) -> std::io::Result<Vec<Task>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, raw FROM tasks WHERE list = ?1 ORDER BY position")
+            .prepare("SELECT id, raw FROM tasks WHERE list = ?1 ORDER BY position, id")
             .map_err(io_err)?;
         let rows = stmt
             .query_map([list.as_str()], |r| {
@@ -432,7 +432,7 @@ impl Db {
 const WITHIN: &str = "(path = ?1 OR substr(path, 1, length(?1) + 1) = ?1 || '/')";
 
 /// Make sure each space in `paths`, and every space above it, has a row.
-fn add_spaces(conn: &Connection, paths: &[String], now: &str) -> rusqlite::Result<()> {
+pub(super) fn add_spaces(conn: &Connection, paths: &[String], now: &str) -> rusqlite::Result<()> {
     let mut stmt =
         conn.prepare("INSERT OR IGNORE INTO spaces (path, hidden, created_at) VALUES (?1, 0, ?2)")?;
     for path in paths {
@@ -506,6 +506,55 @@ fn migrate(conn: &Connection, from: i64) -> rusqlite::Result<()> {
                  );",
             )?;
         }
+        if from < 6 {
+            // Sync: the version of every record as last sent or received,
+            // and the changes waiting to go (see `core::sync`).
+            conn.execute_batch(
+                "CREATE TABLE IF NOT EXISTS sync_state (
+                     kind  TEXT NOT NULL,
+                     key   TEXT NOT NULL,
+                     hlc   TEXT NOT NULL,
+                     hash  TEXT NOT NULL,
+                     PRIMARY KEY (kind, key)
+                 );
+                 CREATE TABLE IF NOT EXISTS sync_outbox (
+                     seq    INTEGER PRIMARY KEY AUTOINCREMENT,
+                     kind   TEXT NOT NULL,
+                     key    TEXT NOT NULL,
+                     hlc    TEXT NOT NULL,
+                     value  TEXT
+                 );
+                 -- When each record went, whoever removed it: a delete made
+                 -- offline keeps its own time, not the time it was synced.
+                 -- Only once sync has started (something in sync_state).
+                 CREATE TABLE IF NOT EXISTS sync_deleted (
+                     kind  TEXT NOT NULL,
+                     key   TEXT NOT NULL,
+                     at    TEXT NOT NULL,
+                     PRIMARY KEY (kind, key)
+                 );
+                 CREATE TRIGGER IF NOT EXISTS sync_task_gone AFTER DELETE ON tasks
+                 WHEN EXISTS (SELECT 1 FROM sync_state) BEGIN
+                     INSERT OR REPLACE INTO sync_deleted VALUES
+                         ('task', old.id, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+                 END;
+                 CREATE TRIGGER IF NOT EXISTS sync_note_gone AFTER DELETE ON notes
+                 WHEN EXISTS (SELECT 1 FROM sync_state) BEGIN
+                     INSERT OR REPLACE INTO sync_deleted VALUES
+                         ('note', old.path, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+                 END;
+                 CREATE TRIGGER IF NOT EXISTS sync_note_moved AFTER UPDATE OF path ON notes
+                 WHEN old.path != new.path AND EXISTS (SELECT 1 FROM sync_state) BEGIN
+                     INSERT OR REPLACE INTO sync_deleted VALUES
+                         ('note', old.path, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+                 END;
+                 CREATE TRIGGER IF NOT EXISTS sync_space_gone AFTER DELETE ON spaces
+                 WHEN EXISTS (SELECT 1 FROM sync_state) BEGIN
+                     INSERT OR REPLACE INTO sync_deleted VALUES
+                         ('space', old.path, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+                 END;",
+            )?;
+        }
         conn.execute(
             "INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', ?1)",
             [SCHEMA_VERSION.to_string()],
@@ -543,7 +592,7 @@ fn extra_columns(task: &Task) -> (Option<String>, Option<u32>, Option<String>) {
 
 /// Insert or fully rewrite one task row (and its tags). `created` is set for
 /// a new row; an existing row keeps its `created_at`.
-fn write_row(
+pub(super) fn write_row(
     tx: &rusqlite::Transaction<'_>,
     task: &Task,
     list: List,
@@ -820,7 +869,7 @@ mod tests {
                 Some("2026-10-05".into()),
                 Some(60),
                 Some("15,1440".into()),
-                "5".into()
+                "6".into()
             )
         );
         let paths: Vec<String> = db

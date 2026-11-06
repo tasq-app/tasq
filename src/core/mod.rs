@@ -19,6 +19,7 @@ pub mod filter;
 pub mod outcome;
 pub mod series;
 pub mod spaces;
+pub mod sync;
 pub use trash::{KEEP_DAYS, TrashItem};
 
 #[cfg(test)]
