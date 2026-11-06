@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/tasq-app/tasq/compare/v0.6.0...v0.7.0) (2026-11-06)
+
+
+### Features
+
+* mark a whole selection as events with E ([#79](https://github.com/tasq-app/tasq/issues/79)) ([2971f1e](https://github.com/tasq-app/tasq/commit/2971f1ea08144d7a86f10bcc156e80ee91f1fa13))
+
 ## [0.6.0](https://github.com/tasq-app/tasq/compare/v0.5.0...v0.6.0) (2026-11-06)
 
 
