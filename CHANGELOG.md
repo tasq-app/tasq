@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.0](https://github.com/tasq-app/tasq/compare/v0.7.0...v0.8.0) (2026-11-06)
+
+
+### Features
+
+* sync between computers through an encrypted relay ([#83](https://github.com/tasq-app/tasq/issues/83)) ([ed5434c](https://github.com/tasq-app/tasq/commit/ed5434c35d111d3a7a494e28ef96c3fb6897893b))
+* the local half of sync: change tracking and merging ([#81](https://github.com/tasq-app/tasq/issues/81)) ([f4bf9bf](https://github.com/tasq-app/tasq/commit/f4bf9bfb98431e66ecad924be9a5caa5dcd4f56c))
+
 ## [0.7.0](https://github.com/tasq-app/tasq/compare/v0.6.0...v0.7.0) (2026-11-06)
 
 
