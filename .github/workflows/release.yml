@@ -59,10 +59,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          # Linux builds on a fixed Ubuntu, not ubuntu-latest: a binary needs
+          # the glibc it was built against or newer, so building on the
+          # newest image left out every older distro (0.7.0 needed 2.43).
+          # 24.04 gives glibc 2.39.
+          - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             archive: tar.gz
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
             archive: tar.gz
             linker: aarch64-linux-gnu-gcc
