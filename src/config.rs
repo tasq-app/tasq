@@ -52,6 +52,9 @@ pub struct Config {
     /// Directory used by note actions for relative `note:<path>` tokens and
     /// generated task notes. Serialized as `notes_dir = ~/notes`.
     pub notes_dir: Option<String>,
+    /// A folder phone captures land in (one text file each), e.g. one in
+    /// iCloud Drive (see the README for the iPhone Shortcut).
+    pub inbox_dir: Option<String>,
     /// Metadata keys whose `key:value` tokens are omitted from rendered
     /// task rows (list + archive). The line is stored on disk untouched;
     /// this only affects display. Serialized as `hide_keys = a, b, c`.
@@ -201,6 +204,7 @@ fn parse(s: &str) -> Config {
                 c.google_client_secret = Some(v.trim().to_string());
             }
             "notes_dir" if !v.trim().is_empty() => c.notes_dir = Some(v.to_string()),
+            "inbox_dir" if !v.trim().is_empty() => c.inbox_dir = Some(v.trim().to_string()),
             // Comma-separated key list; surrounding whitespace trimmed and
             // empty entries (trailing/double comma) dropped so a hand-
             // edited line is forgiving.
@@ -297,6 +301,9 @@ fn serialize(c: &Config) -> String {
     if let Some(v) = &c.notes_dir {
         let _ = writeln!(out, "notes_dir = {v}");
     }
+    if let Some(v) = &c.inbox_dir {
+        let _ = writeln!(out, "inbox_dir = {v}");
+    }
     if !c.hidden_keys.is_empty() {
         let _ = writeln!(out, "hide_keys = {}", c.hidden_keys.join(", "));
     }
@@ -381,6 +388,7 @@ mod tests {
                 ("waiting".into(), "@waiting due=2026".into()),
             ],
             notes_dir: Some("~/notes".into()),
+            inbox_dir: Some("~/Library/Mobile Documents/com~apple~CloudDocs/tasq".into()),
             hidden_keys: vec!["uid".into(), "sync".into()],
             week_start: Some(WeekStart::Sunday),
             recurrence_builder: Some(false),
@@ -550,6 +558,7 @@ mod tests {
             share_port: None,
             filters: vec![("errand".into(), "@errand".into())],
             notes_dir: Some("/tmp/notes".into()),
+            inbox_dir: None,
             hidden_keys: vec!["uid".into()],
             week_start: Some(WeekStart::Sunday),
             recurrence_builder: Some(false),

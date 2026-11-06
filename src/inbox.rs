@@ -73,6 +73,77 @@ fn sibling(todo_path: &Path, name: &str) -> PathBuf {
         .unwrap_or_else(|| PathBuf::from(name))
 }
 
+// ---------------------------------------------------------------------------
+// The inbox folder
+// ---------------------------------------------------------------------------
+
+/// One capture waiting in the inbox folder: a text file, and the day it was
+/// written down (so "tomorrow" means the day after *that*, not after the day
+/// tasq gets to it).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Drop {
+    pub path: PathBuf,
+    pub captured: NaiveDate,
+}
+
+/// The day at the start of a capture's file name: `2026-11-06 093015.txt`
+/// (how the phone Shortcut names them).
+pub fn date_from_name(name: &str) -> Option<NaiveDate> {
+    NaiveDate::parse_from_str(name.get(..10)?, "%Y-%m-%d").ok()
+}
+
+/// The captures in `dir`, oldest first: every `.txt` file, dated by its
+/// name, else by when it was last written. Hidden files (a sync client's
+/// partial downloads) are left alone; iCloud's not-yet-downloaded
+/// placeholders (`.name.txt.icloud`) are asked to download, for the next
+/// look.
+pub fn scan_dir(dir: &Path) -> Vec<Drop> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut drops = Vec::new();
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if let Some(real) = name
+            .strip_prefix('.')
+            .and_then(|n| n.strip_suffix(".icloud"))
+        {
+            request_download(&dir.join(real));
+            continue;
+        }
+        let is_txt = Path::new(&name)
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("txt"));
+        if name.starts_with('.') || !is_txt || !entry.file_type().is_ok_and(|t| t.is_file()) {
+            continue;
+        }
+        let captured = date_from_name(&name).or_else(|| {
+            let modified = entry.metadata().ok()?.modified().ok()?;
+            Some(chrono::DateTime::<chrono::Local>::from(modified).date_naive())
+        });
+        if let Some(captured) = captured {
+            drops.push(Drop {
+                path: entry.path(),
+                captured,
+            });
+        }
+    }
+    drops.sort_by(|a, b| (a.captured, &a.path).cmp(&(b.captured, &b.path)));
+    drops
+}
+
+/// Ask iCloud Drive to bring a file down (macOS only; best effort).
+fn request_download(path: &Path) {
+    if cfg!(target_os = "macos") {
+        let _ = std::process::Command::new("brctl")
+            .arg("download")
+            .arg(path)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    }
+}
+
 /// Full save pipeline for one free-text line: natural-language rewrite,
 /// creation-date insertion, validation. Returns the parsed [`todo::Task`]
 /// ready to push onto `App::tasks`. Used by the inbox drain and the
@@ -143,6 +214,34 @@ mod tests {
 
     fn today() -> NaiveDate {
         NaiveDate::from_ymd_opt(2026, 5, 13).unwrap()
+    }
+
+    #[test]
+    fn the_inbox_folder_lists_captures_oldest_first() {
+        let dir = std::env::temp_dir().join(format!("tasq-inbox-dir-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        for (name, body) in [
+            ("2026-11-06 093015.txt", "call the dentist tomorrow"),
+            ("2026-11-05 220000.txt", "buy milk"),
+            ("notes.md", "not a capture"),
+            (".2026-11-06 100000.txt.icloud", ""),
+            (".syncthing.tmp.txt", "half a file"),
+        ] {
+            std::fs::write(dir.join(name), body).unwrap();
+        }
+        let drops = scan_dir(&dir);
+        let names: Vec<String> = drops
+            .iter()
+            .map(|d| d.path.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, ["2026-11-05 220000.txt", "2026-11-06 093015.txt"]);
+        assert_eq!(
+            drops[1].captured,
+            NaiveDate::from_ymd_opt(2026, 11, 6).unwrap()
+        );
+        assert!(scan_dir(&dir.join("missing")).is_empty());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

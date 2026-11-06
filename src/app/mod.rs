@@ -286,6 +286,10 @@ pub struct App {
     /// Base directory used by note actions. Relative `note:<path>` tokens are
     /// resolved under this directory, and generated notes are created below it.
     pub(crate) notes_dir: PathBuf,
+    /// The phone inbox folder, if the config names one, and when it's next
+    /// looked in (every few seconds, not every tick).
+    pub(crate) inbox_dir: Option<PathBuf>,
+    pub(crate) inbox_dir_next: Option<std::time::Instant>,
     /// State for the floating notes-list popup (`Mode::Notes`): the current
     /// task's `.md` files and the list cursor. Re-seeded every time
     /// `open_notes_for_current` runs.
@@ -369,6 +373,7 @@ impl App {
             cfg.google_client_secret.clone(),
         );
         let note_dir = note::notes_dir_from_config(cfg.notes_dir.as_deref());
+        let inbox_dir = cfg.inbox_dir.as_deref().map(note::expand_note_dir);
         let saved_filters = cfg
             .filters
             .iter()
@@ -450,6 +455,8 @@ impl App {
             inspector_scroll: Cell::new(0),
             share: None,
             notes_dir: note_dir,
+            inbox_dir,
+            inbox_dir_next: None,
             notes_popup: NotesPopupState::default(),
             pending_editor_path: None,
             pinned_notes: Vec::new(),
@@ -919,6 +926,7 @@ impl App {
             })
             .collect();
         self.week_start = new_cfg.week_start.unwrap_or(WeekStart::Sunday);
+        self.inbox_dir = new_cfg.inbox_dir.as_deref().map(note::expand_note_dir);
         self.recompute_visible();
     }
 
@@ -937,6 +945,37 @@ impl App {
         }
         let report = self.store.drain_inbox();
         self.apply_drain(report);
+        self.drain_inbox_dir();
         matches!(reconcile, Reconcile::Unchanged)
+    }
+
+    /// Look in the phone inbox folder (every few seconds) and bring in what
+    /// was captured there.
+    fn drain_inbox_dir(&mut self) {
+        let Some(dir) = self.inbox_dir.clone() else {
+            return;
+        };
+        let now = std::time::Instant::now();
+        if self.inbox_dir_next.is_some_and(|t| now < t) {
+            return;
+        }
+        self.inbox_dir_next = Some(now + std::time::Duration::from_secs(3));
+        let report = self.store.drain_inbox_dir(&dir);
+        if report.merged > 0 {
+            self.recompute_visible();
+            self.clamp_cursor();
+            self.gcal_touch(false);
+            let n = report.merged;
+            self.flash(format!(
+                "{n} new from your phone{}",
+                if report.skipped > 0 {
+                    format!(" · {} line(s) not understood", report.skipped)
+                } else {
+                    String::new()
+                }
+            ));
+        } else if let Some(e) = report.error {
+            self.flash(e);
+        }
     }
 }

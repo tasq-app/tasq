@@ -233,7 +233,8 @@ pub fn looks_like_natural_language(text: &str) -> bool {
     {
         return false;
     }
-    contains_trigger(text)
+    // Spanish reads through its shadow vocabulary ("mañana" → "tomorrow").
+    contains_trigger(text) || contains_trigger(&crate::nl_es::shadow(text).text)
 }
 
 /// Main entry point. `today` resolves relative dates ("tomorrow", "the first
@@ -2848,6 +2849,12 @@ mod tests {
         assert!(looks_like_natural_language("Buy milk tomorrow"));
         assert!(looks_like_natural_language("Pay rent monthly"));
         assert!(looks_like_natural_language("Submit timesheet every friday"));
+        // Spanish too, the way the inbox gets it from a phone.
+        assert!(looks_like_natural_language(
+            "Llamar al dentista mañana a las 6"
+        ));
+        assert!(looks_like_natural_language("Comprar flores el viernes"));
+        assert!(!looks_like_natural_language("Comprar flores"));
         assert!(looks_like_natural_language("Meeting in 3 days"));
         assert!(looks_like_natural_language("Call mom on tuesday"));
     }
