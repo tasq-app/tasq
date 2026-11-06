@@ -4,6 +4,7 @@ pub mod action;
 pub mod app;
 pub mod cli;
 pub mod clipboard;
+pub mod cloud;
 pub mod cmd;
 pub mod config;
 pub mod config_watcher;

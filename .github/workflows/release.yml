@@ -109,6 +109,8 @@ jobs:
           # the real sense, but kept out of the repo).
           TASQ_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           TASQ_GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          # The sync server `tasq sync login` uses unless told another.
+          TASQ_SYNC_URL: https://tasq-sync.82.70.89.188.sslip.io
         run: cargo build --release --locked --target ${{ matrix.target }}
 
       - name: Package (unix)

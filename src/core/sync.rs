@@ -334,6 +334,42 @@ impl Db {
         self.sync_node()
     }
 
+    /// Forget everything sync knew (signing out, or into another account):
+    /// the next round starts from nothing and sends every record again.
+    /// The tasks themselves stay.
+    pub fn sync_forget(&mut self) -> std::io::Result<()> {
+        self.conn
+            .execute_batch(
+                "DELETE FROM sync_state; DELETE FROM sync_outbox; DELETE FROM sync_deleted;
+                 DELETE FROM meta WHERE key IN ('sync_cursor', 'sync_node');",
+            )
+            .map_err(io_err)
+    }
+
+    /// How far into the account's log this device has read (0: not yet).
+    pub fn sync_cursor(&self) -> std::io::Result<i64> {
+        let v: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT value FROM meta WHERE key = 'sync_cursor'",
+                [],
+                |r| r.get(0),
+            )
+            .optional()
+            .map_err(io_err)?;
+        Ok(v.and_then(|v| v.parse().ok()).unwrap_or(0))
+    }
+
+    pub fn set_sync_cursor(&mut self, seq: i64) -> std::io::Result<()> {
+        self.conn
+            .execute(
+                "INSERT OR REPLACE INTO meta (key, value) VALUES ('sync_cursor', ?1)",
+                [seq.to_string()],
+            )
+            .map(|_| ())
+            .map_err(io_err)
+    }
+
     /// Queue every record that changed since it was last sent or received.
     /// Returns how many.
     pub fn sync_scan(&mut self) -> std::io::Result<usize> {

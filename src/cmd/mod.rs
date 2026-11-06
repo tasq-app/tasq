@@ -81,6 +81,10 @@ fn find_subcommand(argv: &[String]) -> Option<usize> {
 /// invocation, so the caller falls through to the TUI. Otherwise returns the
 /// process exit code (0 ok, 1 user error, 2 usage error).
 pub fn run(argv: &[String]) -> Result<Option<i32>> {
+    // `tasq sync …` is its own little world (accounts, the network).
+    if argv.first().map(String::as_str) == Some("sync") {
+        return crate::cloud::cli::run(&argv[1..]).map(Some);
+    }
     let Some(cmd_pos) = find_subcommand(argv) else {
         return Ok(None);
     };
