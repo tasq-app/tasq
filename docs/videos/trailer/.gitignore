@@ -1,0 +1,11 @@
+# Made by rec.py / cells.py / make.js; not kept.
+frames/
+scenes.json
+
+*.wav
+sfx-*.json
+built.html
+still-*.png
+tasq-trailer*.mp4
+jbm/
+nfsym/

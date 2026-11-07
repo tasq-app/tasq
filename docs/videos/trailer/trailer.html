@@ -12,8 +12,8 @@ html,body{margin:0;overflow:hidden;background:#181926;font-family:JBM,monospace}
 #bar i{width:12px;height:12px;border-radius:50%;display:block}
 #bar span{position:absolute;left:0;right:0;text-align:center;color:#6e738d;font-size:14px}
 #view{position:absolute;top:36px;left:0;overflow:hidden}
-#cam{position:absolute;left:0;top:0;width:1200px;height:748px;transform-origin:0 0}
-#cam img{position:absolute;left:0;top:0;width:1200px;height:748px;opacity:0}
+#cam,#cam2{position:absolute;left:0;top:0;width:1200px;height:748px;transform-origin:0 0}
+#cam img,#cam2 img{position:absolute;left:0;top:0;width:1200px;height:748px;opacity:0}
 #capbox{position:absolute;text-align:center;z-index:5}
 #cap{color:#cad3f5;font-weight:bold;letter-spacing:-1px}
 #cap b{color:#c6a0f6}
@@ -26,11 +26,11 @@ html,body{margin:0;overflow:hidden;background:#181926;font-family:JBM,monospace}
 .pill{margin-top:56px;color:#cad3f5;background:#1e2030;border:1px solid #ffffff1f;border-radius:16px;padding:22px 40px;box-shadow:0 20px 60px #0008}
 .pill em{color:#a6da95;font-style:normal}
 .small{margin-top:30px;color:#6e738d}
-/* Landscape: a big window, captions as a lower third over it. */
+/* Landscape: the whole terminal in view, the captions under it (not over it). */
 body.h{width:1920px;height:1080px}
-body.h #win{left:160px;top:22px;width:1600px;height:1033px}
-body.h #view{width:1600px;height:997px}
-body.h #capbox{left:50%;bottom:70px;transform:translateX(-50%);background:#181926e0;border:1px solid #ffffff1a;border-radius:18px;padding:20px 40px 22px;box-shadow:0 20px 60px #000a;white-space:nowrap}
+body.h #win{left:280px;top:26px;width:1360px;height:884px}
+body.h #view{width:1360px;height:848px}
+body.h #capbox{left:50%;bottom:26px;transform:translateX(-50%);background:#181926e0;border:1px solid #ffffff1a;border-radius:18px;padding:20px 40px 22px;box-shadow:0 20px 60px #000a;white-space:nowrap}
 body.h #cap{font-size:50px}
 body.h #sub{font-size:23px}
 body.h .logo{font-size:150px} body.h .tag{font-size:38px} body.h .pill{font-size:40px} body.h .small{font-size:26px}
@@ -45,7 +45,7 @@ body.v .logo{font-size:150px} body.v .tag{font-size:34px;max-width:900px;line-he
 </style></head><body>
 <div id="bg"></div>
 <div id="win"><div id="bar"><i style="background:#ed8796"></i><i style="background:#eed49f"></i><i style="background:#a6da95"></i><span>tasq</span></div>
-  <div id="view"><div id="cam"></div></div></div>
+  <div id="view"><div id="cam2"><img id="ghost"></div><div id="cam"></div></div></div>
 <div id="capbox"><div id="cap"></div><div id="sub"></div></div>
 <div class="card" id="intro"><div class="logo"><span class="sq"></span><span id="word"></span><span class="cursor" id="cur"></span></div>
   <div class="tag" id="tag">Your tasks, in the terminal.</div></div>
@@ -63,31 +63,51 @@ const S = Object.fromEntries(SCENES.map(s => [s.name, s]));
 // take), `vcam` for portrait (zoom 1 = the take's full width).
 const CUT = [
   {name:'capture', from:0, len:7200, cap:'Type it like you <b>say it.</b>', sub:'Dates, times, durations, spaces — picked out as you type',
-   cam:[[0,1,600,374],[800,1,600,374],[1800,1.3,575,345],[5600,1.3,575,345],[6400,1.05,600,374]],
+   cam:[[0,1,600,374],[1000,1,600,374],[2000,1.2,575,345],[5400,1.2,575,345],[6400,1,600,374]],
    vcam:[[0,1.2,600,374],[700,1.2,600,374],[1600,1.7,455,345],[5600,1.7,455,345],[6400,1.35,540,360]]},
   {name:'today', from:0, len:3000, cap:'Your day, <b>at a glance.</b>', sub:'Today, the day in order, and the gaps between',
-   cam:[[0,1.05,600,374],[400,1.05,600,374],[1500,2.0,1030,560],[3000,2.05,1030,560]],
+   cam:[[0,1,600,374],[600,1,600,374],[1700,1.28,1030,560],[3000,1.3,1030,560]],
    vcam:[[0,1.3,560,374],[400,1.3,560,374],[1500,3.3,1030,575],[3000,3.4,1030,575]]},
   {name:'spanish', from:0, len:4900, cap:'…y también <b>en español.</b>', sub:'“mañana a las 6 cada lunes” — understood',
-   cam:[[0,1.3,575,345],[4900,1.34,575,345]],
+   cam:[[0,1,600,374],[4900,1.1,575,345]],
    vcam:[[0,1.7,455,345],[4900,1.75,455,345]]},
   {name:'week', from:0, len:3000, cap:'Plan the <b>week.</b>', sub:'Time blocks, drag to move, the agenda a key away',
-   cam:[[0,1.05,600,374],[3000,1.25,700,330]],
+   cam:[[0,1,600,374],[3000,1.06,640,360]],
    vcam:[[0,1.45,560,340],[3000,1.6,600,330]]},
   {name:'month', from:1300, len:2900, cap:'See the <b>month.</b>', sub:'Scroll it a week at a time',
-   cam:[[0,1.2,700,374],[2900,1.05,640,374]],
+   cam:[[0,1.06,640,374],[2900,1,600,374]],
    vcam:[[0,1.6,700,374],[2900,1.45,680,374]]},
   {name:'calendars', from:0, len:3200, cap:'On all your <b>computers</b>, in your <b>calendars.</b>', sub:'End-to-end encrypted sync · Google & Apple Calendar',
-   cam:[[0,1.05,600,374],[600,1.05,600,374],[1600,1.58,705,225],[3200,1.62,705,225]],
+   cam:[[0,1,600,374],[600,1,600,374],[1600,1.22,705,225],[3200,1.24,705,225]],
    vcam:[[0,1.3,620,300],[600,1.3,620,300],[1600,2.0,640,230],[3200,2.05,640,230]]},
   {name:'themes', from:600, len:3900, cap:'Make it <b>yours.</b>', sub:'Themes, layouts, your keys',
-   cam:[[0,1.05,600,374],[3900,1.05,600,374]],
+   cam:[[0,1,600,374],[3900,1,600,374]],
    vcam:[[0,1.5,560,374],[3900,1.55,560,374]]},
 ];
-const INTRO = 3000, OUTRO = 5000, FADE = 350;
+const INTRO = 3000, OUTRO = 5000, FADE = 450;
 let t0 = INTRO; for (const c of CUT) { c.start = t0; t0 += c.len; }
 const TOTAL = t0 + OUTRO;
 window.TOTAL = TOTAL;
+
+// What the sound follows (sfx.py plays it): the logo typed, each take's
+// keys at the moment they show, the cuts, the bigger camera moves, the end.
+const SFX = [];
+const cue = (t, kind, o = {}) => SFX.push({ t: Math.round(t), kind, ...o });
+for (let k = 1; k <= 4; k++) cue(300 + 150 * k, 'letter', { i: k - 1 });
+cue(1200, 'tag');
+cue(INTRO - 300, 'enter');
+CUT.forEach((c, i) => {
+  cue(c.start, 'cut', { i });
+  for (const [et, kind, arg] of S[c.name].events || [])
+    if (et >= c.from && et < c.from + c.len) cue(c.start + et - c.from, kind, { arg, scene: c.name });
+  const keys = (V ? c.vcam : c.cam);
+  for (let j = 1; j < keys.length; j++) {
+    const dz = keys[j][1] - keys[j-1][1];
+    if (Math.abs(dz) > 0.2) cue(c.start + keys[j-1][0], 'zoom', { len: keys[j][0] - keys[j-1][0], dir: Math.sign(dz) });
+  }
+});
+cue(TOTAL - OUTRO + 250, 'outro');
+window.SFX = SFX;
 
 const view = document.getElementById('view');
 const VW = view.clientWidth, VH = view.clientHeight;
@@ -95,9 +115,18 @@ const VW = view.clientWidth, VH = view.clientHeight;
 const BASE = VW / 1200;
 // Where the camera's point sits in the view: a little high in landscape,
 // clear of the caption over the bottom.
-const AIM = V ? 0.5 : 0.42;
+const AIM = 0.5;
 
-const cam = document.getElementById('cam');
+const cam = document.getElementById('cam'), cam2 = document.getElementById('cam2');
+const ghost = document.getElementById('ghost');
+function place(el, [z, cx, cy]) {
+  const s = BASE * z;
+  let x = VW / 2 - cx * s, y = VH * AIM - cy * s;
+  // Never past the take's edges; a take shorter than the view sits centred.
+  x = Math.min(0, Math.max(VW - 1200 * s, x));
+  y = 748 * s <= VH ? (VH - 748 * s) / 2 : Math.min(0, Math.max(VH - 748 * s, y));
+  el.style.transform = `translate(${x}px,${y}px) scale(${s})`;
+}
 const imgs = {};
 for (const s of SCENES) for (const [, h] of s.frames) if (!imgs[h]) {
   const im = new Image(); im.src = 'frames/' + h + '.png'; cam.appendChild(im); imgs[h] = im;
@@ -143,21 +172,18 @@ window.render = function (t) {
   const fadeIn = prev ? clamp(local / FADE) : 1;
   for (const im of Object.values(imgs)) im.style.opacity = 0;
   imgs[show].style.opacity = 1;
-  if (prev && fadeIn < 1) {
-    const ph = frameAt(S[prev.name], prev.from + prev.len);
-    if (ph !== show) { imgs[ph].style.opacity = 1 - fadeIn; imgs[show].style.opacity = fadeIn; }
-  }
-  let [z, cx, cy] = camAt(keysOf(c), local);
-  if (prev && fadeIn < 1) {
-    const [pz, px, py] = camAt(keysOf(prev), prev.len);
-    const k = ease(fadeIn); z = pz + (z-pz)*k; cx = px + (cx-px)*k; cy = py + (cy-py)*k;
-  }
-  const s = BASE * z;
-  let x = VW / 2 - cx * s, y = VH * AIM - cy * s;
-  // Never past the take's edges; a take shorter than the view sits centred.
-  x = Math.min(0, Math.max(VW - 1200 * s, x));
-  y = 748 * s <= VH ? (VH - 748 * s) / 2 : Math.min(0, Math.max(VH - 748 * s, y));
-  cam.style.transform = `translate(${x}px,${y}px) scale(${s})`;
+  const ph = prev ? frameAt(S[prev.name], prev.from + prev.len) : null;
+  place(cam, camAt(keysOf(c), local));
+  // The take going out stays under the one coming in, on its own camera
+  // (one camera for both made the zoom jump halfway through the fade).
+  let wait = null;
+  if (ph && ph !== show && fadeIn < 1) {
+    const src = 'frames/' + ph + '.png';
+    if (ghost.getAttribute('src') !== src) { ghost.setAttribute('src', src); wait = ghost.decode().catch(() => {}); }
+    ghost.style.opacity = 1;
+    imgs[show].style.opacity = fadeIn;
+    place(cam2, camAt(keysOf(prev), prev.len + local));
+  } else ghost.style.opacity = 0;
 
   const capIn = ease(clamp((local - 150) / 450)), capOut = ease(clamp((local - (c.len - 350)) / 300));
   const on = t >= INTRO - 200 && t < end;
@@ -171,6 +197,7 @@ window.render = function (t) {
   const ov = ease(clamp((t - end - 250) / 600));
   $('outro').style.opacity = ov;
   $('outro').style.transform = `scale(${0.97 + 0.03*ov})`;
+  return wait;
 };
 render(0);
 </script></body></html>

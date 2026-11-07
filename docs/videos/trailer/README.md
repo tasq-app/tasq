@@ -12,6 +12,11 @@
    take), crossfades, the title and end cards; `make.js` renders it frame by
    frame at 30 fps into the MP4 with ffmpeg (`--stills 6000,12500` for
    single frames to check).
+4. The sound: the edit lists its cues (the logo typed, every key a take
+   recorded, the cuts, the bigger camera moves, the end card), `sfx.py`
+   synthesises plucks, chords, ticks and a soft bed in D major on them
+   (numpy, nothing sampled), and `make.js` muxes it in. `--audio` redoes
+   only the sound on the last render.
 
 The "connected" Apple Calendar in the settings take is a local CalDAV
 server (Radicale on 127.0.0.1:5232, user `you@icloud.com`); `seed.sh`

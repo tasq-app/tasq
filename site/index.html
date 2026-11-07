@@ -68,13 +68,18 @@ h1 em{font-style:normal;color:var(--accent)}
 .note a{color:var(--dim)}
 
 /* Video */
-/* Wider than the text column: the trailer is the page's centrepiece. */
-.film{position:relative;z-index:1;left:50%;transform:translateX(-50%);margin-top:56px;width:min(1280px,calc(100vw - 40px));border-radius:18px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 40px 120px #000a;background:#000}
+/* Wider than the text column, big enough to read the whole terminal: the
+   trailer is the page's centrepiece. */
+.film{position:relative;z-index:1;left:50%;transform:translateX(-50%);margin-top:56px;width:min(1600px,calc(100vw - 40px));border-radius:18px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 40px 120px #000a;background:#000}
 .film video{display:block;width:100%;aspect-ratio:16/9;height:auto}
-/* Phones get the portrait cut, close on the action. */
+.film .sound,.film .play{position:absolute;font:600 13px var(--mono);color:var(--fg);background:#181926d9;border:1px solid var(--line2);border-radius:999px;cursor:pointer;backdrop-filter:blur(6px)}
+.film .sound{right:16px;top:16px;padding:8px 14px}
+.film .sound:hover{border-color:var(--accent)}
+/* Phones: the wide cut too, full screen the moment it plays. */
+.film .play{left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 22px;font-size:15px;display:flex;align-items:center;gap:10px}
+.film .play::before{content:"";border-left:14px solid var(--accent);border-top:9px solid transparent;border-bottom:9px solid transparent}
 @media (max-width:700px){
   .film{width:calc(100vw - 32px);border-radius:14px}
-  .film video{aspect-ratio:4/5}
 }
 
 /* Sections */
@@ -167,11 +172,13 @@ footer a{color:var(--dim);text-decoration:none}
 <span class="p">→ </span><a href="https://github.com/tasq-app/tasq/releases/latest">github.com/tasq-app/tasq/releases</a></pre>
         <button class="copy" type="button">copy</button>
       </div>
-      <p class="note">macOS and Linux · early alpha: keep your todo.txt around, tasq only reads it.</p>
+      <p class="note">macOS, Linux and Windows · early alpha: keep your todo.txt around, tasq only reads it.</p>
     </div>
 
     <div class="film">
-      <video id="trailer" poster="img/poster.jpg" autoplay muted loop playsinline controls preload="metadata"></video>
+      <video id="trailer" poster="img/poster.jpg" src="tasq-trailer.mp4" muted loop playsinline preload="metadata"></video>
+      <button class="sound" type="button" hidden>♪ sound on</button>
+      <button class="play" type="button" hidden>Watch · 35 s</button>
     </div>
   </div>
 </header>
@@ -292,14 +299,39 @@ footer a{color:var(--dim);text-decoration:none}
 const WAITLIST_ENDPOINT = "https://formspree.io/f/meaawjvy";
 const WAITLIST_EMAIL = "jfgm299@gmail.com";
 
-// The trailer: the portrait cut on a phone, the wide one elsewhere.
+// The trailer. A computer plays it in the page, muted until asked; a phone
+// waits for a tap, then plays it full screen, with sound, sideways.
 (() => {
   const v = document.getElementById('trailer');
-  const portrait = matchMedia('(max-width: 700px)').matches;
-  v.poster = portrait ? 'img/poster-vertical.jpg' : 'img/poster.jpg';
-  v.src = portrait ? 'tasq-trailer-vertical.mp4' : 'tasq-trailer.mp4';
-  // Autoplay is muted, and only where the browser allows it.
-  v.play().catch(() => {});
+  const film = v.parentElement;
+  const sound = film.querySelector('.sound'), play = film.querySelector('.play');
+  const phone = matchMedia('(max-width: 700px), (pointer: coarse)').matches;
+  const fullscreen = () => document.fullscreenElement || document.webkitFullscreenElement;
+  if (!phone) {
+    v.controls = true;
+    sound.hidden = false;
+    v.addEventListener('volumechange', () => { sound.hidden = !v.muted; });
+    sound.addEventListener('click', () => { v.muted = false; v.currentTime = 0; v.play().catch(() => {}); });
+    v.play().catch(() => {});
+    return;
+  }
+  play.hidden = false;
+  play.addEventListener('click', async () => {
+    v.muted = false; v.loop = false; v.controls = true; v.currentTime = 0;
+    const p = v.play();
+    try {
+      if (v.requestFullscreen) await v.requestFullscreen();
+      else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen();  // iPhone
+      await screen.orientation?.lock?.('landscape');
+    } catch {}
+    await p?.catch(() => {});
+    play.hidden = true;
+  });
+  // Out of full screen: back to the poster.
+  const back = () => { if (!fullscreen()) { v.pause(); v.controls = false; play.hidden = false; v.load(); } };
+  document.addEventListener('fullscreenchange', back);
+  v.addEventListener('webkitendfullscreen', back);
+  v.addEventListener('ended', () => { if (document.exitFullscreen && fullscreen()) document.exitFullscreen(); else back(); });
 })();
 
 // Install tabs and copy.

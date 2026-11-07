@@ -1,5 +1,5 @@
 // Render terminal frames (HTML from cells.py) to PNG at 2x, one browser.
-const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const { chromium } = require('playwright');
 const fs = require('fs');
 (async () => {
   const dir = process.argv[2];
