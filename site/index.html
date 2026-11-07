@@ -73,8 +73,9 @@ h1 em{font-style:normal;color:var(--accent)}
 .film{position:relative;z-index:1;left:50%;transform:translateX(-50%);margin-top:56px;width:min(1600px,calc(100vw - 40px));border-radius:18px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 40px 120px #000a;background:#000}
 .film video{display:block;width:100%;aspect-ratio:16/9;height:auto}
 .film .sound,.film .play{position:absolute;font:600 13px var(--mono);color:var(--fg);background:#181926d9;border:1px solid var(--line2);border-radius:999px;cursor:pointer;backdrop-filter:blur(6px)}
-.film .sound{right:16px;top:16px;padding:8px 14px}
-.film .sound:hover{border-color:var(--accent)}
+.film .sound{right:16px;bottom:16px;padding:10px 16px;font-size:14px}
+.film.preview{cursor:pointer}
+.film.preview:hover .sound{border-color:var(--accent);color:#fff}
 /* Phones: the wide cut too, full screen the moment it plays. */
 .film .play{left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 22px;font-size:15px;display:flex;align-items:center;gap:10px}
 .film .play::before{content:"";border-left:14px solid var(--accent);border-top:9px solid transparent;border-bottom:9px solid transparent}
@@ -179,7 +180,7 @@ footer a{color:var(--dim);text-decoration:none}
 
     <div class="film">
       <video id="trailer" poster="img/poster.jpg" src="tasq-trailer.mp4" muted loop playsinline preload="metadata"></video>
-      <button class="sound" type="button" hidden>♪ sound on</button>
+      <button class="sound" type="button" hidden>▶ Watch with sound</button>
       <button class="play" type="button" hidden>Watch · 35 s</button>
     </div>
   </div>
@@ -310,10 +311,19 @@ const WAITLIST_EMAIL = "jfgm299@gmail.com";
   const phone = matchMedia('(max-width: 700px), (pointer: coarse)').matches;
   const fullscreen = () => document.fullscreenElement || document.webkitFullscreenElement;
   if (!phone) {
-    v.controls = true;
+    // Browsers only allow sound after a click: it plays muted as a preview,
+    // and the first click anywhere on it starts it over, with sound.
     sound.hidden = false;
-    v.addEventListener('volumechange', () => { sound.hidden = !v.muted; });
-    sound.addEventListener('click', () => { v.muted = false; v.currentTime = 0; v.play().catch(() => {}); });
+    film.classList.add('preview');
+    const withSound = e => {
+      e?.preventDefault();
+      film.classList.remove('preview');
+      sound.hidden = true;
+      v.muted = false; v.loop = false; v.controls = true; v.currentTime = 0;
+      v.play().catch(() => {});
+    };
+    film.addEventListener('click', e => { if (film.classList.contains('preview')) withSound(e); });
+    v.addEventListener('ended', () => { v.controls = false; v.muted = true; v.loop = true; sound.hidden = false; film.classList.add('preview'); v.play().catch(() => {}); });
     v.play().catch(() => {});
     return;
   }
