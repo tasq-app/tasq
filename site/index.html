@@ -78,6 +78,8 @@ h1 em{font-style:normal;color:var(--accent)}
 /* Phones: the wide cut too, full screen the moment it plays. */
 .film .play{left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 22px;font-size:15px;display:flex;align-items:center;gap:10px}
 .film .play::before{content:"";border-left:14px solid var(--accent);border-top:9px solid transparent;border-bottom:9px solid transparent}
+/* `hidden` has to win over the buttons' own display. */
+.film [hidden]{display:none}
 @media (max-width:700px){
   .film{width:calc(100vw - 32px);border-radius:14px}
 }
