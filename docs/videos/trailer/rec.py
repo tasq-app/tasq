@@ -42,6 +42,7 @@ def record(name, pre, steps):
             keys(k); time.sleep(0.3)
     t = 0
     frames = []
+    events = []  # (ms, kind, arg): what the sound follows
     def snap(settle=0.18):
         a = grab(settle)
         h = hashlib.sha1(a.encode()).hexdigest()[:12]
@@ -55,15 +56,16 @@ def record(name, pre, steps):
         if kind == "type":
             per = ms
             for ch in arg:
-                lit(ch); t += per; snap()
+                lit(ch); t += per; snap(); events.append((t, "type", ch))
         elif kind == "key":
-            keys(arg); t += ms; snap(0.9 if arg == "Enter" and self_themes else 0.18)
+            keys(arg); t += ms; events.append((t, "key", arg))
+            snap(0.9 if arg == "Enter" and self_themes else 0.18)
         elif kind == "settle":
             time.sleep(1.0); snap()
         elif kind == "wait":
             t += ms; time.sleep(ms / 1000 * 0.5); snap()
     subprocess.run(["tmux", "kill-server"], capture_output=True)
-    return {"name": name, "frames": frames, "length": t}
+    return {"name": name, "frames": frames, "events": events, "length": t}
 
 SCENES = []
 ONLY = sys.argv[1:]
