@@ -23,8 +23,13 @@ pub mod sync;
 /// `url` opened as `email`: Google takes `authuser` on its links (the
 /// event, Meet, Drive), so a link from a second account doesn't open in
 /// whichever account the browser has first.
+/// Only Google's own links take it: a Zoom or Teams link goes as it is.
 pub fn as_account(url: &str, email: &str) -> String {
-    if email.is_empty() {
+    let google = event::host_of(url).is_some_and(|h| {
+        let h = h.to_ascii_lowercase();
+        h == "google.com" || h.ends_with(".google.com")
+    });
+    if email.is_empty() || !google {
         return url.to_string();
     }
     let (base, frag) = match url.split_once('#') {
@@ -55,5 +60,14 @@ mod tests {
             "https://www.google.com/calendar/event?eid=X1&authuser=a%40b.c#top"
         );
         assert_eq!(as_account("https://x.y/z", ""), "https://x.y/z");
+        assert_eq!(
+            as_account("https://us02web.zoom.us/j/1", "me@work.com"),
+            "https://us02web.zoom.us/j/1",
+            "not Google's"
+        );
+        assert_eq!(
+            as_account("https://docs.google.com/document/d/1", "a@b.c"),
+            "https://docs.google.com/document/d/1?authuser=a%40b.c"
+        );
     }
 }

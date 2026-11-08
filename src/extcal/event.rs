@@ -110,15 +110,66 @@ fn when(v: &Value) -> Option<When> {
     Some(When::AllDay { start, end })
 }
 
-/// The video call: Meet's own link, else a conference's video entry.
-fn meet(v: &Value) -> Option<String> {
-    text(&v["hangoutLink"]).or_else(|| {
-        v["conferenceData"]["entryPoints"]
-            .as_array()?
-            .iter()
-            .find(|p| p["entryPointType"] == "video")
-            .and_then(|p| text(&p["uri"]))
+/// Hosts of video calls, for links that come only in the text of an
+/// invitation (a Teams or Zoom invite sent from Outlook).
+const CALL_HOSTS: &[&str] = &[
+    "teams.microsoft.com",
+    "teams.live.com",
+    "zoom.us",
+    "zoom.com",
+    "zoomgov.com",
+    "webex.com",
+    "whereby.com",
+    "meet.jit.si",
+    "meet.google.com",
+    "chime.aws",
+    "meet.goto.com",
+    "gotomeeting.com",
+    "bluejeans.com",
+    "around.co",
+];
+
+/// Whether `host` is `base` or inside it (`us02web.zoom.us`).
+fn host_is(host: &str, base: &str) -> bool {
+    host == base || host.ends_with(&format!(".{base}"))
+}
+
+/// The host of an `https://` URL.
+pub fn host_of(url: &str) -> Option<&str> {
+    let rest = url.strip_prefix("https://")?;
+    let end = rest.find(['/', '?', '#', ':']).unwrap_or(rest.len());
+    Some(&rest[..end])
+}
+
+/// The first video-call link in `text` (plain or HTML).
+pub fn call_in(text: &str) -> Option<String> {
+    text.split(|c: char| {
+        c.is_whitespace() || matches!(c, '<' | '>' | '"' | '\'' | '(' | ')' | '[' | ']')
     })
+    .filter_map(|w| {
+        let start = w.find("https://")?;
+        let url = w[start..].trim_end_matches(['.', ',', ';', '!', '?']);
+        let url = url.replace("&amp;", "&");
+        let host = host_of(&url)?.to_ascii_lowercase();
+        CALL_HOSTS.iter().any(|b| host_is(&host, b)).then_some(url)
+    })
+    .next()
+}
+
+/// The video call: Meet's own link, else a conference's video entry
+/// (Zoom or Teams added from Google Calendar), else one written in the
+/// place or the description (an invite from Outlook).
+fn meet(v: &Value) -> Option<String> {
+    text(&v["hangoutLink"])
+        .or_else(|| {
+            v["conferenceData"]["entryPoints"]
+                .as_array()?
+                .iter()
+                .find(|p| p["entryPointType"] == "video")
+                .and_then(|p| text(&p["uri"]))
+        })
+        .or_else(|| v["location"].as_str().and_then(call_in))
+        .or_else(|| v["description"].as_str().and_then(call_in))
 }
 
 /// Read one item of Google's `events.list`.
@@ -283,6 +334,35 @@ mod tests {
             end.format("%H:%M").to_string(),
             "12:30",
             "local time on landing"
+        );
+    }
+
+    #[test]
+    fn calls_written_in_the_invitation() {
+        let teams = keep(json!({
+            "id": "t", "summary": "Weekly",
+            "start": { "dateTime": "2026-11-10T10:00:00Z" },
+            "end": { "dateTime": "2026-11-10T11:00:00Z" },
+            "description": "<p>Join: <a href=\"https://teams.microsoft.com/l/meetup-join/19%3ameeting_X/0?context=%7b%7d&amp;x=1\">Click here</a></p>"
+        }));
+        assert_eq!(
+            teams.meet_link.as_deref(),
+            Some("https://teams.microsoft.com/l/meetup-join/19%3ameeting_X/0?context=%7b%7d&x=1")
+        );
+        let zoom = keep(json!({
+            "id": "z", "summary": "1:1",
+            "start": { "dateTime": "2026-11-10T10:00:00Z" },
+            "end": { "dateTime": "2026-11-10T11:00:00Z" },
+            "location": "https://us02web.zoom.us/j/123456?pwd=abc.",
+            "description": "Agenda: https://example.com/doc"
+        }));
+        assert_eq!(
+            zoom.meet_link.as_deref(),
+            Some("https://us02web.zoom.us/j/123456?pwd=abc")
+        );
+        assert_eq!(
+            call_in("see https://example.com and https://notzoom.us/x"),
+            None
         );
     }
 
