@@ -23,22 +23,13 @@
 //! - With a device's own bearer: `GET /v1/assistants` (who's connected),
 //!   `POST /v1/assistants/revoke` `{"id"}` or `{"all": true}`.
 
-use std::path::PathBuf;
-
-use anyhow::{Result, anyhow};
-use chrono::{Duration, NaiveDate, Timelike};
+use anyhow::Result;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde_json::{Value, json};
 
-use super::client::Local;
 use super::keys::{self, Keys};
 use super::relay::{Incoming, Outgoing, Relay, device_account, error_reply, now};
-use super::run::sync_once;
-use crate::core::calendar::{self, Occurrence};
-use crate::core::db::{Db, title_of};
-use crate::core::{AddOutcome, CompleteOutcome, EditOutcome, Store, series};
 use crate::gcal::http;
-use crate::todo::{self, Task};
 
 pub const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS oauth_clients (
@@ -82,8 +73,6 @@ CREATE INDEX IF NOT EXISTS assistants_by_refresh ON assistants (refresh_hash);
 const ACCESS_SECS: i64 = 3600;
 /// How long a sign-in code waits to be exchanged.
 const CODE_SECS: i64 = 300;
-/// The widest agenda one call returns.
-const MAX_DAYS: i64 = 62;
 
 const READ: &str = "tasks:read";
 const WRITE: &str = "tasks:write";
@@ -802,13 +791,6 @@ fn accepted() -> Outgoing {
     }
 }
 
-const INSTRUCTIONS: &str = "tasq is the user's task manager and calendar. Use `now` for what's \
-happening right now and next, `agenda` for a day or a range, `search` to find a task, `inbox` \
-for tasks with no day yet. Times are the user's local time. To add, pass the user's words to \
-`add_task` as they'd type them in tasq (English or Spanish, e.g. \"dentist friday at 6pm for 1h \
-in health\"); tasq reads dates, times, durations, repeats and spaces from the text. Use a task's \
-`id` from a previous answer to complete or reschedule it.";
-
 /// One JSON-RPC message; `None` for a notification.
 fn rpc(relay: &Relay, who: &Caller, m: &Value) -> Option<Value> {
     let id = m.get("id")?.clone();
@@ -832,16 +814,16 @@ fn rpc(relay: &Relay, who: &Caller, m: &Value) -> Option<Value> {
                         "title": "tasq",
                         "version": env!("CARGO_PKG_VERSION"),
                     },
-                    "instructions": INSTRUCTIONS,
+                    "instructions": super::tools::INSTRUCTIONS,
                 }),
             )
         }
         "ping" => rpc_result(&id, json!({})),
-        "tools/list" => rpc_result(&id, json!({ "tools": tool_list(who.write) })),
+        "tools/list" => rpc_result(&id, json!({ "tools": super::tools::tool_list(who.write) })),
         "tools/call" => {
             let name = params["name"].as_str().unwrap_or_default();
             let args = params.get("arguments").cloned().unwrap_or(json!({}));
-            let result = match call_tool(relay, who, name, &args) {
+            let result = match super::tools::call_tool(relay, &who.keys, who.tz, who.write, name, &args) {
                 Ok(v) => json!({
                     "content": [{ "type": "text", "text": serde_json::to_string_pretty(&v).unwrap_or_default() }],
                     "structuredContent": v,
@@ -858,359 +840,6 @@ fn rpc(relay: &Relay, who: &Caller, m: &Value) -> Option<Value> {
         "prompts/list" => rpc_result(&id, json!({ "prompts": [] })),
         _ => rpc_error(&id, -32601, "method not found"),
     })
-}
-
-fn tool(name: &str, title: &str, description: &str, props: Value, required: &[&str], read_only: bool) -> Value {
-    json!({
-        "name": name,
-        "title": title,
-        "description": description,
-        "inputSchema": { "type": "object", "properties": props, "required": required },
-        "annotations": {
-            "title": title,
-            "readOnlyHint": read_only,
-            "destructiveHint": false,
-            "idempotentHint": read_only,
-            "openWorldHint": false,
-        },
-    })
-}
-
-fn tool_list(write: bool) -> Vec<Value> {
-    let date = json!({ "type": "string", "description": "YYYY-MM-DD" });
-    let mut tools = vec![
-        tool(
-            "now",
-            "What's on now",
-            "The user's local date and time, what they're doing right now, what comes next, and the rest of today.",
-            json!({}),
-            &[],
-            true,
-        ),
-        tool(
-            "agenda",
-            "Agenda",
-            "Everything on the calendar from `from` to `to` (inclusive, at most 62 days; both default to today): timed blocks, all-day tasks, deadlines and repeats, by day. Late open tasks show on today.",
-            json!({ "from": date, "to": date }),
-            &[],
-            true,
-        ),
-        tool(
-            "search",
-            "Search tasks",
-            "Find tasks whose title, space or tags contain the words (accents and case don't matter).",
-            json!({
-                "query": { "type": "string" },
-                "include_done": { "type": "boolean", "description": "also completed tasks still in the list" },
-            }),
-            &["query"],
-            true,
-        ),
-        tool(
-            "inbox",
-            "Inbox",
-            "Open tasks with no day yet: what's left to put in the calendar.",
-            json!({}),
-            &[],
-            true,
-        ),
-    ];
-    if write {
-        tools.extend([
-            tool(
-                "add_task",
-                "Add a task",
-                "Add a task from natural language, as the user would type it in tasq (English or Spanish): dates (\"tomorrow\", \"el viernes\", \"by friday\" for a deadline), times (\"at 6pm\", \"a las 10\"), durations (\"for 1h\"), repeats (\"every monday\"), spaces (\"in work\"), tags (@calls), priority (!high). Returns the task as tasq understood it.",
-                json!({ "text": { "type": "string" } }),
-                &["text"],
-                false,
-            ),
-            tool(
-                "complete_task",
-                "Complete a task",
-                "Mark a task done by its id. A repeating task moves on to its next time.",
-                json!({ "id": { "type": "string" } }),
-                &["id"],
-                false,
-            ),
-            tool(
-                "reschedule_task",
-                "Reschedule a task",
-                "Move a task by its id: a new planned `date` (YYYY-MM-DD), a new `time` (HH:MM, 24h), or both. `time: \"\"` makes it all-day.",
-                json!({
-                    "id": { "type": "string" },
-                    "date": date,
-                    "time": { "type": "string", "description": "HH:MM, or empty for all-day" },
-                }),
-                &["id"],
-                false,
-            ),
-        ]);
-    }
-    tools
-}
-
-/// The account's tasks, read by replaying its changes into a database in
-/// memory. Nothing is written to disk.
-struct Account<'a> {
-    relay: &'a Relay,
-    keys: Keys,
-    today: String,
-    store: Store,
-}
-
-impl<'a> Account<'a> {
-    fn open(relay: &'a Relay, keys: &Keys, today: &str) -> Result<Self> {
-        let mut db = Db::in_memory();
-        let mut remote = Local {
-            relay,
-            keys: keys.clone(),
-        };
-        sync_once(&mut db, &mut remote, keys, today)?;
-        let store = Store::from_db(db, PathBuf::from(":memory:"), today.to_string())?;
-        Ok(Self {
-            relay,
-            keys: keys.clone(),
-            today: today.to_string(),
-            store,
-        })
-    }
-
-    /// Send what changed here to the account, for the user's computers.
-    fn send(&mut self) -> Result<()> {
-        let db = self
-            .store
-            .db
-            .as_mut()
-            .ok_or_else(|| anyhow!("no database"))?;
-        let mut remote = Local {
-            relay: self.relay,
-            keys: self.keys.clone(),
-        };
-        sync_once(db, &mut remote, &self.keys, &self.today)?;
-        Ok(())
-    }
-
-    fn find(&self, id: &str) -> Result<usize> {
-        self.store
-            .tasks()
-            .iter()
-            .position(|t| t.id == id)
-            .ok_or_else(|| anyhow!("no task with id {id} (search for it again)"))
-    }
-}
-
-fn hhmm(m: u32) -> String {
-    format!("{:02}:{:02}", m / 60 % 24, m % 60)
-}
-
-fn task_json(t: &Task) -> Value {
-    let body = todo::body_after_priority(&t.clean_raw);
-    json!({
-        "id": t.id,
-        "title": title_of(&t.raw),
-        "space": t.projects.first(),
-        "tags": t.contexts,
-        "priority": t.priority.map(|p| p.to_string()),
-        "planned": t.planned,
-        "due": t.due,
-        "time": todo::find_kv(body, "at"),
-        "duration": t.duration,
-        "repeat": t.rec,
-        "ends": t.end,
-        "event": t.event,
-        "starred": t.starred,
-        "done": t.done,
-    })
-}
-
-fn occurrence_json(o: &Occurrence, tasks: &[Task]) -> Value {
-    let mut v = task_json(&tasks[o.abs]);
-    v["date"] = json!(o.date.to_string());
-    v["start"] = json!(o.start.map(hhmm));
-    v["end"] = json!(o.end().map(hhmm));
-    v["all_day"] = json!(o.start.is_none());
-    v["deadline"] = json!(o.deadline);
-    v["late"] = json!(o.late);
-    v["upcoming_repeat"] = json!(o.projected);
-    v
-}
-
-fn arg_date(args: &Value, key: &str) -> Result<Option<NaiveDate>> {
-    match args[key].as_str().filter(|s| !s.is_empty()) {
-        None => Ok(None),
-        Some(s) => NaiveDate::parse_from_str(s, "%Y-%m-%d")
-            .map(Some)
-            .map_err(|_| anyhow!("{key} must be YYYY-MM-DD")),
-    }
-}
-
-fn call_tool(relay: &Relay, who: &Caller, name: &str, args: &Value) -> Result<Value> {
-    let local = chrono::Utc::now().with_timezone(&who.tz);
-    let today = local.date_naive();
-    let today_s = today.format("%Y-%m-%d").to_string();
-    let writes = matches!(name, "add_task" | "complete_task" | "reschedule_task");
-    if writes && !who.write {
-        return Err(anyhow!(
-            "this connection can only read; reconnect tasq allowing changes"
-        ));
-    }
-    let mut acct = Account::open(relay, &who.keys, &today_s)?;
-    let tasks = acct.store.tasks().to_vec();
-    match name {
-        "now" => {
-            let minute = local.hour() * 60 + local.minute();
-            let occs = calendar::occurrences(&tasks, today, today + Duration::days(1), today);
-            let open = |o: &&Occurrence| !tasks[o.abs].done;
-            let today_occs: Vec<&Occurrence> =
-                occs.iter().filter(|o| o.date == today).filter(open).collect();
-            let current: Vec<Value> = today_occs
-                .iter()
-                .filter(|o| o.start.is_some_and(|s| s <= minute) && o.end().is_some_and(|e| e > minute))
-                .map(|o| occurrence_json(o, &tasks))
-                .collect();
-            let next = occs
-                .iter()
-                .filter(open)
-                .find(|o| o.start.is_some() && (o.date > today || o.start.is_some_and(|s| s > minute)))
-                .map(|o| occurrence_json(o, &tasks));
-            Ok(json!({
-                "now": local.format("%Y-%m-%d %H:%M (%A)").to_string(),
-                "timezone": who.tz.name(),
-                "current": current,
-                "next": next,
-                "today": today_occs.iter().map(|o| occurrence_json(o, &tasks)).collect::<Vec<_>>(),
-            }))
-        }
-        "agenda" => {
-            let from = arg_date(args, "from")?.unwrap_or(today);
-            let to = arg_date(args, "to")?.unwrap_or(from);
-            if to < from {
-                return Err(anyhow!("`to` is before `from`"));
-            }
-            if (to - from).num_days() >= MAX_DAYS {
-                return Err(anyhow!("at most {MAX_DAYS} days at a time"));
-            }
-            let occs = calendar::occurrences(&tasks, from, to, today);
-            let mut days: Vec<Value> = Vec::new();
-            let mut d = from;
-            while d <= to {
-                let items: Vec<Value> = occs
-                    .iter()
-                    .filter(|o| o.date == d)
-                    .map(|o| occurrence_json(o, &tasks))
-                    .collect();
-                days.push(json!({
-                    "date": d.to_string(),
-                    "weekday": d.format("%A").to_string(),
-                    "items": items,
-                }));
-                d += Duration::days(1);
-            }
-            Ok(json!({ "today": today_s, "timezone": who.tz.name(), "days": days }))
-        }
-        "search" => {
-            let q = args["query"].as_str().unwrap_or_default();
-            let words: Vec<String> = crate::nl_es::fold(q)
-                .split_whitespace()
-                .map(str::to_string)
-                .collect();
-            if words.is_empty() {
-                return Err(anyhow!("search for something"));
-            }
-            let include_done = args["include_done"].as_bool().unwrap_or(false);
-            let found: Vec<Value> = tasks
-                .iter()
-                .filter(|t| include_done || !t.done)
-                .filter(|t| {
-                    let hay = crate::nl_es::fold(&format!(
-                        "{} {} {}",
-                        title_of(&t.raw),
-                        t.projects.join(" "),
-                        t.contexts.join(" ")
-                    ));
-                    words.iter().all(|w| hay.contains(w.as_str()))
-                })
-                .take(50)
-                .map(task_json)
-                .collect();
-            Ok(json!({ "count": found.len(), "tasks": found }))
-        }
-        "inbox" => {
-            let found: Vec<Value> = tasks
-                .iter()
-                .filter(|t| !t.done && t.planned.is_none() && t.due.is_none())
-                .map(task_json)
-                .collect();
-            Ok(json!({ "count": found.len(), "tasks": found }))
-        }
-        "add_task" => {
-            let text = args["text"].as_str().unwrap_or_default().trim();
-            if text.is_empty() {
-                return Err(anyhow!("say what to add"));
-            }
-            let spaces: Vec<String> = acct
-                .store
-                .known_spaces()
-                .iter()
-                .map(|s| s.path.clone())
-                .collect();
-            let d = crate::nl::detect_in(text, today, &[], &spaces);
-            let line = if d.is_empty() { text.to_string() } else { d.to_todo_txt() };
-            match acct.store.add_finalized(&line) {
-                AddOutcome::Added { abs } => {
-                    let t = acct.store.tasks()[abs].clone();
-                    acct.send()?;
-                    Ok(json!({ "added": task_json(&t) }))
-                }
-                AddOutcome::Empty => Err(anyhow!("say what to add")),
-                AddOutcome::Aborted(_) => Err(anyhow!("the tasks changed meanwhile; try again")),
-                AddOutcome::Error(e) => Err(anyhow!("tasq couldn't read that: {e}")),
-            }
-        }
-        "complete_task" => {
-            let abs = acct.find(args["id"].as_str().unwrap_or_default())?;
-            if acct.store.tasks()[abs].done {
-                return Ok(json!({ "already_done": task_json(&acct.store.tasks()[abs]) }));
-            }
-            let next = match acct.store.toggle_complete(abs) {
-                CompleteOutcome::CompletedSpawned { next, .. } => {
-                    Some(task_json(&acct.store.tasks()[next]))
-                }
-                CompleteOutcome::Completed { .. } | CompleteOutcome::CompletedLast { .. } => None,
-                other => return Err(anyhow!("couldn't complete it: {other:?}")),
-            };
-            let done = task_json(&acct.store.tasks()[abs]);
-            acct.send()?;
-            Ok(json!({ "completed": done, "next_repeat": next }))
-        }
-        "reschedule_task" => {
-            let abs = acct.find(args["id"].as_str().unwrap_or_default())?;
-            let mut raw = acct.store.tasks()[abs].raw.clone();
-            if let Some(d) = arg_date(args, "date")? {
-                raw = series::set_kv(&raw, "plan", Some(&d.to_string()));
-            }
-            if let Some(t) = args["time"].as_str() {
-                let t = t.trim();
-                if t.is_empty() {
-                    raw = series::set_kv(&raw, "at", None);
-                } else {
-                    let m = calendar::parse_time(t)
-                        .ok_or_else(|| anyhow!("time must be HH:MM (24h)"))?;
-                    raw = series::set_kv(&raw, "at", Some(&hhmm(m)));
-                }
-            }
-            match acct.store.edit_line(abs, &raw) {
-                EditOutcome::Saved { abs } => {
-                    let t = acct.store.tasks()[abs].clone();
-                    acct.send()?;
-                    Ok(json!({ "rescheduled": task_json(&t) }))
-                }
-                other => Err(anyhow!("couldn't change it: {other:?}")),
-            }
-        }
-        other => Err(anyhow!("no tool called {other}")),
-    }
 }
 
 fn list_assistants(relay: &Relay, auth: Option<&str>) -> Outgoing {
@@ -1268,8 +897,10 @@ fn revoke(relay: &Relay, auth: Option<&str>, body: &[u8]) -> Outgoing {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use crate::cloud::client::Remote;
-    use crate::core::db::List;
+    use crate::cloud::client::{Local, Remote};
+    use crate::cloud::run::sync_once;
+    use crate::core::db::{Db, List, title_of};
+    use crate::todo;
 
     fn req(method: &str, url: &str, auth: Option<&str>, body: &str) -> Incoming {
         Incoming {
@@ -1459,7 +1090,7 @@ mod tests {
             "tools/call",
             json!({ "name": "search", "arguments": { "query": "CAFE" } }),
         );
-        assert_eq!(found["result"]["structuredContent"]["count"], 1);
+        assert_eq!(found["result"]["structuredContent"]["tasks"].as_array().unwrap().len(), 1);
         let inbox = call(&relay, &token, "tools/call", json!({ "name": "inbox", "arguments": {} }));
         assert_eq!(inbox["result"]["structuredContent"]["tasks"][0]["title"], "Buy café beans");
 
@@ -1479,9 +1110,9 @@ mod tests {
             &relay,
             &token,
             "tools/call",
-            json!({ "name": "reschedule_task", "arguments": { "id": id, "time": "19:30" } }),
+            json!({ "name": "update_task", "arguments": { "id": id, "time": "19:30" } }),
         );
-        assert_eq!(moved["result"]["structuredContent"]["rescheduled"]["time"], "19:30");
+        assert_eq!(moved["result"]["structuredContent"]["updated"]["time"], "19:30");
 
         // The computer gets it on its next sync.
         let mut laptop = Db::in_memory();
@@ -1514,7 +1145,7 @@ mod tests {
         let (relay, _) = setup();
         let token = connect(&relay, "read");
         let tools = call(&relay, &token, "tools/list", json!({}));
-        assert_eq!(tools["result"]["tools"].as_array().unwrap().len(), 4);
+        assert!(tools["result"]["tools"].as_array().unwrap().iter().all(|t| t["annotations"]["readOnlyHint"] == true));
         let added = call(
             &relay,
             &token,
@@ -1533,6 +1164,131 @@ mod tests {
             .query_row("SELECT access_wrapped FROM assistants", [], |r| r.get(0))
             .unwrap();
         assert!(keys::unwrap(&wrapped, "some other token").is_none());
+    }
+
+    fn tool_call(relay: &Relay, token: &str, name: &str, args: Value) -> Value {
+        let v = call(relay, token, "tools/call", json!({ "name": name, "arguments": args }));
+        assert_eq!(v["result"]["isError"], false, "{name}: {v}");
+        v["result"]["structuredContent"].clone()
+    }
+
+    #[test]
+    fn everything_a_task_can_have() {
+        let (relay, keys) = setup();
+        let token = connect(&relay, "write");
+        let today = chrono::Utc::now()
+            .with_timezone(&chrono_tz::Europe::Madrid)
+            .date_naive();
+
+        // A task with a priority, a description and subtasks.
+        let added = tool_call(
+            &relay,
+            &token,
+            "add_task",
+            json!({
+                "text": "preparar examen el viernes a las 10",
+                "priority": "high",
+                "space": "Uni/Exams",
+                "description": "Temas 1 a 4.",
+                "subtasks": ["tema 1", "tema 2"],
+            }),
+        );
+        let id = added["added"]["id"].as_str().unwrap().to_string();
+        assert_eq!(added["added"]["priority"], "A");
+        assert_eq!(added["added"]["time"], "10:00");
+        assert_eq!(added["added"]["title"], "preparar examen");
+        let t = tool_call(&relay, &token, "get_task", json!({ "id": id }));
+        assert_eq!(t["subtasks_done"], "0/2", "{t}");
+        assert!(t["notes"][0]["body"].as_str().unwrap().contains("Temas 1 a 4."));
+        let sub = t["subtasks"][0]["subtask"].as_str().unwrap().to_string();
+        let ticked = tool_call(&relay, &token, "set_subtask", json!({ "id": id, "subtask": sub, "done": true }));
+        assert_eq!(ticked["subtasks"][0]["done"], true);
+        tool_call(&relay, &token, "add_subtasks", json!({ "id": id, "items": ["tema 3"] }));
+        let t = tool_call(&relay, &token, "get_task", json!({ "id": id }));
+        assert_eq!(t["subtasks_done"], "1/3");
+        tool_call(&relay, &token, "write_task_note", json!({ "id": id, "body": "Llevar calculadora.", "mode": "append" }));
+
+        // Edits: title, tags, space by its name.
+        let up = tool_call(
+            &relay,
+            &token,
+            "update_task",
+            json!({ "id": id, "title": "estudiar examen", "tags": ["deep"], "priority": "none" }),
+        );
+        assert_eq!(up["updated"]["title"], "estudiar examen");
+        assert_eq!(up["updated"]["tags"][0], "deep");
+        assert_eq!(up["updated"]["priority"], Value::Null);
+
+        // A repeat: one occurrence moved, another deleted, the rest stays.
+        let gym = tool_call(&relay, &token, "add_task", json!({ "text": "gym every day at 7am" }));
+        let gid = gym["added"]["id"].as_str().unwrap().to_string();
+        let tomorrow = (today + chrono::Duration::days(1)).to_string();
+        let after = (today + chrono::Duration::days(2)).to_string();
+        let moved = tool_call(
+            &relay,
+            &token,
+            "update_task",
+            json!({ "id": gid, "occurrence": tomorrow, "time": "09:00" }),
+        );
+        assert_eq!(moved["changed_occurrence"]["time"], "09:00");
+        assert_eq!(moved["changed_occurrence"]["repeat"], Value::Null);
+        tool_call(&relay, &token, "delete_task", json!({ "id": gid, "occurrence": after }));
+        let ag = tool_call(&relay, &token, "agenda", json!({ "from": tomorrow, "to": after }));
+
+        let gyms = |day: usize| -> Vec<String> {
+            ag["days"][day]["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|i| i["title"] == "gym")
+                .map(|i| i["start"].as_str().unwrap_or("").to_string())
+                .collect()
+        };
+        assert_eq!(gyms(0), ["09:00"], "{ag}");
+        assert!(gyms(1).is_empty(), "{ag}");
+        let free = tool_call(&relay, &token, "free_time", json!({ "date": tomorrow, "from": "08:00", "to": "12:00" }));
+        assert_eq!(free["free"][0]["to"], "09:00", "{free}");
+
+        // Complete, reopen, delete.
+        tool_call(&relay, &token, "complete_task", json!({ "ids": [gid] }));
+        let routines = tool_call(&relay, &token, "routines", json!({}));
+        assert_eq!(routines["routines"][0]["title"], "gym", "{routines}");
+        let done = tool_call(&relay, &token, "list_tasks", json!({ "status": "done" }));
+        assert_eq!(done["count"], 1);
+        let reopened = tool_call(&relay, &token, "reopen_task", json!({ "id": gid }));
+        assert_eq!(reopened["reopened"]["done"], false);
+        let beans = tool_call(&relay, &token, "search", json!({ "query": "beans" }));
+        let bid = beans["tasks"][0]["id"].as_str().unwrap().to_string();
+        tool_call(&relay, &token, "delete_task", json!({ "id": bid }));
+
+        // Notes on their own.
+        let made = tool_call(&relay, &token, "create_note", json!({ "title": "Ideas viaje", "body": "- Lisboa" }));
+        let path = made["created"].as_str().unwrap().to_string();
+        tool_call(&relay, &token, "update_note", json!({ "path": path, "body": "- Oporto", "mode": "append" }));
+        let read = tool_call(&relay, &token, "read_note", json!({ "path": path }));
+        assert_eq!(read["body"], "# Ideas viaje\n\n- Lisboa\n- Oporto\n");
+        let found = tool_call(&relay, &token, "search", json!({ "query": "oporto" }));
+        assert_eq!(found["notes"][0]["path"], path);
+        let notes = tool_call(&relay, &token, "list_notes", json!({}));
+        assert!(notes["notes"].as_array().unwrap().len() >= 3);
+
+        // Spaces.
+        tool_call(&relay, &token, "update_space", json!({ "space": "exams", "rename_to": "Uni/Finals", "color": "#8aadf4" }));
+        let sp = tool_call(&relay, &token, "list_spaces", json!({}));
+        assert!(sp["spaces"].as_array().unwrap().iter().any(|s| s["path"] == "Uni/Finals" && s["color"] == "#8aadf4"), "{sp}");
+
+        // A computer gets all of it.
+        let mut laptop = Db::in_memory();
+        let mut remote = Local { relay: &relay, keys: keys.clone() };
+        sync_once(&mut laptop, &mut remote, &keys, &today.to_string()).unwrap();
+        let live = laptop.load(List::Live).unwrap();
+        assert!(live.iter().any(|t| t.raw.contains("+Uni/Finals") && title_of(&t.raw) == "estudiar examen"));
+        assert!(!live.iter().any(|t| t.raw.contains("beans")));
+        let bodies: Vec<String> = laptop.notes().unwrap().into_iter().map(|n| n.body).collect();
+        assert!(bodies.iter().any(|b| b.contains("- [x] tema 1") && b.contains("- [ ] tema 3")), "{bodies:?}");
+        assert!(bodies.iter().any(|b| b.contains("Llevar calculadora.")));
+        assert!(bodies.iter().any(|b| b.contains("Oporto")));
+        let _ = tool_call(&relay, &token, "delete_note", json!({ "path": path }));
     }
 
     #[test]

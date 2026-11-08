@@ -38,11 +38,11 @@ fn date(s: Option<&str>) -> Option<NaiveDate> {
 }
 
 /// What makes two occurrences the same routine: the title and the rule.
-fn key(t: &Task) -> Option<(String, String)> {
+pub(crate) fn key(t: &Task) -> Option<(String, String)> {
     Some((todo::body_only(&t.raw), t.rec.clone()?))
 }
 
-fn scheduled(t: &Task) -> Option<NaiveDate> {
+pub(crate) fn scheduled(t: &Task) -> Option<NaiveDate> {
     date(t.planned.as_deref()).or_else(|| date(t.due.as_deref()))
 }
 
