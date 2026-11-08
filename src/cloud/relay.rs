@@ -44,7 +44,7 @@ CREATE INDEX IF NOT EXISTS blobs_by_account ON blobs (account, seq);
 ";
 
 pub struct Relay {
-    conn: Mutex<Connection>,
+    pub(crate) conn: Mutex<Connection>,
 }
 
 /// An answer: status and JSON body.
@@ -58,7 +58,7 @@ fn is_hex64(s: &str) -> bool {
     s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
-fn now() -> String {
+pub(crate) fn now() -> String {
     chrono::Utc::now()
         .format("%Y-%m-%dT%H:%M:%S%.3fZ")
         .to_string()
@@ -77,6 +77,7 @@ impl Relay {
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.busy_timeout(std::time::Duration::from_secs(5))?;
         conn.execute_batch(SCHEMA)?;
+        conn.execute_batch(super::assistant::SCHEMA)?;
         Ok(Self {
             conn: Mutex::new(conn),
         })
@@ -104,6 +105,60 @@ impl Relay {
             Ok(r) | Err(r) => r,
         }
     }
+}
+
+/// A request as the server got it, for the routes that need more than
+/// JSON (sign-in pages, OAuth, MCP).
+#[derive(Debug, Clone, Default)]
+pub struct Incoming {
+    pub method: String,
+    /// With the query string.
+    pub url: String,
+    pub auth: Option<String>,
+    pub host: Option<String>,
+    pub proto: Option<String>,
+    pub body: Vec<u8>,
+}
+
+/// An answer with its type and any extra headers.
+#[derive(Debug, Clone)]
+pub struct Outgoing {
+    pub code: u16,
+    pub content_type: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
+}
+
+impl Outgoing {
+    pub fn json((code, value): Reply) -> Self {
+        Self {
+            code,
+            content_type: "application/json".into(),
+            headers: Vec::new(),
+            body: value.to_string().into_bytes(),
+        }
+    }
+}
+
+impl Relay {
+    /// Answer one request: the assistant routes (OAuth, MCP) first, then
+    /// the sync API.
+    pub fn respond(&self, req: &Incoming) -> Outgoing {
+        if let Some(out) = super::assistant::respond(self, req) {
+            return out;
+        }
+        Outgoing::json(self.handle(&req.method, &req.url, req.auth.as_deref(), &req.body))
+    }
+}
+
+/// The account a sync bearer token is for (the devices' own sign-in).
+pub(crate) fn device_account(relay: &Relay, auth: Option<&str>) -> Result<String, Reply> {
+    let conn = relay.conn.lock().map_err(|_| err(500, "server error"))?;
+    account_of(&conn, auth)
+}
+
+pub(crate) fn error_reply(code: u16, msg: &str) -> Reply {
+    err(code, msg)
 }
 
 type Step<T> = Result<T, Reply>;
@@ -247,23 +302,33 @@ pub fn serve_on(server: tiny_http::Server, relay: Relay) -> anyhow::Result<()> {
                         let mut limited = req.as_reader().take((MAX_BLOB + 2048) as u64);
                         limited.read_to_end(&mut body).is_err()
                     };
-                    let auth = req
-                        .headers()
-                        .iter()
-                        .find(|h| h.field.equiv("Authorization"))
-                        .map(|h| h.value.as_str().to_string());
-                    let (code, value) = if too_big {
-                        err(400, "couldn't read the request")
+                    let header = |name: &'static str| {
+                        req.headers()
+                            .iter()
+                            .find(|h| h.field.equiv(name))
+                            .map(|h| h.value.as_str().to_string())
+                    };
+                    let incoming = Incoming {
+                        method: req.method().as_str().to_string(),
+                        url: req.url().to_string(),
+                        auth: header("Authorization"),
+                        host: header("X-Forwarded-Host").or_else(|| header("Host")),
+                        proto: header("X-Forwarded-Proto"),
+                        body,
+                    };
+                    let out = if too_big {
+                        Outgoing::json(err(400, "couldn't read the request"))
                     } else {
-                        relay.handle(req.method().as_str(), req.url(), auth.as_deref(), &body)
+                        relay.respond(&incoming)
                     };
                     let mut resp =
-                        tiny_http::Response::from_string(value.to_string()).with_status_code(code);
-                    if let Ok(h) = tiny_http::Header::from_bytes(
-                        &b"Content-Type"[..],
-                        &b"application/json"[..],
-                    ) {
-                        resp.add_header(h);
+                        tiny_http::Response::from_data(out.body).with_status_code(out.code);
+                    let mut headers = vec![("Content-Type".to_string(), out.content_type)];
+                    headers.extend(out.headers);
+                    for (k, v) in headers {
+                        if let Ok(h) = tiny_http::Header::from_bytes(k.as_bytes(), v.as_bytes()) {
+                            resp.add_header(h);
+                        }
                     }
                     let _ = req.respond(resp);
                 }

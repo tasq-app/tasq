@@ -114,7 +114,7 @@ impl Store {
         Self::from_db(db, path, today)
     }
 
-    fn from_db(db: db::Db, path: PathBuf, today: String) -> std::io::Result<Self> {
+    pub(crate) fn from_db(db: db::Db, path: PathBuf, today: String) -> std::io::Result<Self> {
         let tasks = db.load(db::List::Live)?;
         let archived = db.load(db::List::Archive)?;
         let spaces = db.load_spaces()?;

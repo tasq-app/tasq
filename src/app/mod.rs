@@ -17,7 +17,7 @@ mod autocomplete;
 mod bulk;
 mod cal_drag;
 mod calendar;
-mod checklist;
+pub(crate) mod checklist;
 mod chord;
 mod color_pick;
 mod draft;
@@ -38,7 +38,7 @@ mod picker;
 mod pinned_note;
 mod pomodoro;
 mod prefs;
-mod routines;
+pub(crate) mod routines;
 mod saved;
 mod search_all;
 mod selection;
@@ -205,6 +205,8 @@ pub struct App {
     /// The thread that syncs with the other computers, once signed in.
     pub(crate) sync: Option<sync_link::SyncLink>,
     pub sync_status: SyncStatus,
+    /// The assistants (Claude) connected to the sync account, once known.
+    pub assistants: Option<Vec<crate::cloud::client::Assistant>>,
     pub(crate) sync_due: Option<std::time::Instant>,
     /// The sign-in being typed in Settings.
     pub sync_input: Option<SyncInput>,
@@ -432,6 +434,7 @@ impl App {
             caldav_url,
             sync: None,
             sync_status: SyncStatus::Off,
+            assistants: None,
             sync_due: None,
             sync_input: None,
             sync_pending_input: None,

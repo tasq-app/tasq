@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 12 October 2026_
+_Last updated: 8 November 2026_
 
 tasq is a to-do app that runs on your computer. It has no servers and no
 accounts of its own, and it collects nothing about you: no analytics, no
@@ -50,6 +50,22 @@ sends them the same task details as to Google. It goes straight from your
 computer to Apple's CalDAV server; nobody else receives the password or
 the tasks. **Disconnect Apple** deletes the password from your computer;
 you can also revoke it at account.apple.com.
+
+## Claude and other assistants (optional)
+
+Sync is end-to-end encrypted: tasq's server stores only data it can't
+read. Connecting Claude (or another assistant that speaks MCP) is the one
+exception, and only if you do it. On tasq's sign-in page you type your
+sync email and password; the server makes your keys from them and keeps
+them sealed under the token it gives the assistant, so what it stores
+can't be read without that token. Each time the assistant asks something,
+the server reads your tasks and notes in memory to answer it, and writes
+back what you asked for (as one more device). Nothing it reads is written
+to disk, logged or used for anything else. The answers go to the
+assistant, under its own privacy policy.
+
+Disconnect it in tasq → Settings → Sync → Claude (or remove the connector
+in the assistant): the server forgets the keys at once.
 
 ## Update check and phone capture
 

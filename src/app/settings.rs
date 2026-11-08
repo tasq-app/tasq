@@ -52,6 +52,7 @@ pub enum SetKey {
     AppleCalendar,
     SyncAccount,
     SyncSignOut,
+    Assistants,
     AppleDisconnect,
     Trash,
     Help,
@@ -118,6 +119,14 @@ impl App {
                 ),
             ]
             .into_iter()
+            .chain(self.sync_signed_in().then(|| {
+                row(
+                    "Sync",
+                    "Claude",
+                    self.assistants_label(),
+                    Some(SetKey::Assistants),
+                )
+            }))
             .chain(self.sync_signed_in().then(|| {
                 row(
                     "Sync",
@@ -464,6 +473,10 @@ impl App {
                     super::SyncStatus::Working => self.flash("signing in…"),
                     _ => self.sync_begin(),
                 }
+                None
+            }
+            SetKey::Assistants => {
+                self.assistants_enter();
                 None
             }
             SetKey::SyncSignOut => {

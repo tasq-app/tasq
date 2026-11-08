@@ -9,7 +9,7 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::{Duration, Instant};
 
 use super::App;
-use crate::cloud::client::{Http, Remote};
+use crate::cloud::client::{Assistant, Http, Remote};
 use crate::cloud::keys::{Keys, normalize_email};
 use crate::cloud::run::{Report, sync_once};
 use crate::cloud::session::{self, Session};
@@ -62,6 +62,8 @@ enum Job {
     },
     Sync,
     SignOut,
+    /// Disconnect Claude (every assistant) from the account.
+    RevokeAssistants,
 }
 
 enum Note {
@@ -71,6 +73,9 @@ enum Note {
     Synced(Report),
     Failed(String),
     SignedOut,
+    /// Who's connected (Claude), after a sync round.
+    Assistants(Vec<Assistant>),
+    AssistantsRevoked,
 }
 
 pub struct SyncLink {
@@ -169,7 +174,20 @@ impl SyncLink {
             Job::Sync => {
                 let Some(s) = session.as_ref() else { return };
                 match Self::round(s) {
-                    Ok(r) => send(Note::Synced(r)),
+                    Ok(r) => {
+                        send(Note::Synced(r));
+                        // Older servers don't know assistants: say nothing.
+                        if let Ok(list) = Http::new(&s.server, s.keys.clone()).assistants() {
+                            send(Note::Assistants(list));
+                        }
+                    }
+                    Err(e) => send(Note::Failed(e.to_string())),
+                }
+            }
+            Job::RevokeAssistants => {
+                let Some(s) = session.as_ref() else { return };
+                match Http::new(&s.server, s.keys.clone()).revoke_assistants() {
+                    Ok(()) => send(Note::AssistantsRevoked),
                     Err(e) => send(Note::Failed(e.to_string())),
                 }
             }
@@ -389,6 +407,12 @@ impl App {
                 Note::SignedOut => {
                     self.flash("signed out · your tasks stay on this computer");
                     self.sync_status = SyncStatus::Off;
+                    self.assistants = None;
+                }
+                Note::Assistants(list) => self.assistants = Some(list),
+                Note::AssistantsRevoked => {
+                    self.assistants = Some(Vec::new());
+                    self.flash("Claude disconnected · the server forgot its keys");
                 }
             }
         }
@@ -414,6 +438,47 @@ impl App {
             },
             SyncStatus::Failed(why) => format!("⚠ {why}"),
         }
+    }
+}
+
+impl App {
+    /// The address to add in Claude as a custom connector.
+    pub fn mcp_url(&self) -> String {
+        format!(
+            "{}/mcp",
+            session::server(self.sync_url.as_deref()).trim_end_matches('/')
+        )
+    }
+
+    /// What Settings shows on the Claude row.
+    pub fn assistants_label(&self) -> String {
+        match &self.assistants {
+            Some(list) if !list.is_empty() => {
+                let what = if list.iter().any(|a| a.write) {
+                    "reads and changes your tasks"
+                } else {
+                    "reads your tasks"
+                };
+                format!("● connected · {what} · Enter disconnects")
+            }
+            _ => "Enter copies the link to add in Claude → Connectors".to_string(),
+        }
+    }
+
+    /// Enter on the Claude row: copy the connector link, or disconnect.
+    pub fn assistants_enter(&mut self) {
+        if self.assistants.as_ref().is_some_and(|l| !l.is_empty()) {
+            let _ = self.sync_link().jobs.send(Job::RevokeAssistants);
+            self.flash("disconnecting Claude…");
+            return;
+        }
+        let url = self.mcp_url();
+        let copied = crate::clipboard::copy(&url).is_ok();
+        self.flash(if copied {
+            format!("copied {url} · in Claude: Settings → Connectors → Add custom connector")
+        } else {
+            format!("in Claude: Settings → Connectors → Add custom connector → {url}")
+        });
     }
 }
 

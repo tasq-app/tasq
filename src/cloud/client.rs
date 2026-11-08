@@ -90,6 +90,47 @@ impl Http {
     }
 }
 
+/// An assistant (Claude) connected to the account, as the server lists it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Assistant {
+    pub id: String,
+    pub name: String,
+    /// It may change tasks, not only read them.
+    pub write: bool,
+}
+
+impl Http {
+    /// The assistants connected to this account.
+    pub fn assistants(&self) -> Result<Vec<Assistant>> {
+        let (code, v) = self.call("GET", "/v1/assistants", None)?;
+        answer(code, &v)?;
+        Ok(v["assistants"]
+            .as_array()
+            .map(|list| {
+                list.iter()
+                    .filter_map(|a| {
+                        Some(Assistant {
+                            id: a["id"].as_str()?.to_string(),
+                            name: a["name"].as_str()?.to_string(),
+                            write: a["write"].as_bool().unwrap_or(false),
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default())
+    }
+
+    /// Disconnect every assistant: the server forgets their keys.
+    pub fn revoke_assistants(&self) -> Result<()> {
+        let (code, v) = self.call(
+            "POST",
+            "/v1/assistants/revoke",
+            Some(json!({ "all": true }).to_string()),
+        )?;
+        answer(code, &v)
+    }
+}
+
 impl Remote for Http {
     fn signup(&mut self) -> Result<()> {
         let (code, v) = self.call("POST", "/v1/signup", Some(signup_body(&self.keys)))?;

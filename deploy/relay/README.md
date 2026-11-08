@@ -40,3 +40,12 @@ sent it, when, and how big it is. The changes themselves are encrypted on
 the devices with a key made from the password, which never reaches the
 server. Back up the `/data` volume like any other; without the password
 it's unreadable.
+
+## Claude (MCP)
+
+The same server answers Claude as a remote MCP server at
+`https://sync.example.com/mcp`, with OAuth sign-in at `/oauth/*`. It
+works out the public address from the request (`X-Forwarded-Host` /
+`Host`, HTTPS); set `TASQ_RELAY_PUBLIC_URL=https://sync.example.com` if
+your proxy hides it. Only accounts whose owner connects Claude are ever
+read, and only while answering it.

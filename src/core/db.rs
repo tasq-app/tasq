@@ -104,11 +104,16 @@ impl Db {
     #[cfg(test)]
     pub fn in_memory() -> Self {
         #[allow(clippy::unwrap_used)]
+        Self::memory().unwrap()
+    }
+
+    /// A database that lives only in memory (the sync server reading an
+    /// account for an assistant: nothing reaches the disk).
+    pub fn memory() -> std::io::Result<Self> {
         Self::init(
-            Connection::open_in_memory().unwrap(),
+            Connection::open_in_memory().map_err(io_err)?,
             PathBuf::from(":memory:"),
         )
-        .unwrap()
     }
 
     fn init(conn: Connection, path: PathBuf) -> std::io::Result<Self> {
@@ -1139,5 +1144,68 @@ mod tests {
             [("Uni".to_string(), true), ("Uni/Exams".to_string(), false)]
         );
         assert!(s.tasks()[0].raw.ends_with("+Uni/Exams"));
+    }
+}
+
+/// One note kept in the database: its path (`tasks/<id>/name.md` or
+/// `unlinked/name.md`), body and when it last changed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NoteRow {
+    pub path: String,
+    pub body: String,
+    pub updated: String,
+}
+
+impl Db {
+    /// Every note in the database, the one changed last first.
+    pub fn notes(&self) -> std::io::Result<Vec<NoteRow>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT path, body, updated_at FROM notes ORDER BY updated_at DESC, path")
+            .map_err(io_err)?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok(NoteRow {
+                    path: r.get(0)?,
+                    body: r.get(1)?,
+                    updated: r.get(2)?,
+                })
+            })
+            .map_err(io_err)?;
+        rows.collect::<Result<_, _>>().map_err(io_err)
+    }
+
+    /// The note at `path`, if there is one.
+    pub fn note(&self, path: &str) -> std::io::Result<Option<String>> {
+        self.conn
+            .query_row("SELECT body FROM notes WHERE path = ?1", [path], |r| {
+                r.get(0)
+            })
+            .optional()
+            .map_err(io_err)
+    }
+
+    /// Write the note at `path` (made if it's new).
+    pub fn put_note(&mut self, path: &str, body: &str) -> std::io::Result<()> {
+        let now = now_rfc3339();
+        self.conn
+            .execute(
+                "INSERT INTO notes (id, path, body, created_at, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?4)
+                 ON CONFLICT (path) DO UPDATE SET body = excluded.body,
+                     updated_at = excluded.updated_at
+                 WHERE notes.body != excluded.body",
+                params![new_ulid(), path, body, now],
+            )
+            .map(|_| ())
+            .map_err(io_err)
+    }
+
+    /// Delete the note at `path`; whether there was one.
+    pub fn delete_note(&mut self, path: &str) -> std::io::Result<bool> {
+        self.conn
+            .execute("DELETE FROM notes WHERE path = ?1", [path])
+            .map(|n| n > 0)
+            .map_err(io_err)
     }
 }
