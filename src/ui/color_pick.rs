@@ -41,7 +41,15 @@ pub fn render(frame: &mut Frame, screen: Rect, app: &App) {
     frame.render_widget(block, r);
 
     let palette = theme.palette();
-    let current = app.store.space_color(&pick.path);
+    let current = match pick.ext {
+        Some((a, c)) => app
+            .ext_state
+            .accounts
+            .get(a)
+            .and_then(|acc| Some(app.ext_color(&acc.email, &acc.calendars.get(c)?.id)))
+            .unwrap_or(SpaceColor::Slot(0)),
+        None => app.store.space_color(&pick.path),
+    };
     let gx = inner.x + inner.width.saturating_sub(grid_w) / 2;
     let mut lines: Vec<Line> = vec![Line::raw("")];
     for row in 0..rows as usize {

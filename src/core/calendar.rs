@@ -47,8 +47,8 @@ pub struct Occurrence {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExtMark {
     pub title: String,
-    /// The palette slot it's painted in (its calendar's).
-    pub slot: usize,
+    /// The colour it's painted in (its calendar's).
+    pub color: crate::core::spaces::SpaceColor,
     /// Not answered yet, or "maybe".
     pub tentative: bool,
     /// Its calendar's name.

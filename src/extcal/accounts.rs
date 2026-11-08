@@ -22,6 +22,9 @@ pub struct CalendarChoice {
     pub name: String,
     pub primary: bool,
     pub shown: bool,
+    /// The colour you chose (a palette slot or `#rrggbb`); `None` is
+    /// automatic.
+    pub color: Option<String>,
 }
 
 /// A connected account.
@@ -54,6 +57,10 @@ impl ExtAccount {
                     .iter()
                     .find(|o| o.id == c.id)
                     .map_or(c.primary, |o| o.shown),
+                color: old
+                    .iter()
+                    .find(|o| o.id == c.id)
+                    .and_then(|o| o.color.clone()),
             })
             .collect();
         // The main calendar first, then by name.
@@ -71,7 +78,8 @@ impl ExtAccount {
         json!({
             "email": self.email,
             "calendars": self.calendars.iter().map(|c| json!({
-                "id": c.id, "name": c.name, "primary": c.primary, "shown": c.shown
+                "id": c.id, "name": c.name, "primary": c.primary, "shown": c.shown,
+                "color": c.color,
             })).collect::<Vec<_>>(),
         })
     }
@@ -89,6 +97,7 @@ impl ExtAccount {
                                 name: c["name"].as_str().unwrap_or_default().to_string(),
                                 primary: c["primary"] == true,
                                 shown: c["shown"] == true,
+                                color: c["color"].as_str().map(str::to_string),
                             })
                         })
                         .collect()

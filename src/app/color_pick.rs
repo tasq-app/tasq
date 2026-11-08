@@ -15,6 +15,9 @@ pub struct ColorPick {
     pub cursor: usize,
     /// Typing a custom colour: the hex so far, without `#`.
     pub hex: Option<String>,
+    /// Painting another calendar (account, calendar) instead of a space;
+    /// `path` is then its name.
+    pub ext: Option<(usize, usize)>,
 }
 
 impl App {
@@ -31,6 +34,7 @@ impl App {
             path,
             cursor,
             hex: None,
+            ext: None,
         });
     }
 
@@ -91,12 +95,20 @@ impl App {
             SpaceColor::Slot(p.cursor)
         };
         self.color_pick = None;
+        if let Some((a, c)) = p.ext {
+            self.ext_set_color(a, c, Some(color));
+            return;
+        }
         self.set_space_color_to(&p.path, Some(color));
     }
 
     /// `C`: back to the automatic colour.
     pub fn color_pick_auto(&mut self) {
         if let Some(p) = self.color_pick.take() {
+            if let Some((a, c)) = p.ext {
+                self.ext_set_color(a, c, None);
+                return;
+            }
             self.set_space_color_to(&p.path, None);
         }
     }

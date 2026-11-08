@@ -389,9 +389,9 @@ impl App {
                     card: CARD,
                     label: format!("  {}", c.name).into(),
                     value: if c.shown {
-                        "☑ shown in tasq".to_string()
+                        "☑ shown in tasq · c colour".to_string()
                     } else {
-                        "☐ hidden".to_string()
+                        "☐ hidden · c colour".to_string()
                     },
                     key: Some(SetKey::ExtCalendar(i, j)),
                     soon: false,
@@ -677,5 +677,19 @@ mod ext_tests {
         assert_eq!(me.label, "  Me");
         assert!(me.value.contains("shown"));
         assert!(app.ext_label(0).contains("1 of 2 shown"));
+        // Colours: one each by default, yours once chosen.
+        use crate::core::spaces::SpaceColor;
+        assert_ne!(
+            app.ext_color("me@work.com", "me"),
+            app.ext_color("me@work.com", "team")
+        );
+        app.ext_state.accounts[0].calendars[1].color = Some("3".into());
+        assert_eq!(app.ext_color("me@work.com", "team"), SpaceColor::Slot(3));
+        app.ext_pick_color(0, 1);
+        let pick = app.color_pick.as_ref().unwrap();
+        assert_eq!(
+            (pick.ext, pick.cursor, pick.path.as_str()),
+            (Some((0, 1)), 3, "Team")
+        );
     }
 }

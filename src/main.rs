@@ -2168,6 +2168,16 @@ fn handle_settings(app: &mut App, key: KeyEvent) {
         KeyCode::Char('j') | KeyCode::Down => app.settings_move(true),
         KeyCode::Char('k') | KeyCode::Up => app.settings_move(false),
         KeyCode::Char('l') | KeyCode::Right | KeyCode::Tab => app.settings_enter_rows(),
+        // `c` on one of your other calendars: its colour.
+        KeyCode::Char('c') if app.settings.in_rows => {
+            if let Some(tasq::app::SetKey::ExtCalendar(a, c)) = app
+                .settings_rows(app.settings.section)
+                .get(app.settings.row)
+                .and_then(|r| r.key)
+            {
+                app.ext_pick_color(a, c);
+            }
+        }
         KeyCode::Enter | KeyCode::Char(' ') => {
             if let Some(action) = app.settings_activate() {
                 apply_action(app, action);

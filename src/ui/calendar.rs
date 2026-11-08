@@ -999,7 +999,7 @@ fn day_head(d: chrono::NaiveDate) -> String {
 /// A chip or block colour for an occurrence.
 fn occ_color(app: &App, theme: &Theme, o: &Occurrence) -> Color {
     if let Some(x) = &o.ext {
-        theme.space_color(crate::core::spaces::SpaceColor::Slot(x.slot))
+        theme.space_color(x.color)
     } else if o.late || o.deadline {
         theme.overdue
     } else {

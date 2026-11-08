@@ -406,10 +406,22 @@ impl App {
 }
 
 impl App {
-    /// The palette slot of a calendar: one each, in the order they're
-    /// listed, from the second half of the palette so they read apart from
-    /// the spaces (which take the first eight).
-    fn ext_slot(&self, account: &str, calendar: &str) -> usize {
+    /// A calendar's colour: the one you chose, else one each, in the
+    /// order they're listed, from the second half of the palette so they
+    /// read apart from the spaces (which take the first eight).
+    pub fn ext_color(&self, account: &str, calendar: &str) -> crate::core::spaces::SpaceColor {
+        use crate::core::spaces::SpaceColor;
+        let chosen = self
+            .ext_state
+            .accounts
+            .iter()
+            .find(|a| a.email == account)
+            .and_then(|a| a.calendars.iter().find(|c| c.id == calendar))
+            .and_then(|c| c.color.as_deref())
+            .and_then(SpaceColor::parse);
+        if let Some(c) = chosen {
+            return c;
+        }
         let k = self
             .ext_state
             .accounts
@@ -421,7 +433,48 @@ impl App {
             })
             .position(|x| x == (account, calendar))
             .unwrap_or(0);
-        (crate::core::spaces::AUTO_SLOTS + k) % crate::core::spaces::PALETTE_SLOTS
+        SpaceColor::Slot((crate::core::spaces::AUTO_SLOTS + k) % crate::core::spaces::PALETTE_SLOTS)
+    }
+
+    /// `c` on a calendar in Settings: the colour picker, on its colour.
+    pub fn ext_pick_color(&mut self, acc: usize, cal: usize) {
+        let Some((email, c)) = self
+            .ext_state
+            .accounts
+            .get(acc)
+            .and_then(|a| Some((a.email.clone(), a.calendars.get(cal)?.clone())))
+        else {
+            return;
+        };
+        let cursor = match self.ext_color(&email, &c.id) {
+            crate::core::spaces::SpaceColor::Slot(n) => n,
+            crate::core::spaces::SpaceColor::Rgb(..) => 0,
+        };
+        self.color_pick = Some(super::ColorPick {
+            path: c.name,
+            cursor,
+            hex: None,
+            ext: Some((acc, cal)),
+        });
+    }
+
+    /// The picker's answer for a calendar: its colour, or `None` back to
+    /// the automatic one.
+    pub fn ext_set_color(
+        &mut self,
+        acc: usize,
+        cal: usize,
+        color: Option<crate::core::spaces::SpaceColor>,
+    ) {
+        if let Some(c) = self
+            .ext_state
+            .accounts
+            .get_mut(acc)
+            .and_then(|a| a.calendars.get_mut(cal))
+        {
+            c.color = color.map(|c| c.to_value());
+            let _ = accounts::save(&self.ext_state.accounts);
+        }
     }
 
     /// The other calendars' events from `from` to `to`, as the calendar
@@ -467,7 +520,7 @@ impl App {
                     span: p.span,
                     day: p.day,
                     ext: Some(Box::new(ExtMark {
-                        slot: self.ext_slot(&p.account, &p.calendar),
+                        color: self.ext_color(&p.account, &p.calendar),
                         title: p.title,
                         tentative: p.tentative,
                         calendar,
