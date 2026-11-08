@@ -627,6 +627,7 @@ mod tests {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod ext_tests {
     use super::*;
     use crate::app::test_support::build_app;
