@@ -222,6 +222,10 @@ pub fn respond(relay: &Relay, req: &Incoming) -> Option<Outgoing> {
         }
         ("POST", "/mcp") => mcp(relay, req, &base),
         ("GET" | "DELETE", "/mcp") => json_out(405, json!({ "error": "POST only" })),
+        ("GET", "/icon.svg") => asset("image/svg+xml", ICON_SVG.as_bytes()),
+        ("GET", "/icon.png") => asset("image/png", ICON_PNG),
+        ("GET", "/apple-touch-icon.png") => asset("image/png", APPLE_ICON_PNG),
+        ("GET", "/favicon.png" | "/favicon.ico") => asset("image/png", FAVICON_PNG),
         ("GET", "/v1/assistants") => list_assistants(relay, req.auth.as_deref()),
         ("POST", "/v1/assistants/revoke") => revoke(relay, req.auth.as_deref(), &req.body),
         _ => return None,
@@ -364,37 +368,89 @@ fn auth_request(relay: &Relay, form: &[(String, String)]) -> Result<AuthRequest,
 }
 
 const STYLE: &str = r#"
-:root { --bg:#f6f5f2; --card:#fff; --text:#1d1d1f; --muted:#6b6b70; --line:#e2e0db;
-  --accent:#5b5bd6; --warn-bg:#fff6e5; --warn:#8a5a00; --err:#b42318; }
-@media (prefers-color-scheme: dark) { :root { --bg:#141416; --card:#1e1e22; --text:#ececf1;
-  --muted:#9a9aa3; --line:#2e2e34; --accent:#8b8bf0; --warn-bg:#2a2214; --warn:#f0c674; --err:#ff8a80; } }
+:root { --bg:#181926; --bg2:#1e2030; --panel:#24273a; --line:#ffffff14; --line2:#ffffff24;
+  --fg:#cad3f5; --dim:#a5adcb; --mute:#6e738d; --accent:#c6a0f6; --green:#a6da95;
+  --red:#ed8796; --yellow:#eed49f; --r:14px;
+  --mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
 * { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:var(--text);
-  font:16px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
-main { max-width:420px; margin:0 auto; padding:40px 16px; }
-.card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:24px; }
-h1 { font-size:22px; margin:0 0 4px; }
-p.sub { margin:0 0 20px; color:var(--muted); }
-label { display:block; font-size:14px; font-weight:600; margin:14px 0 6px; }
-input[type=email], input[type=password] { width:100%; padding:11px 12px; font:inherit;
-  border:1px solid var(--line); border-radius:9px; background:var(--bg); color:var(--text); }
-.choice { display:flex; gap:10px; align-items:flex-start; border:1px solid var(--line);
-  border-radius:9px; padding:10px 12px; margin:8px 0; font-weight:400; cursor:pointer; }
-.choice small { display:block; color:var(--muted); }
-.note { background:var(--warn-bg); color:var(--warn); border-radius:9px; padding:10px 12px;
-  font-size:14px; margin:18px 0 0; }
-.error { color:var(--err); font-size:14px; margin:12px 0 0; }
-button { width:100%; margin-top:20px; padding:12px; font:inherit; font-weight:600; color:#fff;
-  background:var(--accent); border:0; border-radius:9px; cursor:pointer; }
-.brand { font-weight:700; letter-spacing:.02em; margin-bottom:16px; color:var(--muted); }
+html { background:var(--bg); }
+body { margin:0; min-height:100vh; background:var(--bg); color:var(--fg);
+  font:15px/1.6 var(--mono); -webkit-font-smoothing:antialiased; position:relative; overflow-x:hidden; }
+.glow { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
+.glow::before, .glow::after { content:""; position:absolute; border-radius:50%; filter:blur(90px); }
+.glow::before { width:520px; height:360px; left:-160px; top:-160px; background:#c6a0f6; opacity:.3; }
+.glow::after { width:480px; height:360px; right:-180px; bottom:-120px; background:#8aadf4; opacity:.18; }
+main { position:relative; z-index:1; max-width:460px; margin:0 auto; padding:40px 16px 56px; }
+.brand { display:flex; align-items:center; justify-content:center; gap:10px; font-weight:800;
+  font-size:22px; letter-spacing:-.5px; margin-bottom:22px; }
+.brand img { width:30px; height:30px; border-radius:8px; }
+.card { background:var(--bg2); border:1px solid var(--line2); border-radius:18px; padding:26px;
+  box-shadow:0 24px 70px #0009; }
+.kicker { font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--accent);
+  font-weight:600; margin:0 0 6px; }
+h1 { font-size:24px; line-height:1.2; letter-spacing:-.8px; margin:0 0 8px; font-weight:800; }
+h1 em { font-style:normal; color:var(--accent); }
+p.sub { margin:0 0 18px; color:var(--dim); font-size:14px; }
+label { display:block; font-size:13px; font-weight:600; color:var(--dim); margin:16px 0 6px; }
+input[type=email], input[type=password] { width:100%; padding:12px 14px; font:15px var(--mono);
+  color:var(--fg); background:var(--bg); border:1px solid var(--line2); border-radius:10px; }
+input[type=email]:focus, input[type=password]:focus { outline:2px solid #c6a0f655; border-color:var(--accent); }
+.choice { display:flex; gap:12px; align-items:flex-start; border:1px solid var(--line2);
+  border-radius:12px; padding:12px 14px; margin:8px 0; font-weight:600; color:var(--fg);
+  background:var(--bg); cursor:pointer; font-size:14px; }
+.choice:has(input:checked) { border-color:var(--accent); background:#c6a0f612; }
+.choice input { accent-color:var(--accent); margin-top:4px; }
+.choice small { display:block; color:var(--mute); font-weight:400; font-size:13px; margin-top:2px; }
+.note { border:1px solid #eed49f33; background:#eed49f0f; color:var(--yellow); border-radius:12px;
+  padding:12px 14px; font-size:13px; margin:18px 0 0; }
+.error { color:var(--red); font-size:14px; margin:14px 0 0; }
+button { width:100%; margin-top:20px; padding:13px; font:600 15px var(--mono); color:#1e2030;
+  background:var(--accent); border:0; border-radius:10px; cursor:pointer; }
+button:hover { filter:brightness(1.07); }
+.foot { text-align:center; color:var(--mute); font-size:12px; margin-top:22px; }
+.foot a { color:var(--dim); text-decoration:none; }
 "#;
+
+/// The tasq logo (the bowtie from the TUI's splash), in the site's colours.
+const ICON_SVG: &str = include_str!("assets/icon.svg");
+const ICON_PNG: &[u8] = include_bytes!("assets/icon.png");
+const APPLE_ICON_PNG: &[u8] = include_bytes!("assets/apple-touch-icon.png");
+const FAVICON_PNG: &[u8] = include_bytes!("assets/favicon.png");
+
+fn asset(content_type: &str, body: &[u8]) -> Outgoing {
+    Outgoing {
+        code: 200,
+        content_type: content_type.into(),
+        headers: vec![("Cache-Control".into(), "public, max-age=86400".into())],
+        body: body.to_vec(),
+    }
+}
+
+/// The icons the server advertises to MCP clients (`serverInfo.icons`).
+fn icons(base: &str) -> Value {
+    json!([
+        { "src": format!("{base}/icon.svg"), "mimeType": "image/svg+xml", "sizes": ["any"] },
+        { "src": format!("{base}/icon.png"), "mimeType": "image/png", "sizes": ["512x512"] },
+    ])
+}
 
 fn page(title: &str, inner: &str) -> String {
     format!(
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">\
          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\
-         <title>{}</title><style>{STYLE}</style></head><body><main>\
-         <div class=\"brand\">tasq</div><div class=\"card\">{inner}</div></main></body></html>",
+         <meta name=\"color-scheme\" content=\"dark\"><meta name=\"theme-color\" content=\"#181926\">\
+         <title>{}</title>\
+         <link rel=\"icon\" type=\"image/svg+xml\" href=\"/icon.svg\">\
+         <link rel=\"icon\" type=\"image/png\" sizes=\"48x48\" href=\"/favicon.png\">\
+         <link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\">\
+         <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\
+         <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\
+         <link href=\"https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap\" rel=\"stylesheet\">\
+         <style>{STYLE}</style></head><body><div class=\"glow\"></div><main>\
+         <div class=\"brand\"><img src=\"/icon.svg\" alt=\"\">tasq</div>\
+         <div class=\"card\">{inner}</div>\
+         <p class=\"foot\"><a href=\"https://tasq-app.github.io/tasq/\">tasq</a> · your tasks, in the terminal</p>\
+         </main></body></html>",
         esc_html(title)
     )
 }
@@ -444,7 +500,7 @@ fn authorize_page(relay: &Relay, form: &[(String, String)], error: Option<&str>)
         .unwrap_or_default();
     let name = esc_html(&ar.client.name);
     let inner = format!(
-        r#"<h1>Connect {name} to tasq</h1>
+        r#"<p class="kicker">Sign in</p><h1>Connect {name} to tasq</h1>
 <p class="sub">Sign in with the account your computers sync with.</p>
 <form method="post" action="/oauth/authorize">{hidden}
 <input type="hidden" name="tz" id="tz" value="">
@@ -793,14 +849,17 @@ fn mcp(relay: &Relay, req: &Incoming, base: &str) -> Outgoing {
     };
     match msg {
         Value::Array(batch) => {
-            let answers: Vec<Value> = batch.iter().filter_map(|m| rpc(relay, &who, m)).collect();
+            let answers: Vec<Value> = batch
+                .iter()
+                .filter_map(|m| rpc(relay, &who, m, base))
+                .collect();
             if answers.is_empty() {
                 accepted()
             } else {
                 json_out(200, Value::Array(answers))
             }
         }
-        m => match rpc(relay, &who, &m) {
+        m => match rpc(relay, &who, &m, base) {
             Some(answer) => json_out(200, answer),
             None => accepted(),
         },
@@ -817,7 +876,7 @@ fn accepted() -> Outgoing {
 }
 
 /// One JSON-RPC message; `None` for a notification.
-fn rpc(relay: &Relay, who: &Caller, m: &Value) -> Option<Value> {
+fn rpc(relay: &Relay, who: &Caller, m: &Value, base: &str) -> Option<Value> {
     let id = m.get("id")?.clone();
     let method = m["method"].as_str().unwrap_or_default();
     let params = &m["params"];
@@ -838,6 +897,8 @@ fn rpc(relay: &Relay, who: &Caller, m: &Value) -> Option<Value> {
                         "name": "tasq",
                         "title": "tasq",
                         "version": env!("CARGO_PKG_VERSION"),
+                        "websiteUrl": "https://tasq-app.github.io/tasq/",
+                        "icons": icons(base),
                     },
                     "instructions": super::tools::INSTRUCTIONS,
                 }),
@@ -1103,6 +1164,17 @@ mod tests {
             r#"{"redirect_uris":["http://evil.example/cb"]}"#,
         ));
         assert_eq!(reg.code, 400);
+        // The logo, for the connector and the sign-in page's tab.
+        for path in [
+            "/icon.svg",
+            "/icon.png",
+            "/favicon.ico",
+            "/apple-touch-icon.png",
+        ] {
+            let icon = relay.respond(&req("GET", path, None, ""));
+            assert_eq!(icon.code, 200, "{path}");
+            assert!(icon.content_type.starts_with("image/"), "{path}");
+        }
     }
 
     #[test]
@@ -1117,6 +1189,10 @@ mod tests {
             json!({ "protocolVersion": "2025-06-18" }),
         );
         assert_eq!(init["result"]["protocolVersion"], "2025-06-18");
+        assert_eq!(
+            init["result"]["serverInfo"]["icons"][0]["src"],
+            "https://tasq.example/icon.svg"
+        );
         let tools = call(&relay, &token, "tools/list", json!({}));
         let names: Vec<&str> = tools["result"]["tools"]
             .as_array()
