@@ -38,6 +38,21 @@ pub struct Occurrence {
     /// How many days it lasts (1 for most), and which of them this is.
     pub span: u16,
     pub day: u16,
+    /// Set on an event from another calendar (read-only, not a task: its
+    /// `abs` points past the task list).
+    pub ext: Option<Box<ExtMark>>,
+}
+
+/// What the calendar views need of an event from another calendar.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExtMark {
+    pub title: String,
+    /// The palette slot it's painted in (its calendar's).
+    pub slot: usize,
+    /// Not answered yet, or "maybe".
+    pub tentative: bool,
+    /// Its calendar's name.
+    pub calendar: String,
 }
 
 impl Occurrence {
@@ -103,6 +118,7 @@ pub fn occurrences(
                     origin,
                     span,
                     day,
+                    ext: None,
                 }
             };
         let in_range = |d: NaiveDate| d >= from && d <= to;
@@ -330,6 +346,7 @@ mod tests {
             origin: d("2026-10-06"),
             span: 1,
             day: 0,
+            ext: None,
         };
         let a = mk(9 * 60, 120);
         let b = mk(10 * 60, 60);

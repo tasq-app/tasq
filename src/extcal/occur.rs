@@ -24,6 +24,11 @@ pub struct ExternalOccurrence {
     /// It started on an earlier day / goes on to a later one.
     pub from_before: bool,
     pub goes_on: bool,
+    /// The day it starts on, how many days it touches, and which of them
+    /// this is.
+    pub origin: NaiveDate,
+    pub span: u16,
+    pub day: u16,
     pub tentative: bool,
     pub account: String,
     pub calendar: String,
@@ -46,29 +51,29 @@ pub fn occurrences<Tz: TimeZone>(
     let mut out = Vec::new();
     for c in events {
         let e = &c.event;
-        let piece = |date, start, minutes, from_before, goes_on| ExternalOccurrence {
-            date,
-            start,
-            minutes,
-            from_before,
-            goes_on,
-            tentative: e.response != Response::Accepted,
-            account: c.account.clone(),
-            calendar: c.calendar.clone(),
-            id: e.id.clone(),
-            title: e.title.clone(),
+        let piece = |date: NaiveDate, start, minutes, (origin, last): (NaiveDate, NaiveDate)| {
+            ExternalOccurrence {
+                date,
+                start,
+                minutes,
+                from_before: date > origin,
+                goes_on: date < last,
+                origin,
+                span: ((last - origin).num_days() + 1).clamp(1, 366) as u16,
+                day: (date - origin).num_days().clamp(0, 365) as u16,
+                tentative: e.response != Response::Accepted,
+                account: c.account.clone(),
+                calendar: c.calendar.clone(),
+                id: e.id.clone(),
+                title: e.title.clone(),
+            }
         };
         match &e.when {
             When::AllDay { start, end } => {
+                let last = end.pred_opt().unwrap_or(*start).max(*start);
                 let mut d = (*start).max(from);
                 while d < *end && d <= to {
-                    out.push(piece(
-                        d,
-                        None,
-                        0,
-                        d > *start,
-                        d.succ_opt().is_some_and(|n| n < *end),
-                    ));
+                    out.push(piece(d, None, 0, (*start, last)));
                     let Some(n) = d.succ_opt() else { break };
                     d = n;
                 }
@@ -94,8 +99,7 @@ pub fn occurrences<Tz: TimeZone>(
                         d,
                         Some(begin),
                         finish.saturating_sub(begin),
-                        d > first,
-                        d < last,
+                        (first, last),
                     ));
                     let Some(n) = d.checked_add_days(Days::new(1)) else {
                         break;

@@ -404,3 +404,90 @@ impl App {
         }
     }
 }
+
+impl App {
+    /// The palette slot of a calendar: one each, in the order they're
+    /// listed, from the second half of the palette so they read apart from
+    /// the spaces (which take the first eight).
+    fn ext_slot(&self, account: &str, calendar: &str) -> usize {
+        let k = self
+            .ext_state
+            .accounts
+            .iter()
+            .flat_map(|a| {
+                a.calendars
+                    .iter()
+                    .map(move |c| (a.email.as_str(), c.id.as_str()))
+            })
+            .position(|x| x == (account, calendar))
+            .unwrap_or(0);
+        (crate::core::spaces::AUTO_SLOTS + k) % crate::core::spaces::PALETTE_SLOTS
+    }
+
+    /// The other calendars' events from `from` to `to`, as the calendar
+    /// views draw them. Each gets an `abs` past the task list, its own,
+    /// so it never stands for a task.
+    pub fn cal_ext_occurrences(
+        &self,
+        from: chrono::NaiveDate,
+        to: chrono::NaiveDate,
+    ) -> Vec<crate::core::calendar::Occurrence> {
+        use crate::core::calendar::{ExtMark, Occurrence};
+        let events: Vec<Cached> = self.ext_events().cloned().collect();
+        let pieces = match &self.frozen_tz {
+            Some(tz) => crate::extcal::occur::occurrences(&events, from, to, tz),
+            None => crate::extcal::occur::occurrences(&events, from, to, &chrono::Local),
+        };
+        pieces
+            .into_iter()
+            .map(|p| {
+                let k = events
+                    .iter()
+                    .position(|e| {
+                        e.account == p.account && e.calendar == p.calendar && e.event.id == p.id
+                    })
+                    .unwrap_or(0);
+                let calendar = self
+                    .ext_state
+                    .accounts
+                    .iter()
+                    .find(|a| a.email == p.account)
+                    .and_then(|a| a.calendars.iter().find(|c| c.id == p.calendar))
+                    .map(|c| c.name.clone())
+                    .unwrap_or_default();
+                Occurrence {
+                    abs: usize::MAX - k,
+                    date: p.date,
+                    start: p.start,
+                    minutes: p.minutes,
+                    deadline: false,
+                    projected: false,
+                    late: false,
+                    origin: p.origin,
+                    span: p.span,
+                    day: p.day,
+                    ext: Some(Box::new(ExtMark {
+                        slot: self.ext_slot(&p.account, &p.calendar),
+                        title: p.title,
+                        tentative: p.tentative,
+                        calendar,
+                    })),
+                }
+            })
+            .collect()
+    }
+
+    /// Tasks and the other calendars' events together, for drawing.
+    pub fn cal_view_occurrences(
+        &self,
+        from: chrono::NaiveDate,
+        to: chrono::NaiveDate,
+    ) -> Vec<crate::core::calendar::Occurrence> {
+        let mut all = self.cal_occurrences(from, to);
+        all.extend(self.cal_ext_occurrences(from, to));
+        all.sort_by(|a, b| {
+            (a.date, a.start.is_some(), a.start).cmp(&(b.date, b.start.is_some(), b.start))
+        });
+        all
+    }
+}

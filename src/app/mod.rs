@@ -289,6 +289,8 @@ pub struct App {
     /// The time the calendar treats as now, in minutes; `None` reads the
     /// clock. Snapshot tests pin it (24*60 or more hides the now line).
     pub frozen_now: Option<u32>,
+    /// Tests pin the time zone other calendars' events are drawn in.
+    pub frozen_tz: Option<chrono::FixedOffset>,
     pub command_palette: CommandPaletteState,
     /// Vertical scroll offset (rows from the top of the line list) for each
     /// view, keyed by `View::idx()`. Updated at render time via `Cell` so the
@@ -478,6 +480,7 @@ impl App {
             saved_pick_idx: 0,
             calendar: None,
             frozen_now: None,
+            frozen_tz: None,
             command_palette: CommandPaletteState::default(),
             view_scroll: [Cell::new(0), Cell::new(0)],
             inspector_scroll: Cell::new(0),

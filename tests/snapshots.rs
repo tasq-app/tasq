@@ -704,3 +704,73 @@ fn clicking_a_filter_chip_takes_it_off() {
     app.click(x + 1, y);
     assert!(!app.filter().has_any());
 }
+
+#[test]
+fn calendar_week_with_other_calendars() {
+    use tasq::extcal::accounts::ExtAccount;
+    use tasq::extcal::cache::Cached;
+    use tasq::extcal::event::{Parsed, from_google};
+    use tasq::extcal::sync::CalendarInfo;
+
+    let body = format!(
+        "{}{}",
+        sample::TODO_RAW,
+        "(A) Trabajo TIS +Uni/TIS plan:2026-05-06 at:16:00 dur:2h\n"
+    );
+    let mut app = App::new(
+        PathBuf::from(FIXTURE_PATH),
+        body,
+        "2026-05-06".to_string(),
+        all_tasks_cfg(),
+    );
+    app.user_name = "you".to_string();
+    app.version_label = "tasq 0.0.0".to_string();
+    app.prefs.density = Density::Compact;
+    app.frozen_now = Some(24 * 60);
+    app.frozen_tz = chrono::FixedOffset::east_opt(2 * 3600);
+    app.prefs.layout.left = false;
+    app.prefs.layout.right = false;
+    let mut account = ExtAccount::new("me@work.com");
+    account.refresh_calendars(&[CalendarInfo {
+        id: "me@work.com".into(),
+        name: "Work".into(),
+        primary: true,
+        color: None,
+    }]);
+    app.ext_state.accounts.push(account);
+    let event = |v: serde_json::Value| {
+        let Parsed::Keep(e) = from_google(&v) else {
+            panic!("kept")
+        };
+        Cached {
+            account: "me@work.com".into(),
+            calendar: "me@work.com".into(),
+            event: *e,
+        }
+    };
+    app.ext_state.events = vec![
+        event(serde_json::json!({
+            "id": "standup", "summary": "Standup",
+            "start": { "dateTime": "2026-05-05T09:30:00+02:00" },
+            "end": { "dateTime": "2026-05-05T10:00:00+02:00" }
+        })),
+        event(serde_json::json!({
+            "id": "review", "summary": "Design review",
+            "start": { "dateTime": "2026-05-06T15:00:00+02:00" },
+            "end": { "dateTime": "2026-05-06T17:00:00+02:00" },
+            "attendees": [{ "email": "me@work.com", "self": true, "responseStatus": "needsAction" }]
+        })),
+        event(serde_json::json!({
+            "id": "trip", "summary": "Lisbon offsite",
+            "start": { "date": "2026-05-07" }, "end": { "date": "2026-05-09" }
+        })),
+    ];
+    app.open_cal(CalView::Week);
+    let text = render_text(&app, COLS, ROWS);
+    assert!(text.contains("Standup"), "{text}");
+    snapshot_app("calendar_week_with_other_calendars", &app);
+    // The day under the month lists the meeting, marked as not answered.
+    app.open_cal(CalView::Month);
+    let month = render_text(&app, COLS, ROWS);
+    assert!(month.contains("◌ Design review"), "{month}");
+}

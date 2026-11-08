@@ -145,28 +145,36 @@ impl App {
         let now = chrono::Local::now();
         let now_min = now.hour() * 60 + now.minute();
         let occs = calendar::occurrences(self.store.tasks(), today, today, today);
-        // Today's open things with a time, in order.
-        let mut timed: Vec<(u32, u32, usize)> = occs
+        // Today's open things with a time, in order: tasks, and the other
+        // calendars' events.
+        let tasks = self.store.tasks();
+        let mut timed: Vec<(u32, u32, String)> = occs
             .iter()
-            .filter(|o| !self.store.tasks()[o.abs].done)
-            .filter_map(|o| Some((o.start?, o.end()?, o.abs)))
+            .filter(|o| !tasks[o.abs].done)
+            .filter_map(|o| Some((o.start?, o.end()?, todo::body_only(&tasks[o.abs].raw))))
+            .chain(
+                self.cal_ext_occurrences(today, today)
+                    .into_iter()
+                    .filter_map(|o| Some((o.start?, o.end()?, o.ext?.title)))
+                    // A meeting that's over isn't missed, just over.
+                    .filter(|(_, end, _)| *end > now_min),
+            )
             .collect();
         timed.sort();
         // What's on now or next; failing that, the last one you missed.
-        let (start, till, abs) =
-            if let Some(&(start, end, abs)) = timed.iter().find(|(_, end, _)| *end > now_min) {
-                let till = if start <= now_min {
+        let (start, till, title) =
+            if let Some((start, end, title)) = timed.iter().find(|(_, end, _)| *end > now_min) {
+                let till = if *start <= now_min {
                     let left = end - now_min;
                     format!("now · {} left", short(left))
                 } else {
                     format!("in {}", short(start - now_min))
                 };
-                (start, till, abs)
+                (*start, till, title.clone())
             } else {
-                let &(start, _, abs) = timed.last()?;
-                (start, "late".to_string(), abs)
+                let (start, _, title) = timed.last()?;
+                (*start, "late".to_string(), title.clone())
             };
-        let title = todo::body_only(&self.store.tasks()[abs].raw);
         Some((format!("{:02}:{:02}", start / 60, start % 60), title, till))
     }
 
