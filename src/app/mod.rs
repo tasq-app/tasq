@@ -22,6 +22,7 @@ mod chord;
 mod color_pick;
 mod draft;
 mod draft_overlay;
+mod extcal_link;
 mod filter_pop;
 mod flash;
 mod gcal_link;
@@ -70,6 +71,7 @@ pub use draft_overlay::{
     REC_UNIT_ORDER, RecurrenceBuilderState, SLASH_ENTRIES, SlashEntry, SlashKind, SlashMenuState,
     format_rec_value, recurrence_next_preview,
 };
+pub use extcal_link::ExtState;
 pub use filter_pop::{DUE_TERMS, FilterPop, PopPick, PopRow, search_label};
 pub use flash::Flash;
 pub use gcal_link::GcalStatus;
@@ -194,6 +196,10 @@ pub struct App {
     pub(crate) gcal_due: Option<std::time::Instant>,
     /// Your own Google OAuth client from the config (id, secret).
     pub(crate) google_client: (Option<String>, Option<String>),
+    /// The thread that reads your other calendars, once one is connected.
+    pub(crate) ext: Option<extcal_link::ExtLink>,
+    pub ext_state: ExtState,
+    pub(crate) ext_due: Option<std::time::Instant>,
     /// The thread that talks to Apple Calendar (CalDAV), once connected.
     pub(crate) acal: Option<acal_link::AcalLink>,
     pub acal_status: GcalStatus,
@@ -425,6 +431,9 @@ impl App {
             gcal_status: GcalStatus::Off,
             gcal_due: None,
             google_client,
+            ext: None,
+            ext_state: ExtState::default(),
+            ext_due: None,
             acal: None,
             acal_status: GcalStatus::Off,
             acal_due: None,

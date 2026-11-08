@@ -13,6 +13,7 @@
 //! - [`occur`]: what falls on which day, in this device's time zone, for
 //!   the calendar views.
 
+pub mod accounts;
 pub mod cache;
 pub mod event;
 pub mod google;

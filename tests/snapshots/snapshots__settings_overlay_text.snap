@@ -18,10 +18,10 @@ expression: buffer_to_text(&buf)
                              │  │  Apple Calendar     not connected · Enter connects ›           │  
                              │  ╰────────────────────────────────────────────────────────────────╯  
                              │                                                                      
-                             │                                                                      
-                             │                                                                      
-                             │                                                                      
-                             │                                                                      
+                             │  ╭────────────────────────────────────────────────────────────────╮  
+                             │  │ OTHER CALENDARS · READ-ONLY                                    │  
+                             │  │  Add Google account needs a Google client (see README) ›       │  
+                             │  ╰────────────────────────────────────────────────────────────────╯  
                              │                                                                      
                              │                                                                      
                              │                                                                      

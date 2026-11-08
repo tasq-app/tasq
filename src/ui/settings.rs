@@ -192,7 +192,7 @@ fn draw_row(buf: &mut Buffer, card: Rect, y: u16, row: &SetRow, here: bool, them
     } else {
         base.fg(theme.fg)
     };
-    put(buf, card.x + 3, y, row.label, 18, label_style);
+    put(buf, card.x + 3, y, &row.label, 18, label_style);
     let x = card.x + 22;
     let room = card.right().saturating_sub(x + 2);
     let (text, style) = match row.value.as_str() {

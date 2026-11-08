@@ -148,6 +148,17 @@ fn email_of(id_token: &str) -> Option<String> {
 /// Sign in: the browser, the consent, the code back on `127.0.0.1`, the
 /// tokens. `on_url` is told the address in case the browser doesn't open.
 pub fn sign_in(client: &Client, on_url: &dyn Fn(&str)) -> Result<(Account, Access)> {
+    sign_in_for(client, SCOPES, "Google Calendar is connected", on_url)
+}
+
+/// [`sign_in`] asking for `scopes`; `done` is what the browser tab says
+/// once it worked.
+pub fn sign_in_for(
+    client: &Client,
+    scopes: &str,
+    done: &str,
+    on_url: &dyn Fn(&str),
+) -> Result<(Account, Access)> {
     let server = tiny_http::Server::http("127.0.0.1:0")
         .map_err(|e| anyhow!("couldn't listen for Google's answer: {e}"))?;
     let port = server
@@ -165,7 +176,7 @@ pub fn sign_in(client: &Client, on_url: &dyn Fn(&str)) -> Result<(Account, Acces
             ("client_id", &client.id),
             ("redirect_uri", &redirect),
             ("response_type", "code"),
-            ("scope", SCOPES),
+            ("scope", scopes),
             ("code_challenge", &challenge),
             ("code_challenge_method", "S256"),
             ("access_type", "offline"),
@@ -215,9 +226,9 @@ pub fn sign_in(client: &Client, on_url: &dyn Fn(&str)) -> Result<(Account, Acces
             let _ = req.respond(tiny_http::Response::empty(400));
             continue;
         };
-        let _ = req.respond(page(
-            "Google Calendar is connected. You can close this tab and go back to tasq.",
-        ));
+        let _ = req.respond(page(&format!(
+            "{done}. You can close this tab and go back to tasq."
+        )));
         break code;
     };
 

@@ -53,6 +53,12 @@ pub enum SetKey {
     SyncAccount,
     SyncSignOut,
     AppleDisconnect,
+    /// Your other calendars: add an account, sync one, show or hide one
+    /// of its calendars, disconnect it.
+    ExtAdd,
+    ExtAccount(usize),
+    ExtCalendar(usize, usize),
+    ExtDisconnect(usize),
     Trash,
     Help,
 }
@@ -62,7 +68,7 @@ pub enum SetKey {
 pub struct SetRow {
     /// The card it sits in.
     pub card: &'static str,
-    pub label: &'static str,
+    pub label: std::borrow::Cow<'static, str>,
     pub value: String,
     /// `None` for a line that's just information.
     pub key: Option<SetKey>,
@@ -82,16 +88,16 @@ impl App {
 
     /// The rows of section `s`.
     pub fn settings_rows(&self, s: usize) -> Vec<SetRow> {
-        let row = |card, label, value: String, key| SetRow {
+        let row = |card, label: &'static str, value: String, key| SetRow {
             card,
-            label,
+            label: label.into(),
             value,
             key,
             soon: false,
         };
-        let soon = |card, label, value: &str| SetRow {
+        let soon = |card, label: &'static str, value: &str| SetRow {
             card,
-            label,
+            label: label.into(),
             value: value.to_string(),
             key: None,
             soon: true,
@@ -166,6 +172,7 @@ impl App {
                     )
                 }),
             )
+            .chain(self.ext_rows())
             .collect(),
             1 => vec![
                 row(
@@ -364,6 +371,57 @@ impl App {
         }
     }
 
+    /// The "Other calendars" card: each account, its calendars to show
+    /// or hide, a way out, and a way to add one more.
+    fn ext_rows(&self) -> Vec<SetRow> {
+        const CARD: &str = "Other calendars · read-only";
+        let mut rows = Vec::new();
+        for (i, a) in self.ext_state.accounts.iter().enumerate() {
+            rows.push(SetRow {
+                card: CARD,
+                label: "Google account".into(),
+                value: self.ext_label(i),
+                key: Some(SetKey::ExtAccount(i)),
+                soon: false,
+            });
+            for (j, c) in a.calendars.iter().enumerate() {
+                rows.push(SetRow {
+                    card: CARD,
+                    label: format!("  {}", c.name).into(),
+                    value: if c.shown {
+                        "☑ shown in tasq".to_string()
+                    } else {
+                        "☐ hidden".to_string()
+                    },
+                    key: Some(SetKey::ExtCalendar(i, j)),
+                    soon: false,
+                });
+            }
+            rows.push(SetRow {
+                card: CARD,
+                label: "  On".into(),
+                value: "this device · all your devices coming soon".to_string(),
+                key: None,
+                soon: true,
+            });
+            rows.push(SetRow {
+                card: CARD,
+                label: "  Disconnect".into(),
+                value: "revokes the access · its events leave tasq".to_string(),
+                key: Some(SetKey::ExtDisconnect(i)),
+                soon: false,
+            });
+        }
+        rows.push(SetRow {
+            card: CARD,
+            label: "Add Google account".into(),
+            value: self.ext_add_label(),
+            key: Some(SetKey::ExtAdd),
+            soon: false,
+        });
+        rows
+    }
+
     pub fn settings_move(&mut self, forward: bool) {
         let s = &mut self.settings;
         if s.in_rows {
@@ -474,6 +532,24 @@ impl App {
                 self.acal_disconnect();
                 None
             }
+            SetKey::ExtAdd => {
+                self.ext_connect();
+                None
+            }
+            SetKey::ExtAccount(_) => {
+                self.ext_touch();
+                self.flash("reading your calendars…");
+                None
+            }
+            SetKey::ExtCalendar(a, c) => {
+                self.ext_toggle_calendar(a, c);
+                None
+            }
+            SetKey::ExtDisconnect(a) => {
+                self.ext_disconnect(a);
+                self.settings.row = self.settings.row.saturating_sub(1);
+                None
+            }
             SetKey::Icons => {
                 self.prefs.nerd_icons = !self.prefs.nerd_icons;
                 None
@@ -547,5 +623,58 @@ mod tests {
             .unwrap_or(0);
         app.settings_activate();
         assert_eq!(app.prefs.hints, !hints);
+    }
+}
+
+#[cfg(test)]
+mod ext_tests {
+    use super::*;
+    use crate::app::test_support::build_app;
+    use crate::extcal::accounts::ExtAccount;
+    use crate::extcal::sync::CalendarInfo;
+
+    #[test]
+    fn each_account_shows_its_calendars_and_a_way_out() {
+        let mut app = build_app("a\n");
+        let mut a = ExtAccount::new("me@work.com");
+        a.refresh_calendars(&[
+            CalendarInfo {
+                id: "me".into(),
+                name: "Me".into(),
+                primary: true,
+                color: None,
+            },
+            CalendarInfo {
+                id: "team".into(),
+                name: "Team".into(),
+                primary: false,
+                color: None,
+            },
+        ]);
+        app.ext_state.accounts.push(a);
+        let rows = app.settings_rows(0);
+        let keys: Vec<_> = rows
+            .iter()
+            .filter(|r| r.card.starts_with("Other calendars"))
+            .map(|r| r.key)
+            .collect();
+        assert_eq!(
+            keys,
+            [
+                Some(SetKey::ExtAccount(0)),
+                Some(SetKey::ExtCalendar(0, 0)),
+                Some(SetKey::ExtCalendar(0, 1)),
+                None,
+                Some(SetKey::ExtDisconnect(0)),
+                Some(SetKey::ExtAdd),
+            ]
+        );
+        let me = rows
+            .iter()
+            .find(|r| r.key == Some(SetKey::ExtCalendar(0, 0)))
+            .unwrap();
+        assert_eq!(me.label, "  Me");
+        assert!(me.value.contains("shown"));
+        assert!(app.ext_label(0).contains("1 of 2 shown"));
     }
 }

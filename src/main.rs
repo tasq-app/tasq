@@ -144,6 +144,7 @@ fn main() -> Result<()> {
     // A kept Google Calendar connection comes back on, and syncs.
     if std::env::var_os("TASQ_NO_GOOGLE").is_none() {
         app_state.gcal_resume();
+        app_state.ext_resume();
     }
     if std::env::var_os("TASQ_NO_APPLE").is_none() {
         app_state.acal_resume();
@@ -263,6 +264,9 @@ fn run(
             dirty = true;
         }
         if app.acal_poll() {
+            dirty = true;
+        }
+        if app.ext_poll() {
             dirty = true;
         }
         if app.sync_poll() {
@@ -553,6 +557,10 @@ fn next_timeout(app: &App) -> Duration {
         (a, b) => a.or(b),
     };
     let earliest = match (earliest, app.gcal_deadline()) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (a, b) => a.or(b),
+    };
+    let earliest = match (earliest, app.ext_deadline()) {
         (Some(a), Some(b)) => Some(a.min(b)),
         (a, b) => a.or(b),
     };
