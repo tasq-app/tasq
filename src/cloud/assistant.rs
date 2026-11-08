@@ -222,6 +222,14 @@ pub fn respond(relay: &Relay, req: &Incoming) -> Option<Outgoing> {
         }
         ("POST", "/mcp") => mcp(relay, req, &base),
         ("GET" | "DELETE", "/mcp") => json_out(405, json!({ "error": "POST only" })),
+        // A home page, so favicon lookups on the domain find the logo.
+        ("GET", "/") => html_out(
+            200,
+            page_message(
+                "tasq",
+                "This is a tasq sync server. Add its /mcp address to Claude as a connector to use your tasks there.",
+            ),
+        ),
         ("GET", "/icon.svg") => asset("image/svg+xml", ICON_SVG.as_bytes()),
         ("GET", "/icon.png") => asset("image/png", ICON_PNG),
         ("GET", "/apple-touch-icon.png") => asset("image/png", APPLE_ICON_PNG),
@@ -1173,7 +1181,9 @@ mod tests {
         ] {
             let icon = relay.respond(&req("GET", path, None, ""));
             assert_eq!(icon.code, 200, "{path}");
-            assert!(icon.content_type.starts_with("image/"), "{path}");
+            if path != "/" {
+                assert!(icon.content_type.starts_with("image/"), "{path}");
+            }
         }
     }
 
