@@ -163,6 +163,54 @@ impl Keys {
     }
 }
 
+/// Seal `secret` under `token` (a random 256-bit token handed to an
+/// assistant): the server keeps only this and the token's hash, so what it
+/// stores can't be read without the token the assistant shows.
+pub fn wrap(secret: &str, token: &str) -> Result<String> {
+    let key = sha256(&[b"tasq wrap v1\0", token.as_bytes()]);
+    let mut nonce = [0u8; 24];
+    getrandom::getrandom(&mut nonce).map_err(|e| anyhow!("no randomness: {e}"))?;
+    let sealed = XChaCha20Poly1305::new((&key).into())
+        .encrypt(XNonce::from_slice(&nonce), secret.as_bytes())
+        .map_err(|_| anyhow!("encryption failed"))?;
+    let mut out = nonce.to_vec();
+    out.extend_from_slice(&sealed);
+    Ok(http::b64url(&out))
+}
+
+/// Open what [`wrap`] sealed under `token`.
+pub fn unwrap(wrapped: &str, token: &str) -> Option<String> {
+    let key = sha256(&[b"tasq wrap v1\0", token.as_bytes()]);
+    let bytes = http::b64url_decode(wrapped)?;
+    if bytes.len() < 24 + 16 {
+        return None;
+    }
+    let (nonce, sealed) = bytes.split_at(24);
+    let plain = XChaCha20Poly1305::new((&key).into())
+        .decrypt(XNonce::from_slice(nonce), sealed)
+        .ok()?;
+    String::from_utf8(plain).ok()
+}
+
+/// What the server keeps of a token: its SHA-256, hex.
+pub fn token_hash(token: &str) -> String {
+    hex(&sha256(&[b"tasq token v1\0", token.as_bytes()]))
+}
+
+/// A fresh random token: 32 bytes, hex.
+pub fn random_token() -> Result<String> {
+    let mut b = [0u8; 32];
+    getrandom::getrandom(&mut b).map_err(|e| anyhow!("no randomness: {e}"))?;
+    Ok(hex(&b))
+}
+
+impl Keys {
+    /// Whether these keys sign in to an account stored with `auth_hash`.
+    pub fn matches(&self, stored_hash: &str) -> bool {
+        auth_hash(&hex(&self.auth)) == stored_hash
+    }
+}
+
 /// What the server keeps of an auth key: its SHA-256, hex.
 pub fn auth_hash(auth_hex: &str) -> String {
     hex(&sha256(&[b"tasq auth hash v1\0", auth_hex.as_bytes()]))

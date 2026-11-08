@@ -4,6 +4,7 @@
 //! the others' ([`run::sync_once`]). What changed and how changes merge is
 //! [`crate::core::sync`].
 
+pub mod assistant;
 pub mod cli;
 pub mod client;
 pub mod keys;
