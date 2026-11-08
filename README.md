@@ -1086,6 +1086,34 @@ can't be read.
 The server is `tasq-relay`, in this repository: run your own with the
 Docker image in [`deploy/relay`](deploy/relay/README.md).
 
+## Claude, from your phone (beta)
+
+Ask Claude what you have now, what's on this week or when you're free,
+and have it add, change, complete or delete tasks, subtasks and notes,
+from claude.ai or the Claude app on your phone. tasq's sync server is
+also a remote [MCP](https://modelcontextprotocol.io) server.
+
+1. Sign in to sync on your computer (above).
+2. Settings (`,`) → **Sync** → **Claude**, Enter: the link is copied.
+3. In Claude: Settings → **Connectors** → **Add custom connector**, paste
+   it, and sign in with your tasq email and password on the page that
+   opens. Choose whether Claude may only read, or read and change.
+
+Once added on claude.ai it's in the phone app too. What Claude can do:
+`now`, `agenda`, `late`, `inbox`, `list_tasks`, `search` (tasks and
+notes), `get_task` (notes, subtasks, next repeats, streak), `free_time`,
+`routines`, `list_spaces`, `list_tags`, `list_notes`, `read_note`,
+`preview_task`; and, if allowed, `add_task` (your own words, read like
+the add box: "dentista el viernes a las 6 en salud"), `update_task` and
+`delete_task` (a whole series or just one occurrence), `complete_task`,
+`reopen_task`, `add_subtasks`, `set_subtask`, `remove_subtask`,
+`write_task_note`, `create_note`, `update_note`, `delete_note`,
+`create_space`, `update_space`.
+
+While it's connected the server reads your tasks each time Claude asks
+(see [`PRIVACY.md`](PRIVACY.md)); Settings → Sync → Claude shows it's
+connected, and Enter there disconnects it.
+
 ## Google Calendar
 
 tasq can keep your dated tasks in Google Calendar, each in its space's

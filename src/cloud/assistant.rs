@@ -142,15 +142,13 @@ pub fn parse_form(s: &str) -> Vec<(String, String)> {
         while i < bytes.len() {
             match bytes[i] {
                 b'+' => out.push(b' '),
-                b'%' if i + 2 < bytes.len() + 0 && i + 2 <= bytes.len() - 1 => {
-                    match u8::from_str_radix(&s[i + 1..i + 3], 16) {
-                        Ok(b) => {
-                            out.push(b);
-                            i += 2;
-                        }
-                        Err(_) => out.push(b'%'),
+                b'%' if i + 2 < bytes.len() => match u8::from_str_radix(&s[i + 1..i + 3], 16) {
+                    Ok(b) => {
+                        out.push(b);
+                        i += 2;
                     }
-                }
+                    Err(_) => out.push(b'%'),
+                },
                 b => out.push(b),
             }
             i += 1;
@@ -167,9 +165,7 @@ pub fn parse_form(s: &str) -> Vec<(String, String)> {
 }
 
 fn field<'a>(form: &'a [(String, String)], key: &str) -> Option<&'a str> {
-    form.iter()
-        .find(|(k, _)| k == key)
-        .map(|(_, v)| v.as_str())
+    form.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str())
 }
 
 fn esc_html(s: &str) -> String {
@@ -337,13 +333,17 @@ fn auth_request(relay: &Relay, form: &[(String, String)]) -> Result<AuthRequest,
         ));
     };
     let redirect_uri = field(form, "redirect_uri").unwrap_or_default().to_string();
-    if !client.redirects.iter().any(|u| *u == redirect_uri) {
-        return Err(bad("The assistant asked to come back to an address it didn't register."));
+    if !client.redirects.contains(&redirect_uri) {
+        return Err(bad(
+            "The assistant asked to come back to an address it didn't register.",
+        ));
     }
     if field(form, "response_type") != Some("code") {
         return Err(bad("Only the code flow is supported."));
     }
-    let challenge = field(form, "code_challenge").unwrap_or_default().to_string();
+    let challenge = field(form, "code_challenge")
+        .unwrap_or_default()
+        .to_string();
     if challenge.len() < 43 || field(form, "code_challenge_method") != Some("S256") {
         return Err(bad("The assistant must use PKCE (S256)."));
     }
@@ -402,7 +402,11 @@ fn page(title: &str, inner: &str) -> String {
 fn page_message(title: &str, msg: &str) -> String {
     page(
         title,
-        &format!("<h1>{}</h1><p class=\"sub\">{}</p>", esc_html(title), esc_html(msg)),
+        &format!(
+            "<h1>{}</h1><p class=\"sub\">{}</p>",
+            esc_html(title),
+            esc_html(msg)
+        ),
     )
 }
 
@@ -421,11 +425,20 @@ fn authorize_page(relay: &Relay, form: &[(String, String)], error: Option<&str>)
         ("scope", ar.scope.as_str()),
     ]
     .iter()
-    .map(|(k, v)| format!("<input type=\"hidden\" name=\"{k}\" value=\"{}\">", esc_html(v)))
+    .map(|(k, v)| {
+        format!(
+            "<input type=\"hidden\" name=\"{k}\" value=\"{}\">",
+            esc_html(v)
+        )
+    })
     .collect();
     let email = field(form, "email").unwrap_or_default();
     let write = field(form, "access").map_or(ar.scope == WRITE, |a| a == "write");
-    let (rc, wc) = if write { ("", " checked") } else { (" checked", "") };
+    let (rc, wc) = if write {
+        ("", " checked")
+    } else {
+        (" checked", "")
+    };
     let err = error
         .map(|e| format!("<p class=\"error\">{}</p>", esc_html(e)))
         .unwrap_or_default();
@@ -443,7 +456,7 @@ fn authorize_page(relay: &Relay, form: &[(String, String)], error: Option<&str>)
 <label class="choice"><input type="radio" name="access" value="read"{rc}>
 <span>See my tasks and calendar<small>What's on today, what's next, search.</small></span></label>
 <label class="choice"><input type="radio" name="access" value="write"{wc}>
-<span>See them, and add or change tasks<small>Add, complete and reschedule. It never deletes.</small></span></label>
+<span>See them, and add or change things<small>Tasks, subtasks, notes and spaces. What it deletes waits in the trash for 30 days.</small></span></label>
 <p class="note">While {name} is connected, tasq's server reads your tasks each time it asks, to answer it. The rest of the time your data stays end-to-end encrypted. Disconnect it any time in tasq → Settings → Sync.</p>
 {err}
 <button type="submit">Connect</button>
@@ -451,7 +464,10 @@ fn authorize_page(relay: &Relay, form: &[(String, String)], error: Option<&str>)
 <script>try{{document.getElementById('tz').value=Intl.DateTimeFormat().resolvedOptions().timeZone||''}}catch(e){{}}</script>"#,
         email = esc_html(email),
     );
-    html_out(if error.is_some() { 400 } else { 200 }, page("Connect to tasq", &inner))
+    html_out(
+        if error.is_some() { 400 } else { 200 },
+        page("Connect to tasq", &inner),
+    )
 }
 
 fn authorize_submit(relay: &Relay, form: &[(String, String)]) -> Outgoing {
@@ -479,7 +495,9 @@ fn authorize_submit(relay: &Relay, form: &[(String, String)]) -> Outgoing {
             return authorize_page(
                 relay,
                 form,
-                Some("There's no tasq account for that email on this server. Sign in from tasq on your computer first (Settings → Sync)."),
+                Some(
+                    "There's no tasq account for that email on this server. Sign in from tasq on your computer first (Settings → Sync).",
+                ),
             );
         }
         Some(h) if !keys.matches(&h) => {
@@ -503,10 +521,7 @@ fn authorize_submit(relay: &Relay, form: &[(String, String)]) -> Outgoing {
         return html_out(500, page_message("Something went wrong", "Try again."));
     };
     let saved = with_conn(relay, |c| {
-        c.execute(
-            "DELETE FROM oauth_codes WHERE expires < ?1",
-            [unix()],
-        )?;
+        c.execute("DELETE FROM oauth_codes WHERE expires < ?1", [unix()])?;
         c.execute(
             "INSERT INTO oauth_codes (hash, client, redirect, challenge, scope, tz, account, wrapped, expires)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
@@ -526,7 +541,11 @@ fn authorize_submit(relay: &Relay, form: &[(String, String)]) -> Outgoing {
     if saved.is_none() {
         return html_out(500, page_message("Something went wrong", "Try again."));
     }
-    let sep = if ar.redirect_uri.contains('?') { '&' } else { '?' };
+    let sep = if ar.redirect_uri.contains('?') {
+        '&'
+    } else {
+        '?'
+    };
     let mut to = format!("{}{sep}code={}", ar.redirect_uri, http::percent(&code));
     if !ar.state.is_empty() {
         to.push_str(&format!("&state={}", http::percent(&ar.state)));
@@ -564,7 +583,8 @@ fn token_answer(t: &Issued, scope: &str) -> Outgoing {
             "scope": scope,
         }),
     );
-    out.headers.push(("Cache-Control".into(), "no-store".into()));
+    out.headers
+        .push(("Cache-Control".into(), "no-store".into()));
     out
 }
 
@@ -572,7 +592,11 @@ fn token(relay: &Relay, form: &[(String, String)]) -> Outgoing {
     match field(form, "grant_type") {
         Some("authorization_code") => token_from_code(relay, form),
         Some("refresh_token") => token_from_refresh(relay, form),
-        _ => oauth_err(400, "unsupported_grant_type", "authorization_code or refresh_token"),
+        _ => oauth_err(
+            400,
+            "unsupported_grant_type",
+            "authorization_code or refresh_token",
+        ),
     }
 }
 
@@ -668,7 +692,11 @@ fn token_from_refresh(relay: &Relay, form: &[(String, String)]) -> Outgoing {
     })
     .flatten();
     let Some((id, client_id, scope, wrapped)) = row else {
-        return oauth_err(400, "invalid_grant", "unknown refresh token (disconnected?)");
+        return oauth_err(
+            400,
+            "invalid_grant",
+            "unknown refresh token (disconnected?)",
+        );
     };
     if field(form, "client_id").is_some_and(|c| c != client_id) {
         return oauth_err(400, "invalid_grant", "client mismatch");
@@ -765,10 +793,7 @@ fn mcp(relay: &Relay, req: &Incoming, base: &str) -> Outgoing {
     };
     match msg {
         Value::Array(batch) => {
-            let answers: Vec<Value> = batch
-                .iter()
-                .filter_map(|m| rpc(relay, &who, m))
-                .collect();
+            let answers: Vec<Value> = batch.iter().filter_map(|m| rpc(relay, &who, m)).collect();
             if answers.is_empty() {
                 accepted()
             } else {
@@ -823,7 +848,9 @@ fn rpc(relay: &Relay, who: &Caller, m: &Value) -> Option<Value> {
         "tools/call" => {
             let name = params["name"].as_str().unwrap_or_default();
             let args = params.get("arguments").cloned().unwrap_or(json!({}));
-            let result = match super::tools::call_tool(relay, &who.keys, who.tz, who.write, name, &args) {
+            let result = match super::tools::call_tool(
+                relay, &who.keys, who.tz, who.write, name, &args,
+            ) {
                 Ok(v) => json!({
                     "content": [{ "type": "text", "text": serde_json::to_string_pretty(&v).unwrap_or_default() }],
                     "structuredContent": v,
@@ -1024,8 +1051,14 @@ mod tests {
         ));
         assert_eq!(fresh.code, 200);
         let old = format!("Bearer {}", v["access_token"].as_str().unwrap());
-        assert_eq!(relay.respond(&req("POST", "/mcp", Some(&old), "{}")).code, 401);
-        body_json(&fresh)["access_token"].as_str().unwrap().to_string()
+        assert_eq!(
+            relay.respond(&req("POST", "/mcp", Some(&old), "{}")).code,
+            401
+        );
+        body_json(&fresh)["access_token"]
+            .as_str()
+            .unwrap()
+            .to_string()
     }
 
     fn call(relay: &Relay, token: &str, method: &str, params: Value) -> Value {
@@ -1045,9 +1078,19 @@ mod tests {
         let relay = Relay::in_memory().unwrap();
         let out = relay.respond(&req("POST", "/mcp", None, "{}"));
         assert_eq!(out.code, 401);
-        let h = &out.headers.iter().find(|(k, _)| k == "WWW-Authenticate").unwrap().1;
+        let h = &out
+            .headers
+            .iter()
+            .find(|(k, _)| k == "WWW-Authenticate")
+            .unwrap()
+            .1;
         assert!(h.contains("https://tasq.example/.well-known/oauth-protected-resource"));
-        let meta = relay.respond(&req("GET", "/.well-known/oauth-authorization-server", None, ""));
+        let meta = relay.respond(&req(
+            "GET",
+            "/.well-known/oauth-authorization-server",
+            None,
+            "",
+        ));
         assert_eq!(
             body_json(&meta)["token_endpoint"],
             "https://tasq.example/oauth/token"
@@ -1067,7 +1110,12 @@ mod tests {
         let (relay, keys) = setup();
         let token = connect(&relay, "write");
 
-        let init = call(&relay, &token, "initialize", json!({ "protocolVersion": "2025-06-18" }));
+        let init = call(
+            &relay,
+            &token,
+            "initialize",
+            json!({ "protocolVersion": "2025-06-18" }),
+        );
         assert_eq!(init["result"]["protocolVersion"], "2025-06-18");
         let tools = call(&relay, &token, "tools/list", json!({}));
         let names: Vec<&str> = tools["result"]["tools"]
@@ -1078,7 +1126,12 @@ mod tests {
             .collect();
         assert!(names.contains(&"add_task") && names.contains(&"now"));
 
-        let now = call(&relay, &token, "tools/call", json!({ "name": "now", "arguments": {} }));
+        let now = call(
+            &relay,
+            &token,
+            "tools/call",
+            json!({ "name": "now", "arguments": {} }),
+        );
         let v = &now["result"]["structuredContent"];
         assert_eq!(v["timezone"], "Europe/Madrid");
         assert_eq!(v["current"][0]["title"], "Standup");
@@ -1090,9 +1143,23 @@ mod tests {
             "tools/call",
             json!({ "name": "search", "arguments": { "query": "CAFE" } }),
         );
-        assert_eq!(found["result"]["structuredContent"]["tasks"].as_array().unwrap().len(), 1);
-        let inbox = call(&relay, &token, "tools/call", json!({ "name": "inbox", "arguments": {} }));
-        assert_eq!(inbox["result"]["structuredContent"]["tasks"][0]["title"], "Buy café beans");
+        assert_eq!(
+            found["result"]["structuredContent"]["tasks"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        let inbox = call(
+            &relay,
+            &token,
+            "tools/call",
+            json!({ "name": "inbox", "arguments": {} }),
+        );
+        assert_eq!(
+            inbox["result"]["structuredContent"]["tasks"][0]["title"],
+            "Buy café beans"
+        );
 
         let added = call(
             &relay,
@@ -1112,7 +1179,10 @@ mod tests {
             "tools/call",
             json!({ "name": "update_task", "arguments": { "id": id, "time": "19:30" } }),
         );
-        assert_eq!(moved["result"]["structuredContent"]["updated"]["time"], "19:30");
+        assert_eq!(
+            moved["result"]["structuredContent"]["updated"]["time"],
+            "19:30"
+        );
 
         // The computer gets it on its next sync.
         let mut laptop = Db::in_memory();
@@ -1133,10 +1203,20 @@ mod tests {
         let bearer = format!("Bearer {}", keys.bearer());
         let list = relay.respond(&req("GET", "/v1/assistants", Some(&bearer), ""));
         assert_eq!(body_json(&list)["assistants"][0]["name"], "Claude");
-        let out = relay.respond(&req("POST", "/v1/assistants/revoke", Some(&bearer), r#"{"all":true}"#));
+        let out = relay.respond(&req(
+            "POST",
+            "/v1/assistants/revoke",
+            Some(&bearer),
+            r#"{"all":true}"#,
+        ));
         assert_eq!(body_json(&out)["revoked"], 1);
         let body = json!({ "jsonrpc": "2.0", "id": 1, "method": "ping" }).to_string();
-        let gone = relay.respond(&req("POST", "/mcp", Some(&format!("Bearer {token}")), &body));
+        let gone = relay.respond(&req(
+            "POST",
+            "/mcp",
+            Some(&format!("Bearer {token}")),
+            &body,
+        ));
         assert_eq!(gone.code, 401);
     }
 
@@ -1145,7 +1225,13 @@ mod tests {
         let (relay, _) = setup();
         let token = connect(&relay, "read");
         let tools = call(&relay, &token, "tools/list", json!({}));
-        assert!(tools["result"]["tools"].as_array().unwrap().iter().all(|t| t["annotations"]["readOnlyHint"] == true));
+        assert!(
+            tools["result"]["tools"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|t| t["annotations"]["readOnlyHint"] == true)
+        );
         let added = call(
             &relay,
             &token,
@@ -1167,7 +1253,12 @@ mod tests {
     }
 
     fn tool_call(relay: &Relay, token: &str, name: &str, args: Value) -> Value {
-        let v = call(relay, token, "tools/call", json!({ "name": name, "arguments": args }));
+        let v = call(
+            relay,
+            token,
+            "tools/call",
+            json!({ "name": name, "arguments": args }),
+        );
         assert_eq!(v["result"]["isError"], false, "{name}: {v}");
         v["result"]["structuredContent"].clone()
     }
@@ -1199,14 +1290,34 @@ mod tests {
         assert_eq!(added["added"]["title"], "preparar examen");
         let t = tool_call(&relay, &token, "get_task", json!({ "id": id }));
         assert_eq!(t["subtasks_done"], "0/2", "{t}");
-        assert!(t["notes"][0]["body"].as_str().unwrap().contains("Temas 1 a 4."));
+        assert!(
+            t["notes"][0]["body"]
+                .as_str()
+                .unwrap()
+                .contains("Temas 1 a 4.")
+        );
         let sub = t["subtasks"][0]["subtask"].as_str().unwrap().to_string();
-        let ticked = tool_call(&relay, &token, "set_subtask", json!({ "id": id, "subtask": sub, "done": true }));
+        let ticked = tool_call(
+            &relay,
+            &token,
+            "set_subtask",
+            json!({ "id": id, "subtask": sub, "done": true }),
+        );
         assert_eq!(ticked["subtasks"][0]["done"], true);
-        tool_call(&relay, &token, "add_subtasks", json!({ "id": id, "items": ["tema 3"] }));
+        tool_call(
+            &relay,
+            &token,
+            "add_subtasks",
+            json!({ "id": id, "items": ["tema 3"] }),
+        );
         let t = tool_call(&relay, &token, "get_task", json!({ "id": id }));
         assert_eq!(t["subtasks_done"], "1/3");
-        tool_call(&relay, &token, "write_task_note", json!({ "id": id, "body": "Llevar calculadora.", "mode": "append" }));
+        tool_call(
+            &relay,
+            &token,
+            "write_task_note",
+            json!({ "id": id, "body": "Llevar calculadora.", "mode": "append" }),
+        );
 
         // Edits: title, tags, space by its name.
         let up = tool_call(
@@ -1220,7 +1331,12 @@ mod tests {
         assert_eq!(up["updated"]["priority"], Value::Null);
 
         // A repeat: one occurrence moved, another deleted, the rest stays.
-        let gym = tool_call(&relay, &token, "add_task", json!({ "text": "gym every day at 7am" }));
+        let gym = tool_call(
+            &relay,
+            &token,
+            "add_task",
+            json!({ "text": "gym every day at 7am" }),
+        );
         let gid = gym["added"]["id"].as_str().unwrap().to_string();
         let tomorrow = (today + chrono::Duration::days(1)).to_string();
         let after = (today + chrono::Duration::days(2)).to_string();
@@ -1232,8 +1348,18 @@ mod tests {
         );
         assert_eq!(moved["changed_occurrence"]["time"], "09:00");
         assert_eq!(moved["changed_occurrence"]["repeat"], Value::Null);
-        tool_call(&relay, &token, "delete_task", json!({ "id": gid, "occurrence": after }));
-        let ag = tool_call(&relay, &token, "agenda", json!({ "from": tomorrow, "to": after }));
+        tool_call(
+            &relay,
+            &token,
+            "delete_task",
+            json!({ "id": gid, "occurrence": after }),
+        );
+        let ag = tool_call(
+            &relay,
+            &token,
+            "agenda",
+            json!({ "from": tomorrow, "to": after }),
+        );
 
         let gyms = |day: usize| -> Vec<String> {
             ag["days"][day]["items"]
@@ -1246,7 +1372,12 @@ mod tests {
         };
         assert_eq!(gyms(0), ["09:00"], "{ag}");
         assert!(gyms(1).is_empty(), "{ag}");
-        let free = tool_call(&relay, &token, "free_time", json!({ "date": tomorrow, "from": "08:00", "to": "12:00" }));
+        let free = tool_call(
+            &relay,
+            &token,
+            "free_time",
+            json!({ "date": tomorrow, "from": "08:00", "to": "12:00" }),
+        );
         assert_eq!(free["free"][0]["to"], "09:00", "{free}");
 
         // Complete, reopen, delete.
@@ -1262,9 +1393,19 @@ mod tests {
         tool_call(&relay, &token, "delete_task", json!({ "id": bid }));
 
         // Notes on their own.
-        let made = tool_call(&relay, &token, "create_note", json!({ "title": "Ideas viaje", "body": "- Lisboa" }));
+        let made = tool_call(
+            &relay,
+            &token,
+            "create_note",
+            json!({ "title": "Ideas viaje", "body": "- Lisboa" }),
+        );
         let path = made["created"].as_str().unwrap().to_string();
-        tool_call(&relay, &token, "update_note", json!({ "path": path, "body": "- Oporto", "mode": "append" }));
+        tool_call(
+            &relay,
+            &token,
+            "update_note",
+            json!({ "path": path, "body": "- Oporto", "mode": "append" }),
+        );
         let read = tool_call(&relay, &token, "read_note", json!({ "path": path }));
         assert_eq!(read["body"], "# Ideas viaje\n\n- Lisboa\n- Oporto\n");
         let found = tool_call(&relay, &token, "search", json!({ "query": "oporto" }));
@@ -1273,19 +1414,47 @@ mod tests {
         assert!(notes["notes"].as_array().unwrap().len() >= 3);
 
         // Spaces.
-        tool_call(&relay, &token, "update_space", json!({ "space": "exams", "rename_to": "Uni/Finals", "color": "#8aadf4" }));
+        tool_call(
+            &relay,
+            &token,
+            "update_space",
+            json!({ "space": "exams", "rename_to": "Uni/Finals", "color": "#8aadf4" }),
+        );
         let sp = tool_call(&relay, &token, "list_spaces", json!({}));
-        assert!(sp["spaces"].as_array().unwrap().iter().any(|s| s["path"] == "Uni/Finals" && s["color"] == "#8aadf4"), "{sp}");
+        assert!(
+            sp["spaces"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|s| s["path"] == "Uni/Finals" && s["color"] == "#8aadf4"),
+            "{sp}"
+        );
 
         // A computer gets all of it.
         let mut laptop = Db::in_memory();
-        let mut remote = Local { relay: &relay, keys: keys.clone() };
+        let mut remote = Local {
+            relay: &relay,
+            keys: keys.clone(),
+        };
         sync_once(&mut laptop, &mut remote, &keys, &today.to_string()).unwrap();
         let live = laptop.load(List::Live).unwrap();
-        assert!(live.iter().any(|t| t.raw.contains("+Uni/Finals") && title_of(&t.raw) == "estudiar examen"));
+        assert!(
+            live.iter()
+                .any(|t| t.raw.contains("+Uni/Finals") && title_of(&t.raw) == "estudiar examen")
+        );
         assert!(!live.iter().any(|t| t.raw.contains("beans")));
-        let bodies: Vec<String> = laptop.notes().unwrap().into_iter().map(|n| n.body).collect();
-        assert!(bodies.iter().any(|b| b.contains("- [x] tema 1") && b.contains("- [ ] tema 3")), "{bodies:?}");
+        let bodies: Vec<String> = laptop
+            .notes()
+            .unwrap()
+            .into_iter()
+            .map(|n| n.body)
+            .collect();
+        assert!(
+            bodies
+                .iter()
+                .any(|b| b.contains("- [x] tema 1") && b.contains("- [ ] tema 3")),
+            "{bodies:?}"
+        );
         assert!(bodies.iter().any(|b| b.contains("Llevar calculadora.")));
         assert!(bodies.iter().any(|b| b.contains("Oporto")));
         let _ = tool_call(&relay, &token, "delete_note", json!({ "path": path }));

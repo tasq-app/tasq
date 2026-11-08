@@ -1178,7 +1178,9 @@ impl Db {
     /// The note at `path`, if there is one.
     pub fn note(&self, path: &str) -> std::io::Result<Option<String>> {
         self.conn
-            .query_row("SELECT body FROM notes WHERE path = ?1", [path], |r| r.get(0))
+            .query_row("SELECT body FROM notes WHERE path = ?1", [path], |r| {
+                r.get(0)
+            })
             .optional()
             .map_err(io_err)
     }

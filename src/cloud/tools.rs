@@ -25,7 +25,9 @@ use crate::core::{
     AddOutcome, CompleteOutcome, DeleteOutcome, EditOutcome, RenameOutcome, SpaceSettingOutcome,
     Store, series,
 };
-use crate::note::{NOTES_TASKS_SUBDIR, NOTES_UNLINKED_SUBDIR, generate_notes_id, notes_id_from_raw};
+use crate::note::{
+    NOTES_TASKS_SUBDIR, NOTES_UNLINKED_SUBDIR, generate_notes_id, notes_id_from_raw,
+};
 use crate::todo::{self, Task};
 
 /// The widest agenda one call returns.
@@ -85,7 +87,11 @@ impl<'a> Account<'a> {
             relay: self.relay,
             keys: keys.clone(),
         };
-        let db = self.store.db.as_mut().ok_or_else(|| anyhow!("no database"))?;
+        let db = self
+            .store
+            .db
+            .as_mut()
+            .ok_or_else(|| anyhow!("no database"))?;
         sync_once(db, &mut remote, &keys, &today)?;
         Ok(())
     }
@@ -109,7 +115,11 @@ impl<'a> Account<'a> {
         self.tasks()
             .iter()
             .position(|t| t.id == id.trim())
-            .ok_or_else(|| anyhow!("no task with id {id} (it may be done and archived, or deleted; search again)"))
+            .ok_or_else(|| {
+                anyhow!(
+                    "no task with id {id} (it may be done and archived, or deleted; search again)"
+                )
+            })
     }
 
     fn space_paths(&self) -> Vec<String> {
@@ -378,13 +388,13 @@ fn resolve_space(v: &str, known: &[String]) -> Result<String> {
     if let Some(p) = known.iter().find(|p| crate::nl_es::fold(p) == f) {
         return Ok(p.clone());
     }
-    if let Some(p) = known.iter().find(|p| crate::nl_es::fold(spaces::leaf(p)) == f) {
+    if let Some(p) = known
+        .iter()
+        .find(|p| crate::nl_es::fold(spaces::leaf(p)) == f)
+    {
         return Ok(p.clone());
     }
-    let path: Vec<String> = v
-        .split('/')
-        .map(tag_name)
-        .collect::<Result<_>>()?;
+    let path: Vec<String> = v.split('/').map(tag_name).collect::<Result<_>>()?;
     Ok(path.join("/"))
 }
 
@@ -414,9 +424,15 @@ fn apply(raw: &str, args: &Value, today: NaiveDate, known: &[String]) -> Result<
         let name = tag_name(&tag)?;
         raw = without_tokens(&raw, |t| !t.eq_ignore_ascii_case(&format!("@{name}")));
     }
-    for tag in strings(args, "tags").into_iter().chain(strings(args, "add_tags")) {
+    for tag in strings(args, "tags")
+        .into_iter()
+        .chain(strings(args, "add_tags"))
+    {
         let name = tag_name(&tag)?;
-        if !raw.split_whitespace().any(|t| t.eq_ignore_ascii_case(&format!("@{name}"))) {
+        if !raw
+            .split_whitespace()
+            .any(|t| t.eq_ignore_ascii_case(&format!("@{name}")))
+        {
             raw = format!("{raw} @{name}");
         }
     }
@@ -444,12 +460,20 @@ fn apply(raw: &str, args: &Value, today: NaiveDate, known: &[String]) -> Result<
             Value::String(s) if s.trim().is_empty() => None,
             Value::String(s) => Some(
                 crate::duration::parse_minutes(s.trim())
-                    .or_else(|| crate::nl::detect(&format!("x for {s}"), today, &[]).parsed.duration)
-                    .ok_or_else(|| anyhow!("couldn't read {s:?} as a duration (e.g. 45m, 1h30m)"))?,
+                    .or_else(|| {
+                        crate::nl::detect(&format!("x for {s}"), today, &[])
+                            .parsed
+                            .duration
+                    })
+                    .ok_or_else(|| {
+                        anyhow!("couldn't read {s:?} as a duration (e.g. 45m, 1h30m)")
+                    })?,
             ),
             _ => None,
         };
-        let v = minutes.filter(|m| *m > 0).map(crate::duration::format_minutes);
+        let v = minutes
+            .filter(|m| *m > 0)
+            .map(crate::duration::format_minutes);
         raw = series::set_kv(&raw, "dur", v.as_deref());
     }
     if let Some(v) = s(args, "reminders") {
@@ -474,9 +498,11 @@ fn apply(raw: &str, args: &Value, today: NaiveDate, known: &[String]) -> Result<
         }
         if !v.trim().is_empty() {
             let p = crate::nl::detect(&format!("x {v}"), today, &[]).parsed;
-            let rec = p
-                .rec
-                .ok_or_else(|| anyhow!("couldn't read {v:?} as a repeat (e.g. \"every monday\", \"cada 2 semanas\")"))?;
+            let rec = p.rec.ok_or_else(|| {
+                anyhow!(
+                    "couldn't read {v:?} as a repeat (e.g. \"every monday\", \"cada 2 semanas\")"
+                )
+            })?;
             raw = series::set_kv(&raw, "rec", Some(&rec));
             if let Some(u) = p.until {
                 raw = series::set_kv(&raw, todo::UNTIL_KEY, Some(&u.to_string()));
@@ -503,7 +529,9 @@ fn apply(raw: &str, args: &Value, today: NaiveDate, known: &[String]) -> Result<
 fn with_first_day(raw: &str, today: NaiveDate) -> String {
     let body = todo::body_after_priority(raw);
     match todo::find_kv(body, "rec") {
-        Some(rec) if todo::find_kv(body, "plan").is_none() && todo::find_kv(body, "due").is_none() => {
+        Some(rec)
+            if todo::find_kv(body, "plan").is_none() && todo::find_kv(body, "due").is_none() =>
+        {
             let first = crate::nl::first_rec_day(&rec, today).unwrap_or(today);
             series::set_kv(raw, "plan", Some(&first.to_string()))
         }
@@ -560,7 +588,14 @@ fn file_name(name: &str) -> Result<String> {
 
 // ---------------------------------------------------------------- the list
 
-fn tool(name: &str, title: &str, description: &str, props: Value, required: &[&str], kind: Kind) -> Value {
+fn tool(
+    name: &str,
+    title: &str,
+    description: &str,
+    props: Value,
+    required: &[&str],
+    kind: Kind,
+) -> Value {
     json!({
         "name": name,
         "title": title,
@@ -604,8 +639,11 @@ pub(super) fn tool_list(write: bool) -> Vec<Value> {
     let st = |d: &str| json!({ "type": "string", "description": d });
     let date = st("YYYY-MM-DD, or words like \"friday\", \"mañana\"");
     let id = st("the task's id, from an earlier answer");
-    let occurrence = st("for a repeating task: the date (YYYY-MM-DD) of the one occurrence to act on; leave out for the whole task");
-    let list = |d: &str| json!({ "type": "array", "items": { "type": "string" }, "description": d });
+    let occurrence = st(
+        "for a repeating task: the date (YYYY-MM-DD) of the one occurrence to act on; leave out for the whole task",
+    );
+    let list =
+        |d: &str| json!({ "type": "array", "items": { "type": "string" }, "description": d });
     let fields = |extra: Value| {
         let mut p = json!({
             "title": st("new title (words only)"),
@@ -630,16 +668,41 @@ pub(super) fn tool_list(write: bool) -> Vec<Value> {
         p
     };
     let mut tools = vec![
-        tool("now", "What's on now",
+        tool(
+            "now",
+            "What's on now",
             "The user's local date and time; what they're doing right now; what's next; the rest of today (timed and all-day); what's late; how many of today's tasks are done.",
-            json!({}), &[], Kind::Read),
-        tool("agenda", "Agenda",
+            json!({}),
+            &[],
+            Kind::Read,
+        ),
+        tool(
+            "agenda",
+            "Agenda",
             "The calendar from `from` to `to` (inclusive, at most 62 days; both default to today), by day: timed blocks with start and end, all-day tasks, events lasting several days, deadline markers and upcoming repeats. Late open tasks show on today.",
             json!({ "from": date, "to": date, "space": st("only this space (and its sub-spaces)"), "include_done": { "type": "boolean" } }),
-            &[], Kind::Read),
-        tool("late", "Late tasks", "Open tasks whose day or deadline has passed.", json!({}), &[], Kind::Read),
-        tool("inbox", "Inbox", "Open tasks with no day and no deadline yet: what's left to put in the calendar.", json!({}), &[], Kind::Read),
-        tool("list_tasks", "List tasks",
+            &[],
+            Kind::Read,
+        ),
+        tool(
+            "late",
+            "Late tasks",
+            "Open tasks whose day or deadline has passed.",
+            json!({}),
+            &[],
+            Kind::Read,
+        ),
+        tool(
+            "inbox",
+            "Inbox",
+            "Open tasks with no day and no deadline yet: what's left to put in the calendar.",
+            json!({}),
+            &[],
+            Kind::Read,
+        ),
+        tool(
+            "list_tasks",
+            "List tasks",
             "Tasks filtered by space, tag, priority, starred, status and whether they have a day.",
             json!({
                 "space": st("space name or path (includes sub-spaces)"),
@@ -650,33 +713,81 @@ pub(super) fn tool_list(write: bool) -> Vec<Value> {
                 "dated": { "type": "string", "enum": ["any", "yes", "no"], "description": "default any" },
                 "limit": { "type": "integer", "description": "default 100" },
             }),
-            &[], Kind::Read),
-        tool("search", "Search",
+            &[],
+            Kind::Read,
+        ),
+        tool(
+            "search",
+            "Search",
             "Find tasks (title, space, tags) and notes (title and text, with the matching line) containing all the words; accents and case don't matter.",
             json!({ "query": st("words to find"), "include_done": { "type": "boolean" } }),
-            &["query"], Kind::Read),
-        tool("get_task", "Get a task",
+            &["query"],
+            Kind::Read,
+        ),
+        tool(
+            "get_task",
+            "Get a task",
             "Everything about one task: its fields, its notes (Markdown, the main one first), its subtasks (checklist), the next dates it repeats on, its streak if it's a routine, and its todo.txt line.",
-            json!({ "id": id }), &["id"], Kind::Read),
-        tool("free_time", "Free time",
+            json!({ "id": id }),
+            &["id"],
+            Kind::Read,
+        ),
+        tool(
+            "free_time",
+            "Free time",
             "The free gaps in a day between `from` and `to` (default 08:00–22:00) at least `min_minutes` long (default 30), around the timed tasks.",
             json!({ "date": date, "from": st("HH:MM"), "to": st("HH:MM"), "min_minutes": { "type": "integer" } }),
-            &[], Kind::Read),
-        tool("routines", "Routines",
+            &[],
+            Kind::Read,
+        ),
+        tool(
+            "routines",
+            "Routines",
             "The user's repeating tasks (habits), each with its streak (done in a row), how it repeats, its next date and the last seven days.",
-            json!({}), &[], Kind::Read),
-        tool("list_spaces", "Spaces",
+            json!({}),
+            &[],
+            Kind::Read,
+        ),
+        tool(
+            "list_spaces",
+            "Spaces",
             "The spaces (folders like Uni › Exams) as a tree, with open-task counts, colours and whether they're hidden.",
-            json!({}), &[], Kind::Read),
-        tool("list_tags", "Tags", "Every tag in use on open tasks, with how many.", json!({}), &[], Kind::Read),
-        tool("list_notes", "Notes",
+            json!({}),
+            &[],
+            Kind::Read,
+        ),
+        tool(
+            "list_tags",
+            "Tags",
+            "Every tag in use on open tasks, with how many.",
+            json!({}),
+            &[],
+            Kind::Read,
+        ),
+        tool(
+            "list_notes",
+            "Notes",
             "Notes, the one changed last first: path, title, a preview and the task it belongs to (if any). Optionally only those containing `query`.",
             json!({ "query": st("words to find"), "limit": { "type": "integer", "description": "default 30" } }),
-            &[], Kind::Read),
-        tool("read_note", "Read a note", "A note's full Markdown, by its path.", json!({ "path": st("from list_notes or get_task") }), &["path"], Kind::Read),
-        tool("preview_task", "Preview a task",
+            &[],
+            Kind::Read,
+        ),
+        tool(
+            "read_note",
+            "Read a note",
+            "A note's full Markdown, by its path.",
+            json!({ "path": st("from list_notes or get_task") }),
+            &["path"],
+            Kind::Read,
+        ),
+        tool(
+            "preview_task",
+            "Preview a task",
             "How tasq would read some text as a new task (date, time, space, repeat…), without saving anything.",
-            json!({ "text": st("as the user would type it") }), &["text"], Kind::Read),
+            json!({ "text": st("as the user would type it") }),
+            &["text"],
+            Kind::Read,
+        ),
     ];
     if write {
         tools.extend([
@@ -768,7 +879,13 @@ pub(super) fn call_tool(
     let minute = local.hour() * 60 + local.minute();
     let mut a = Account::open(relay, keys, today)?;
     let out = match name {
-        "now" => now(&a, today, minute, &local.format("%Y-%m-%d %H:%M, %A").to_string(), tz),
+        "now" => now(
+            &a,
+            today,
+            minute,
+            &local.format("%Y-%m-%d %H:%M, %A").to_string(),
+            tz,
+        ),
         "agenda" => agenda(&a, args, today, tz),
         "late" => Ok(late(&a, today)),
         "inbox" => Ok(inbox(&a)),
@@ -803,7 +920,13 @@ pub(super) fn call_tool(
     Ok(out)
 }
 
-fn now(a: &Account, today: NaiveDate, minute: u32, now_s: &str, tz: chrono_tz::Tz) -> Result<Value> {
+fn now(
+    a: &Account,
+    today: NaiveDate,
+    minute: u32,
+    now_s: &str,
+    tz: chrono_tz::Tz,
+) -> Result<Value> {
     let tasks = a.tasks();
     let occs = calendar::occurrences(tasks, today, today + Duration::days(1), today);
     let open = |o: &&&Occurrence| !tasks[o.abs].done;
@@ -824,7 +947,11 @@ fn now(a: &Account, today: NaiveDate, minute: u32, now_s: &str, tz: chrono_tz::T
         .iter()
         .filter(|t| t.done && t.done_date.as_deref() == Some(&today.to_string()))
         .count();
-    let open_today = todays.iter().filter(open).filter(|o| !tasks[o.abs].event).count();
+    let open_today = todays
+        .iter()
+        .filter(open)
+        .filter(|o| !tasks[o.abs].event)
+        .count();
     Ok(json!({
         "now": now_s,
         "timezone": tz.name(),
@@ -865,7 +992,9 @@ fn agenda(a: &Account, args: &Value, today: NaiveDate, tz: chrono_tz::Tz) -> Res
             })
             .map(|o| occurrence_json(o, tasks))
             .collect();
-        days.push(json!({ "date": d.to_string(), "weekday": d.format("%A").to_string(), "items": items }));
+        days.push(
+            json!({ "date": d.to_string(), "weekday": d.format("%A").to_string(), "items": items }),
+        );
         d += Duration::days(1);
     }
     Ok(json!({ "today": today.to_string(), "timezone": tz.name(), "days": days }))
@@ -921,7 +1050,11 @@ fn list_tasks(a: &Account, args: &Value) -> Result<Value> {
             "all" => true,
             _ => !t.done,
         })
-        .filter(|t| space.as_ref().is_none_or(|sp| spaces::in_space(&t.projects, sp)))
+        .filter(|t| {
+            space
+                .as_ref()
+                .is_none_or(|sp| spaces::in_space(&t.projects, sp))
+        })
         .filter(|t| {
             tag.as_ref()
                 .is_none_or(|g| t.contexts.iter().any(|c| crate::nl_es::fold(c) == *g))
@@ -1104,7 +1237,7 @@ fn routines(a: &Account, today: NaiveDate) -> Value {
             ))
         })
         .collect();
-    out.sort_by(|x, y| y.0.cmp(&x.0));
+    out.sort_by_key(|x| std::cmp::Reverse(x.0));
     json!({ "routines": out.into_iter().map(|(_, v)| v).collect::<Vec<_>>() })
 }
 
@@ -1289,7 +1422,9 @@ fn reopen_task(a: &mut Account, args: &Value) -> Result<Value> {
         return Ok(json!({ "already_open": task_json(&a.tasks()[abs]) }));
     }
     match a.store.toggle_complete(abs) {
-        CompleteOutcome::Uncompleted { abs } => Ok(json!({ "reopened": task_json(&a.tasks()[abs]) })),
+        CompleteOutcome::Uncompleted { abs } => {
+            Ok(json!({ "reopened": task_json(&a.tasks()[abs]) }))
+        }
         other => Err(anyhow!("couldn't reopen it: {other:?}")),
     }
 }
@@ -1502,7 +1637,9 @@ fn update_space(a: &mut Account, args: &Value) -> Result<Value> {
     if let Some(to) = s(args, "rename_to").filter(|t| !t.trim().is_empty()) {
         let to = resolve_space(to, &[])?;
         match a.store.rename_project(&path, &to) {
-            RenameOutcome::Done { .. } | RenameOutcome::NothingToRename | RenameOutcome::Unchanged => {}
+            RenameOutcome::Done { .. }
+            | RenameOutcome::NothingToRename
+            | RenameOutcome::Unchanged => {}
             other => bail!("couldn't rename it: {other:?}"),
         }
         did.push(format!("renamed to {to}"));
@@ -1512,7 +1649,10 @@ fn update_space(a: &mut Account, args: &Value) -> Result<Value> {
         let color = if c.trim().is_empty() {
             None
         } else {
-            Some(SpaceColor::parse(c.trim()).ok_or_else(|| anyhow!("a colour like #8aadf4, or a palette number"))?)
+            Some(
+                SpaceColor::parse(c.trim())
+                    .ok_or_else(|| anyhow!("a colour like #8aadf4, or a palette number"))?,
+            )
         };
         match a.store.set_space_color(&path, color) {
             SpaceSettingOutcome::Done => did.push("colour set".into()),
@@ -1536,7 +1676,10 @@ mod tests {
     #[test]
     fn titles_change_and_the_markup_stays() {
         assert_eq!(
-            retitle("(A) 2026-11-01 Call mom +Home @phone due:2026-11-09", "Call dad"),
+            retitle(
+                "(A) 2026-11-01 Call mom +Home @phone due:2026-11-09",
+                "Call dad"
+            ),
             "(A) 2026-11-01 Call dad +Home @phone due:2026-11-09"
         );
         assert_eq!(set_priority("(A) Call", Some('C')), "(C) Call");
@@ -1562,9 +1705,18 @@ mod tests {
         assert_eq!(t.projects, ["Uni/Exams"]);
         assert_eq!(t.contexts, ["deep"]);
         assert_eq!(t.planned.as_deref(), Some("2026-11-12"));
-        assert!(raw.contains("at:18:00") && raw.contains("dur:1h30m"), "{raw}");
+        assert!(
+            raw.contains("at:18:00") && raw.contains("dur:1h30m"),
+            "{raw}"
+        );
         assert!(t.rec.is_some() && t.starred);
-        let cleared = apply(&raw, &json!({ "space": "", "time": "", "repeat": "" }), today, &known).unwrap();
+        let cleared = apply(
+            &raw,
+            &json!({ "space": "", "time": "", "repeat": "" }),
+            today,
+            &known,
+        )
+        .unwrap();
         assert!(!cleared.contains('+') && !cleared.contains("at:") && !cleared.contains("rec:"));
         assert!(note_path("../etc/passwd").is_err());
         assert!(note_path("unlinked/a.md").is_ok());
