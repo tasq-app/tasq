@@ -58,6 +58,7 @@ pub enum SetKey {
     ExtAdd,
     ExtAccount(usize),
     ExtCalendar(usize, usize),
+    ExtShare(usize),
     ExtDisconnect(usize),
     Trash,
     Help,
@@ -400,9 +401,13 @@ impl App {
             rows.push(SetRow {
                 card: CARD,
                 label: "  On".into(),
-                value: "this device · all your devices coming soon".to_string(),
-                key: None,
-                soon: true,
+                value: if a.shared {
+                    "all your devices · encrypted with sync".to_string()
+                } else {
+                    "only this device · Enter: all your devices".to_string()
+                },
+                key: Some(SetKey::ExtShare(i)),
+                soon: false,
             });
             rows.push(SetRow {
                 card: CARD,
@@ -541,6 +546,10 @@ impl App {
                 self.flash("reading your calendars…");
                 None
             }
+            SetKey::ExtShare(a) => {
+                self.ext_toggle_shared(a);
+                None
+            }
             SetKey::ExtCalendar(a, c) => {
                 self.ext_toggle_calendar(a, c);
                 None
@@ -665,7 +674,7 @@ mod ext_tests {
                 Some(SetKey::ExtAccount(0)),
                 Some(SetKey::ExtCalendar(0, 0)),
                 Some(SetKey::ExtCalendar(0, 1)),
-                None,
+                Some(SetKey::ExtShare(0)),
                 Some(SetKey::ExtDisconnect(0)),
                 Some(SetKey::ExtAdd),
             ]

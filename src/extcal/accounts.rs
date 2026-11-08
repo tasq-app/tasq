@@ -32,6 +32,9 @@ pub struct CalendarChoice {
 pub struct ExtAccount {
     pub email: String,
     pub calendars: Vec<CalendarChoice>,
+    /// Shown on all your devices (its access travels with sync), not
+    /// only on this one.
+    pub shared: bool,
 }
 
 impl ExtAccount {
@@ -39,6 +42,7 @@ impl ExtAccount {
         Self {
             email: email.to_string(),
             calendars: Vec::new(),
+            shared: false,
         }
     }
 
@@ -74,9 +78,22 @@ impl ExtAccount {
         self.calendars.iter().filter(|c| c.shown)
     }
 
+    fn calendars_json(&self) -> Value {
+        json!(
+            self.calendars
+                .iter()
+                .map(|c| json!({
+                    "id": c.id, "name": c.name, "primary": c.primary, "shown": c.shown,
+                    "color": c.color,
+                }))
+                .collect::<Vec<_>>()
+        )
+    }
+
     fn to_json(&self) -> Value {
         json!({
             "email": self.email,
+            "shared": self.shared,
             "calendars": self.calendars.iter().map(|c| json!({
                 "id": c.id, "name": c.name, "primary": c.primary, "shown": c.shown,
                 "color": c.color,
@@ -87,6 +104,7 @@ impl ExtAccount {
     fn from_json(v: &Value) -> Option<Self> {
         Some(Self {
             email: v["email"].as_str()?.to_string(),
+            shared: v["shared"] == true,
             calendars: v["calendars"]
                 .as_array()
                 .map(|a| {
@@ -105,6 +123,21 @@ impl ExtAccount {
                 .unwrap_or_default(),
         })
     }
+}
+
+/// What sync carries of a shared account: its calendar choices and its
+/// access. Keys sorted, so the same account always reads the same.
+pub fn shared_value(a: &ExtAccount, token: &str) -> String {
+    json!({ "calendars": a.calendars_json(), "token": token }).to_string()
+}
+
+/// A shared account back from sync: the account and its token.
+pub fn from_shared(email: &str, value: &str) -> Option<(ExtAccount, String)> {
+    let v: Value = serde_json::from_str(value).ok()?;
+    let token = v["token"].as_str().filter(|t| !t.is_empty())?.to_string();
+    let mut a = ExtAccount::from_json(&json!({ "email": email, "calendars": v["calendars"] }))?;
+    a.shared = true;
+    Some((a, token))
 }
 
 /// The accounts as text, for the file.
@@ -298,5 +331,18 @@ mod tests {
         let all = vec![a, b];
         assert_eq!(from_json(&to_json(&all)), all);
         assert!(from_json("not json").is_empty());
+        // What sync carries, and back.
+        let mut a = all[0].clone();
+        a.calendars[0].color = Some("#8aadf4".into());
+        let v = shared_value(&a, "1//tok");
+        let (back, token) = from_shared("me@x", &v).unwrap();
+        assert_eq!(token, "1//tok");
+        assert!(back.shared);
+        assert_eq!(back.calendars, a.calendars);
+        assert_eq!(shared_value(&back, "1//tok"), v, "the same text every time");
+        assert!(
+            from_shared("me@x", r#"{"calendars":[]}"#).is_none(),
+            "no token, no account"
+        );
     }
 }

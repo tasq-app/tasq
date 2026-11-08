@@ -141,6 +141,9 @@ impl Db {
         if version < SCHEMA_VERSION || !stored {
             migrate(&conn, version).map_err(io_err)?;
         }
+        // Other calendars' accounts shown on all your devices: a table an
+        // older tasq doesn't know and leaves alone, so no version step.
+        conn.execute_batch(SHARED_ACCOUNTS).map_err(io_err)?;
         let mut db = Self {
             conn,
             path,
@@ -441,6 +444,71 @@ pub(super) fn add_spaces(conn: &Connection, paths: &[String], now: &str) -> rusq
         }
     }
     Ok(())
+}
+
+/// The accounts of other calendars you show on all your devices: by
+/// email, their refresh token and calendar choices as JSON. They travel
+/// with sync, end-to-end encrypted, like tasks.
+const SHARED_ACCOUNTS: &str = "
+CREATE TABLE IF NOT EXISTS shared_accounts (
+    email       TEXT PRIMARY KEY,
+    value       TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS sync_account_gone AFTER DELETE ON shared_accounts
+WHEN EXISTS (SELECT 1 FROM sync_state) BEGIN
+    INSERT OR REPLACE INTO sync_deleted VALUES
+        ('account', old.email, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+END;
+";
+
+impl Db {
+    /// The shared accounts: email and value.
+    pub fn shared_accounts(&self) -> std::io::Result<Vec<(String, String)>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT email, value FROM shared_accounts ORDER BY email")
+            .map_err(io_err)?;
+        let rows = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .map_err(io_err)?;
+        rows.collect::<Result<_, _>>().map_err(io_err)
+    }
+
+    /// Share an account (or change what's shared of it).
+    pub fn put_shared_account(&mut self, email: &str, value: &str) -> std::io::Result<()> {
+        let same: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT value FROM shared_accounts WHERE email = ?1",
+                [email],
+                |r| r.get(0),
+            )
+            .optional()
+            .map_err(io_err)?;
+        if same.as_deref() == Some(value) {
+            return Ok(());
+        }
+        self.conn
+            .execute(
+                "INSERT INTO shared_accounts (email, value, updated_at) VALUES (?1, ?2, ?3)
+                 ON CONFLICT (email) DO UPDATE SET value = excluded.value,
+                     updated_at = excluded.updated_at",
+                params![email, value, now_rfc3339()],
+            )
+            .map_err(io_err)?;
+        self.data_version = self.read_data_version().map_err(io_err)?;
+        Ok(())
+    }
+
+    /// Stop sharing an account: the other devices drop it.
+    pub fn drop_shared_account(&mut self, email: &str) -> std::io::Result<()> {
+        self.conn
+            .execute("DELETE FROM shared_accounts WHERE email = ?1", [email])
+            .map_err(io_err)?;
+        self.data_version = self.read_data_version().map_err(io_err)?;
+        Ok(())
+    }
 }
 
 /// Bring a database at `from` up to [`SCHEMA_VERSION`], in one transaction.

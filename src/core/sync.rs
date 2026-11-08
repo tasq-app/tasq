@@ -32,6 +32,8 @@ pub enum Kind {
     Task,
     Note,
     Space,
+    /// Another calendar's account, shown on all your devices.
+    Account,
 }
 
 impl Kind {
@@ -40,6 +42,7 @@ impl Kind {
             Kind::Task => "task",
             Kind::Note => "note",
             Kind::Space => "space",
+            Kind::Account => "account",
         }
     }
 
@@ -48,6 +51,7 @@ impl Kind {
             "task" => Some(Kind::Task),
             "note" => Some(Kind::Note),
             "space" => Some(Kind::Space),
+            "account" => Some(Kind::Account),
             _ => None,
         }
     }
@@ -165,6 +169,8 @@ fn canonical(kind: Kind, value: &str) -> Option<String> {
         Kind::Task => task_value(v["raw"].as_str()?, v["list"].as_str()?),
         Kind::Note => note_value(v["body"].as_str()?),
         Kind::Space => space_value(v["hidden"].as_bool()?, v["color"].as_str()),
+        // Kept as the other device wrote it: this one stores it the same.
+        Kind::Account => v.to_string(),
     })
 }
 
@@ -240,6 +246,21 @@ fn current(conn: &Connection) -> rusqlite::Result<Records> {
             (Kind::Space, path),
             (space_value(hidden, color.as_deref()), None),
         );
+    }
+    let mut stmt = conn.prepare("SELECT email, value, updated_at FROM shared_accounts")?;
+    let rows = stmt.query_map([], |r| {
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, String>(1)?,
+            r.get::<_, String>(2)?,
+        ))
+    })?;
+    for row in rows {
+        let (email, value, updated) = row?;
+        let value = serde_json::from_str::<Value>(&value)
+            .map(|v| v.to_string())
+            .unwrap_or(value);
+        out.insert((Kind::Account, email), (value, rfc3339_ms(&updated)));
     }
     Ok(out)
 }
@@ -613,6 +634,19 @@ fn apply_one(
             tx.execute("DELETE FROM spaces WHERE path = ?1", [key])
                 .map_err(io_err)?;
         }
+        (Kind::Account, Some(v)) => {
+            tx.execute(
+                "INSERT INTO shared_accounts (email, value, updated_at) VALUES (?1, ?2, ?3)
+                 ON CONFLICT (email) DO UPDATE SET value = excluded.value,
+                     updated_at = excluded.updated_at",
+                params![key, v.to_string(), now],
+            )
+            .map_err(io_err)?;
+        }
+        (Kind::Account, None) => {
+            tx.execute("DELETE FROM shared_accounts WHERE email = ?1", [key])
+                .map_err(io_err)?;
+        }
     }
     Ok(())
 }
@@ -749,6 +783,26 @@ mod tests {
             a.receive(&from_b);
         }
         panic!("sync never settled");
+    }
+
+    #[test]
+    fn a_shared_account_reaches_the_other_device_and_leaves_it() {
+        let mut a = Device::new();
+        let mut b = Device::new();
+        a.add("Something to start the sync");
+        sync(&mut a, &mut b);
+        let value = r#"{"calendars":[],"token":"1//x"}"#;
+        a.db.put_shared_account("me@work.com", value).unwrap();
+        sync(&mut a, &mut b);
+        assert_eq!(
+            b.db.shared_accounts().unwrap(),
+            [("me@work.com".to_string(), value.to_string())]
+        );
+        // Received, not sent back.
+        assert!(b.outgoing().is_empty());
+        a.db.drop_shared_account("me@work.com").unwrap();
+        sync(&mut a, &mut b);
+        assert!(b.db.shared_accounts().unwrap().is_empty());
     }
 
     #[test]

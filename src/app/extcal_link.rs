@@ -24,7 +24,12 @@ const EVERY: Duration = Duration::from_secs(5 * 60);
 enum Job {
     SignIn,
     Refresh(Vec<ExtAccount>),
-    Forget(String),
+    /// Forget an account here; `revoke` also gives the access up at
+    /// Google (a disconnect, not another device letting it go).
+    Forget {
+        email: String,
+        revoke: bool,
+    },
 }
 
 enum Note {
@@ -167,8 +172,8 @@ impl ExtLink {
                 }
                 let _ = out.send(Note::Events(load_events(cache)));
             }
-            Job::Forget(email) => {
-                if let Some(token) = accounts::load_token(&email) {
+            Job::Forget { email, revoke } => {
+                if revoke && let Some(token) = accounts::load_token(&email) {
                     auth::revoke(&auth::Account {
                         email: email.clone(),
                         refresh_token: token,
@@ -211,9 +216,124 @@ impl App {
         self.ext.as_ref()
     }
 
+    /// Keep the accounts: the file, and what's shared of the ones shown on
+    /// all your devices.
+    pub(crate) fn ext_save(&mut self) {
+        let _ = accounts::save(&self.ext_state.accounts);
+        let Some(db) = self.store.db.as_mut() else {
+            return;
+        };
+        let mut changed = false;
+        for a in self.ext_state.accounts.iter().filter(|a| a.shared) {
+            if let Some(token) = accounts::load_token(&a.email) {
+                let before = db.shared_accounts().unwrap_or_default();
+                let value = accounts::shared_value(a, &token);
+                let _ = db.put_shared_account(&a.email, &value);
+                changed |= !before.iter().any(|(e, v)| *e == a.email && *v == value);
+            }
+        }
+        if changed {
+            self.sync_touch(false);
+        }
+    }
+
+    /// "On": all your devices, or only this one.
+    pub fn ext_toggle_shared(&mut self, acc: usize) {
+        if !self.is_db() {
+            self.flash("sharing an account needs the database");
+            return;
+        }
+        let Some(a) = self.ext_state.accounts.get_mut(acc) else {
+            return;
+        };
+        a.shared = !a.shared;
+        let (email, shared) = (a.email.clone(), a.shared);
+        if !shared && let Some(db) = self.store.db.as_mut() {
+            let _ = db.drop_shared_account(&email);
+            self.sync_touch(false);
+        }
+        self.ext_save();
+        self.flash(if shared {
+            if self.sync_signed_in() {
+                "on all your devices · it goes with the next sync, encrypted"
+            } else {
+                "on all your devices once you sign in to Sync"
+            }
+        } else {
+            "only on this device · your other devices let it go"
+        });
+    }
+
+    /// Take in the accounts your other devices share: new ones come in,
+    /// changed choices follow, and one no longer shared leaves (here, its
+    /// access isn't revoked: it may still be in use where it came from).
+    pub fn ext_reconcile_shared(&mut self) {
+        let Some(db) = self.store.db.as_ref() else {
+            return;
+        };
+        let rows = db.shared_accounts().unwrap_or_default();
+        let mut changed = false;
+        let mut new_account = false;
+        for (email, value) in &rows {
+            let Some((remote, token)) = accounts::from_shared(email, value) else {
+                continue;
+            };
+            match self
+                .ext_state
+                .accounts
+                .iter_mut()
+                .find(|a| a.email == *email)
+            {
+                Some(local) => {
+                    if local.calendars != remote.calendars || !local.shared {
+                        local.calendars = remote.calendars;
+                        local.shared = true;
+                        changed = true;
+                    }
+                }
+                None => {
+                    if accounts::store_token(email, &token).is_ok() {
+                        self.ext_state.accounts.push(remote);
+                        changed = true;
+                        new_account = true;
+                    }
+                }
+            }
+            if accounts::load_token(email).as_deref() != Some(token.as_str()) {
+                let _ = accounts::store_token(email, &token);
+            }
+        }
+        let gone: Vec<String> = self
+            .ext_state
+            .accounts
+            .iter()
+            .filter(|a| a.shared && !rows.iter().any(|(e, _)| *e == a.email))
+            .map(|a| a.email.clone())
+            .collect();
+        for email in gone {
+            self.ext_state.accounts.retain(|a| a.email != email);
+            self.ext_state.events.retain(|e| e.account != email);
+            self.ext_state.status.remove(&email);
+            if let Some(link) = self.ext_link() {
+                let _ = link.jobs.send(Job::Forget {
+                    email,
+                    revoke: false,
+                });
+            }
+            changed = true;
+        }
+        if changed {
+            let _ = accounts::save(&self.ext_state.accounts);
+        }
+        if new_account && self.ext_link().is_some() {
+            self.ext_due = Some(Instant::now());
+        }
+    }
+
     /// At startup: the kept accounts come back, and a round goes.
     pub fn ext_resume(&mut self) {
         self.ext_state.accounts = accounts::load();
+        self.ext_reconcile_shared();
         if self.ext_state.accounts.is_empty() {
             return;
         }
@@ -256,7 +376,7 @@ impl App {
         };
         c.shown = !c.shown;
         let shown = c.shown;
-        let _ = accounts::save(&self.ext_state.accounts);
+        self.ext_save();
         if shown {
             self.ext_touch();
         }
@@ -268,11 +388,21 @@ impl App {
             return;
         }
         let a = self.ext_state.accounts.remove(acc);
-        let _ = accounts::save(&self.ext_state.accounts);
+        self.ext_save();
+        // Shown on your other devices: they let it go too.
+        if a.shared
+            && let Some(db) = self.store.db.as_mut()
+        {
+            let _ = db.drop_shared_account(&a.email);
+            self.sync_touch(false);
+        }
         self.ext_state.status.remove(&a.email);
         self.ext_state.events.retain(|e| e.account != a.email);
         if let Some(link) = self.ext_link() {
-            let _ = link.jobs.send(Job::Forget(a.email.clone()));
+            let _ = link.jobs.send(Job::Forget {
+                email: a.email.clone(),
+                revoke: true,
+            });
         }
         self.flash(format!(
             "{} disconnected · its events are gone from tasq",
@@ -291,6 +421,7 @@ impl App {
             && due <= Instant::now()
         {
             self.ext_due = None;
+            self.ext_reconcile_shared();
             let list = self.ext_state.accounts.clone();
             if !list.is_empty()
                 && let Some(link) = self.ext_link()
@@ -316,7 +447,8 @@ impl App {
                         }
                     };
                     st.accounts[i].refresh_calendars(&cals);
-                    let _ = accounts::save(&st.accounts);
+                    self.ext_save();
+                    let st = &mut self.ext_state;
                     st.status.insert(email.clone(), "syncing…".to_string());
                     self.flash(format!(
                         "{email} connected · its main calendar shows in tasq"
@@ -331,7 +463,7 @@ impl App {
                         .find(|a| a.email == email)
                     {
                         a.refresh_calendars(&cals);
-                        let _ = accounts::save(&self.ext_state.accounts);
+                        self.ext_save();
                     }
                 }
                 Note::Synced(email, error) => {
@@ -473,7 +605,7 @@ impl App {
             .and_then(|a| a.calendars.get_mut(cal))
         {
             c.color = color.map(|c| c.to_value());
-            let _ = accounts::save(&self.ext_state.accounts);
+            self.ext_save();
         }
     }
 

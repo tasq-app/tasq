@@ -63,10 +63,11 @@ and never sent anywhere else.
 
 Each account's access (a refresh token) is kept on your computer like the
 Google Calendar one above. If you choose to show an account on all your
-devices, its token travels to your other devices inside tasq's sync,
-end-to-end encrypted: the sync server stores it sealed and can't read it,
-and it never sees the events. An account set to "only this device" never
-leaves the computer where you connected it.
+devices, its token and your choice of calendars also go in tasq's
+database on each of your devices and travel between them inside tasq's
+sync, end-to-end encrypted: the sync server stores them sealed and can't
+read them, and it never sees the events. An account set to "only this
+device" never leaves the computer where you connected it.
 
 tasq does not share, sell or use this data for advertising, and does not
 use it to train AI models. Its use of information received from Google APIs

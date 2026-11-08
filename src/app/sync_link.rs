@@ -372,6 +372,7 @@ impl App {
                         // take them in now, not at the next tick.
                         self.check_external_changes();
                         self.store.reload_spaces();
+                        self.ext_reconcile_shared();
                         self.recompute_visible();
                         self.gcal_touch(false);
                     }
