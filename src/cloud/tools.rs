@@ -355,7 +355,7 @@ fn set_priority(raw: &str, p: Option<char>) -> String {
         toks.remove(0);
     }
     if let Some(p) = p
-        && !toks.first().is_some_and(|t| t == "x")
+        && toks.first().is_none_or(|t| t != "x")
     {
         toks.insert(0, format!("({p})"));
     }
