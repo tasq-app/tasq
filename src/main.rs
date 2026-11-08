@@ -27,6 +27,8 @@ use tasq::{clipboard, todo, ui, update};
 const EVENT_POLL: Duration = Duration::from_millis(250);
 
 fn main() -> Result<()> {
+    // Delete the executable a previous `tasq update` left behind on Windows.
+    update::cleanup_old_binary();
     let argv: Vec<String> = std::env::args().skip(1).collect();
     // A recognized subcommand (possibly preceded by `-f`/`--json`) runs the
     // one-shot CLI and exits; otherwise we fall through to the TUI.
@@ -216,7 +218,7 @@ fn print_usage() {
     println!("  listcon, lsc              list @contexts");
     println!("  import TODO.TXT [DONE]    add a todo.txt's tasks (and its done.txt's)");
     println!("  export [archive | all]    print tasks as todo.txt lines");
-    println!("  update                    print instructions for upgrading tasq");
+    println!("  update                    update tasq to the latest release");
     println!();
     println!("Options:");
     println!("  -f, --force      skip confirmation prompts (e.g. for del)");

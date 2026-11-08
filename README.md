@@ -444,7 +444,7 @@ tasq               # launch the TUI on your tasks
 tasq FILE.txt      # open a todo.txt file directly instead
 tasq --sample      # open the bundled sample file in the temp dir
 tasq <command>     # run a one-shot CLI command — see "Command-line interface"
-tasq update        # print upgrade instructions for your install
+tasq update        # update to the latest release (or print the brew/cargo command)
 tasq --help
 tasq --version
 ```
