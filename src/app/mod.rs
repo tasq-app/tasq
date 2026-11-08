@@ -71,7 +71,7 @@ pub use draft_overlay::{
     REC_UNIT_ORDER, RecurrenceBuilderState, SLASH_ENTRIES, SlashEntry, SlashKind, SlashMenuState,
     format_rec_value, recurrence_next_preview,
 };
-pub use extcal_link::ExtState;
+pub use extcal_link::{ExtDetail, ExtState};
 pub use filter_pop::{DUE_TERMS, FilterPop, PopPick, PopRow, search_label};
 pub use flash::Flash;
 pub use gcal_link::GcalStatus;
@@ -222,6 +222,8 @@ pub struct App {
     pub spaces_in_use: Option<std::collections::BTreeSet<String>>,
     /// A change to a repeating task asking "only this one?".
     pub series_ask: Option<SeriesAsk>,
+    /// Another calendar's event, open on its details.
+    pub ext_detail: Option<ExtDetail>,
     /// The calendar's day columns as last drawn, for the mouse.
     pub cal_cols: std::cell::RefCell<Vec<CalCol>>,
     /// A block being dragged in the calendar.
@@ -449,6 +451,7 @@ impl App {
             sync_url,
             spaces_in_use: None,
             series_ask: None,
+            ext_detail: None,
             cal_cols: std::cell::RefCell::new(Vec::new()),
             cal_drag: None,
             trash_screen: None,

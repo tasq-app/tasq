@@ -53,6 +53,10 @@ pub struct ExtMark {
     pub tentative: bool,
     /// Its calendar's name.
     pub calendar: String,
+    /// Where it comes from: the account, its calendar's id, the event's.
+    pub account: String,
+    pub calendar_id: String,
+    pub id: String,
 }
 
 impl Occurrence {

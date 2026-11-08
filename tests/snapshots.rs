@@ -758,7 +758,13 @@ fn calendar_week_with_other_calendars() {
             "id": "review", "summary": "Design review",
             "start": { "dateTime": "2026-05-06T15:00:00+02:00" },
             "end": { "dateTime": "2026-05-06T17:00:00+02:00" },
-            "attendees": [{ "email": "me@work.com", "self": true, "responseStatus": "needsAction" }]
+            "location": "Room 4",
+            "hangoutLink": "https://meet.google.com/abc-defg-hij",
+            "htmlLink": "https://www.google.com/calendar/event?eid=cmV2aWV3",
+            "attendees": [
+                { "email": "ana@work.com", "displayName": "Ana", "organizer": true, "responseStatus": "accepted" },
+                { "email": "me@work.com", "self": true, "responseStatus": "needsAction" }
+            ]
         })),
         event(serde_json::json!({
             "id": "trip", "summary": "Lisbon offsite",
@@ -773,4 +779,17 @@ fn calendar_week_with_other_calendars() {
     app.open_cal(CalView::Month);
     let month = render_text(&app, COLS, ROWS);
     assert!(month.contains("◌ Design review"), "{month}");
+
+    // Day view: the meeting can be picked, and Enter opens its details.
+    app.open_cal(CalView::Day);
+    let items = app.cal_day_items();
+    let i = items
+        .iter()
+        .position(|o| o.ext.as_ref().is_some_and(|x| x.title == "Design review"))
+        .expect("the meeting is on the day");
+    app.calendar.as_mut().expect("calendar").selected = i;
+    assert!(app.cal_selected().is_none(), "no task action reaches it");
+    app.cal_edit();
+    assert!(app.ext_detail.is_some());
+    snapshot_app("calendar_other_calendar_event_detail", &app);
 }

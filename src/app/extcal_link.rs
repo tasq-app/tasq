@@ -471,6 +471,9 @@ impl App {
                         title: p.title,
                         tentative: p.tentative,
                         calendar,
+                        account: p.account,
+                        calendar_id: p.calendar,
+                        id: p.id,
                     })),
                 }
             })
@@ -489,5 +492,42 @@ impl App {
             (a.date, a.start.is_some(), a.start).cmp(&(b.date, b.start.is_some(), b.start))
         });
         all
+    }
+}
+
+/// Another calendar's event, open on its details.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExtDetail {
+    pub event: Cached,
+    /// Its calendar's name.
+    pub calendar: String,
+}
+
+impl App {
+    /// Open a link of the event in the details: `None` the video call,
+    /// `Some(0)` the event in Google, `Some(n)` its n-th file. Google's
+    /// links open in the event's own account.
+    pub fn ext_detail_open(&mut self, which: Option<usize>) {
+        let Some(d) = &self.ext_detail else {
+            return;
+        };
+        let e = &d.event.event;
+        let url = match which {
+            None => e.meet_link.clone(),
+            Some(0) => e.html_link.clone(),
+            Some(n) => e.attachments.get(n - 1).map(|a| a.url.clone()),
+        };
+        let Some(url) = url else {
+            self.flash(match which {
+                None => "no video call in this one",
+                _ => "nothing there",
+            });
+            return;
+        };
+        let url = crate::extcal::as_account(&url, &d.event.account);
+        match auth::open_browser(&url) {
+            Ok(()) => self.flash("opening in your browser…"),
+            Err(_) => self.flash(format!("couldn't open the browser · {url}")),
+        }
     }
 }

@@ -336,17 +336,15 @@ fn draw_bands(
         let text = fit(&format!("{left}{prefix}{name}"), inner);
         let text = format!("{text:<inner$}{tail}");
         put(buf, x, y + b.row as u16, &text, w, style);
-        if o.ext.is_none() {
-            app.hits.add(
-                Rect {
-                    x,
-                    y: y + b.row as u16,
-                    width: w,
-                    height: 1,
-                },
-                crate::app::Hit::CalItem(Box::new(o.clone())),
-            );
-        }
+        app.hits.add(
+            Rect {
+                x,
+                y: y + b.row as u16,
+                width: w,
+                height: 1,
+            },
+            crate::app::Hit::CalItem(Box::new(o.clone())),
+        );
     }
     for c in 0..cols {
         let n = hidden(c);
@@ -426,7 +424,11 @@ fn bar(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     // Summary on the right.
     let summary = match cal.view {
         CalView::Day => {
-            let items = app.cal_day_items();
+            let items: Vec<_> = app
+                .cal_day_items()
+                .into_iter()
+                .filter(|o| o.ext.is_none())
+                .collect();
             let planned: u32 = items
                 .iter()
                 .filter(|o| o.start.is_some())
@@ -500,12 +502,9 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     }
 
     // All-day band: chips that wrap, then a dashed rule.
-    // The other calendars' events: drawn with the tasks, never selected.
-    let ext = app.cal_ext_occurrences(cal.date, cal.date);
     let all_day: Vec<(usize, &Occurrence)> = items
         .iter()
         .enumerate()
-        .chain(ext.iter().map(|o| (usize::MAX, o)))
         .filter(|(_, o)| o.start.is_none())
         .collect();
     let mut y = grid_r.y;
@@ -551,10 +550,6 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
                     .add_modifier(Modifier::CROSSED_OUT);
             }
             put(buf, x, y, &fit(&text, usize::from(w)), w, style);
-            if o.ext.is_some() {
-                x += w + 1;
-                continue;
-            }
             app.hits.add(
                 Rect {
                     x,
@@ -585,16 +580,7 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     }
 
     // Hours to show, and how many rows an hour gets.
-    let timed: Vec<&Occurrence> = items
-        .iter()
-        .chain(ext.iter())
-        .filter(|o| o.start.is_some())
-        .collect();
-    let timed = {
-        let mut t = timed;
-        t.sort_by_key(|o| o.start);
-        t
-    };
+    let timed: Vec<&Occurrence> = items.iter().filter(|o| o.start.is_some()).collect();
     let first = timed
         .iter()
         .filter_map(|o| o.start)
@@ -760,7 +746,8 @@ fn draw_block(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme, o: &Occurrenc
     let done = app.tasks().get(o.abs).is_some_and(|t| t.done);
     let color = occ_color(app, theme, o);
     let amount = match (&o.ext, sel) {
-        (Some(_), _) => 0.08,
+        (Some(_), true) => 0.25,
+        (Some(_), false) => 0.08,
         (None, true) => 0.40,
         (None, false) => 0.20,
     };
@@ -771,6 +758,7 @@ fn draw_block(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme, o: &Occurrenc
     };
     fill(buf, r, Style::default().bg(bg));
     let edge = match &o.ext {
+        Some(_) if sel => "┃",
         Some(x) if x.tentative => "┆",
         Some(_) => "│",
         None if o.projected => "┆",
@@ -944,6 +932,26 @@ fn side_panel(
                 row(buf, &mut y, "", "a future repeat", key);
             }
         }
+        None if selected.is_some_and(|o| o.ext.is_some()) => {
+            let Some((o, m)) = selected.and_then(|o| Some((o, o.ext.as_ref()?))) else {
+                return;
+            };
+            row(buf, &mut y, "event", &m.title, val);
+            row(buf, &mut y, "calendar", &m.calendar, val);
+            if let (Some(s), Some(e)) = (o.start, o.end()) {
+                row(
+                    buf,
+                    &mut y,
+                    "time",
+                    &format!("{} – {}", hhmm(s), hhmm(e)),
+                    val,
+                );
+            }
+            if m.tentative {
+                row(buf, &mut y, "", "not answered yet", val.fg(theme.overdue));
+            }
+            row(buf, &mut y, "", "Enter for details · read-only", key);
+        }
         None => {
             put(buf, x, y, "nothing on this day", w, key);
             y += 1;
@@ -1006,7 +1014,7 @@ fn week_blocks(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     let days = week_days(app);
     let today = app.today_naive();
     let occs = app.cal_view_occurrences(days[0], days[6]);
-    let selected = app.cal_selected();
+    let selected = app.cal_selected_any();
     const GW: u16 = 4;
     let col_w = (r.width.saturating_sub(GW)) / 7;
     let col_x = |i: usize| r.x + GW + col_w * i as u16;
@@ -1220,8 +1228,13 @@ fn week_blocks(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
 /// Where a click on block `r` lands: the block, and its bottom row to
 /// drag its length (when it has more than one).
 fn block_hits(app: &App, r: Rect, o: &Occurrence) {
-    // Another calendar's event: shown, not moved or opened.
-    if o.ext.is_some() || o.projected && app.tasks().get(o.abs).is_none_or(|t| t.rec.is_none()) {
+    // Another calendar's event: a click opens it, nothing drags it.
+    if o.ext.is_some() {
+        app.hits
+            .add(r, crate::app::Hit::CalItem(Box::new(o.clone())));
+        return;
+    }
+    if o.projected && app.tasks().get(o.abs).is_none_or(|t| t.rec.is_none()) {
         return;
     }
     app.hits
@@ -1301,7 +1314,8 @@ fn draw_mini_block(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme, o: &Occu
         theme.panel
     } else {
         let amount = match (&o.ext, sel) {
-            (Some(_), _) => 0.08,
+            (Some(_), true) => 0.25,
+            (Some(_), false) => 0.08,
             (None, true) => 0.40,
             (None, false) => 0.20,
         };
@@ -1309,6 +1323,7 @@ fn draw_mini_block(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme, o: &Occu
     };
     fill(buf, r, Style::default().bg(bg));
     let edge = match &o.ext {
+        Some(_) if sel => "┃",
         Some(x) if x.tentative => "┆",
         Some(_) => "│",
         None if o.projected => "┆",
@@ -1367,7 +1382,7 @@ fn week_agenda(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     let days = week_days(app);
     let today = app.today_naive();
     let occs = app.cal_view_occurrences(days[0], days[6]);
-    let selected = app.cal_selected();
+    let selected = app.cal_selected_any();
     agenda(
         buf,
         r,
@@ -1731,7 +1746,7 @@ fn month(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
                 height: r.bottom() - py,
             };
             let items = app.cal_view_occurrences(cal.date, cal.date);
-            let selected = app.cal_selected();
+            let selected = app.cal_selected_any();
             agenda(
                 buf,
                 pr,

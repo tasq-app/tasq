@@ -944,6 +944,202 @@ pub fn render_confirm_done(frame: &mut Frame, screen: Rect, app: &App, abs: usiz
     );
 }
 
+/// Another calendar's event: what it is, when (here, and where it
+/// happens when that's another zone), who's coming, and its links.
+pub fn render_ext_detail(frame: &mut Frame, screen: Rect, app: &App, d: &crate::app::ExtDetail) {
+    use crate::extcal::event::{Response, When};
+    use ratatui::text::{Line, Span};
+    let theme = app.theme();
+    let e = &d.event.event;
+    let dim = Style::default().fg(theme.dim);
+    let fg = Style::default().fg(theme.fg);
+    let key = |k: String| {
+        Span::styled(
+            k,
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        )
+    };
+    let mut lines: Vec<Line> = vec![
+        Line::styled(
+            e.title.clone(),
+            Style::default().fg(theme.fg).add_modifier(Modifier::BOLD),
+        ),
+        Line::styled(format!("{} · {}", d.calendar, d.event.account), dim),
+        Line::raw(""),
+    ];
+    // When, in this device's zone; and as it is where it happens.
+    let when = match &e.when {
+        When::AllDay { start, end } => {
+            let last = end.pred_opt().unwrap_or(*start);
+            if last == *start {
+                format!("{} · all day", start.format("%a %-d %b"))
+            } else {
+                format!(
+                    "{} – {} · all day",
+                    start.format("%a %-d %b"),
+                    last.format("%a %-d %b")
+                )
+            }
+        }
+        When::Timed { start, end } => {
+            let (s, t) = match &app.frozen_tz {
+                Some(tz) => (
+                    start.with_timezone(tz).naive_local(),
+                    end.with_timezone(tz).naive_local(),
+                ),
+                None => (
+                    start.with_timezone(&chrono::Local).naive_local(),
+                    end.with_timezone(&chrono::Local).naive_local(),
+                ),
+            };
+            let mut w = format!(
+                "{} · {} – {}",
+                s.format("%a %-d %b"),
+                s.format("%H:%M"),
+                t.format("%H:%M")
+            );
+            if t.date() != s.date() {
+                w.push_str(&format!(" ({})", t.format("%a %-d")));
+            }
+            let mins = (*end - *start).num_minutes();
+            w.push_str(&format!(" · {}h{:02}", mins / 60, mins % 60));
+            let local_off = s.and_utc().timestamp() - start.timestamp();
+            if i64::from(start.offset().local_minus_utc()) != local_off
+                || start.offset() != end.offset()
+            {
+                lines.push(Line::styled(w, fg));
+                w = format!(
+                    "there: {} {} → {} {}",
+                    start.format("%H:%M"),
+                    start.format("%:z"),
+                    end.format("%H:%M"),
+                    end.format("%:z")
+                );
+                lines.push(Line::styled(w, dim));
+                w = String::new();
+            }
+            w
+        }
+    };
+    if !when.is_empty() {
+        lines.push(Line::styled(when, fg));
+    }
+    let answer = match e.response {
+        Response::Accepted => None,
+        Response::Tentative => Some("you said maybe"),
+        Response::Pending => Some("◌ you haven't answered"),
+    };
+    if let Some(a) = answer {
+        lines.push(Line::styled(a, Style::default().fg(theme.overdue)));
+    }
+    if let Some(l) = &e.location {
+        lines.push(Line::styled(format!("at {l}"), fg));
+    }
+    if !e.attendees.is_empty() {
+        lines.push(Line::raw(""));
+        for a in e.attendees.iter().take(5) {
+            let who = a.name.clone().unwrap_or_else(|| a.email.clone());
+            let how = match a.response.as_str() {
+                "accepted" => "✓",
+                "declined" => "✗",
+                "tentative" => "?",
+                _ => "·",
+            };
+            let org = if a.organizer { " · organizer" } else { "" };
+            lines.push(Line::styled(format!("{how} {who}{org}"), dim));
+        }
+        if e.attendees.len() > 5 {
+            lines.push(Line::styled(
+                format!("  and {} more", e.attendees.len() - 5),
+                dim,
+            ));
+        }
+    }
+    if let Some(desc) = &e.description {
+        // Google sends some as HTML: the words, without the tags.
+        let mut plain = String::new();
+        let mut in_tag = false;
+        for c in desc.replace("<br>", "\n").replace("</p>", "\n").chars() {
+            match c {
+                '<' => in_tag = true,
+                '>' => in_tag = false,
+                c if !in_tag => plain.push(c),
+                _ => {}
+            }
+        }
+        let plain = plain.replace("&amp;", "&").replace("&nbsp;", " ");
+        let kept: Vec<&str> = plain
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty())
+            .take(3)
+            .collect();
+        if !kept.is_empty() {
+            lines.push(Line::raw(""));
+            for l in kept {
+                lines.push(Line::styled(l.to_string(), fg));
+            }
+        }
+    }
+    lines.push(Line::raw(""));
+    if e.meet_link.is_some() {
+        lines.push(Line::from(vec![
+            key("o ".into()),
+            Span::styled("join the call", fg),
+        ]));
+    }
+    if e.html_link.is_some() {
+        lines.push(Line::from(vec![
+            key("g ".into()),
+            Span::styled("open in Google Calendar", fg),
+        ]));
+    }
+    for (i, a) in e.attachments.iter().take(9).enumerate() {
+        lines.push(Line::from(vec![
+            key(format!("{} ", i + 1)),
+            Span::styled(a.title.clone(), fg),
+        ]));
+    }
+    lines.push(Line::styled(
+        "any other key closes · read-only in tasq",
+        dim,
+    ));
+
+    let w = 64.min(screen.width.saturating_sub(4));
+    let h = (lines.len() as u16 + 2).min(screen.height);
+    let r = Rect {
+        x: screen.x + (screen.width.saturating_sub(w)) / 2,
+        y: screen.y + screen.height.saturating_sub(h) / 2,
+        width: w,
+        height: h,
+    };
+    frame.render_widget(ratatui::widgets::Clear, r);
+    let block = ratatui::widgets::Block::bordered()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .border_style(Style::default().fg(theme.accent))
+        .style(Style::default().bg(theme.panel));
+    let inner = block.inner(r);
+    frame.render_widget(block, r);
+    let lines: Vec<Line> = lines
+        .into_iter()
+        .map(|l| {
+            let text: String = l.spans.iter().map(|s| s.content.as_ref()).collect();
+            if text.chars().count() > usize::from(inner.width) && l.spans.len() <= 1 {
+                Line::styled(
+                    fit(&text, usize::from(inner.width)),
+                    l.style
+                        .patch(l.spans.first().map(|s| s.style).unwrap_or_default()),
+                )
+            } else {
+                l
+            }
+        })
+        .collect();
+    frame.render_widget(ratatui::widgets::Paragraph::new(lines), inner);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

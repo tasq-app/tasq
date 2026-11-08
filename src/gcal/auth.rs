@@ -93,7 +93,7 @@ fn random(n: usize) -> String {
 }
 
 /// Open `url` in the browser.
-fn open_browser(url: &str) -> Result<()> {
+pub(crate) fn open_browser(url: &str) -> Result<()> {
     let (cmd, args): (&str, Vec<&str>) = if cfg!(target_os = "macos") {
         ("open", vec![url])
     } else if cfg!(windows) {

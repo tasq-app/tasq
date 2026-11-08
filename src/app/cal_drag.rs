@@ -94,7 +94,7 @@ impl App {
         let same = |a: &Occurrence, b: &Occurrence| {
             a.abs == b.abs && a.origin == b.origin && a.projected == b.projected
         };
-        let was = self.cal_selected().is_some_and(|s| same(&s, occ));
+        let was = self.cal_selected_any().is_some_and(|s| same(&s, occ));
         if let Some(c) = self.calendar.as_mut()
             && c.date != occ.date
             && !(was && occ.span > 1)

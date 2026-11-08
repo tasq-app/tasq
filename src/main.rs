@@ -637,6 +637,18 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
         handle_color_pick(app, key);
         return;
     }
+    // Another calendar's event: its links open, any other key closes it.
+    if app.ext_detail.is_some() {
+        match key.code {
+            KeyCode::Char('o') | KeyCode::Enter => app.ext_detail_open(None),
+            KeyCode::Char('g') => app.ext_detail_open(Some(0)),
+            KeyCode::Char(c @ '1'..='9') => {
+                app.ext_detail_open(Some(c as usize - '0' as usize));
+            }
+            _ => app.ext_detail = None,
+        }
+        return;
+    }
     // "Only this one, or this and the ones after?" takes the next key.
     if app.series_ask.is_some() {
         match key.code {
@@ -2572,7 +2584,9 @@ fn apply_action(app: &mut App, action: Action) {
         // In the calendar, every task action is about the task selected
         // there, not the one under the list's cursor.
         Action::BeginEdit | Action::BeginEditInsert if app.calendar.is_some() => {
-            if action == Action::BeginEditInsert {
+            if app.cal_open_ext() {
+                // Another calendar's event: its details, read-only.
+            } else if action == Action::BeginEditInsert {
                 app.cal_edit_insert();
             } else if let Some(occ) = app.cal_selected() {
                 app.cal_apply(occ, tasq::app::SeriesOp::Edit(false));
