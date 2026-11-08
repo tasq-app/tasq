@@ -383,7 +383,7 @@ body { margin:0; min-height:100vh; background:var(--bg); color:var(--fg);
 main { position:relative; z-index:1; max-width:460px; margin:0 auto; padding:40px 16px 56px; }
 .brand { display:flex; align-items:center; justify-content:center; gap:10px; font-weight:800;
   font-size:22px; letter-spacing:-.5px; margin-bottom:22px; }
-.brand img { width:30px; height:30px; border-radius:8px; }
+.sq { width:18px; height:18px; border-radius:5px; background:var(--accent); display:inline-block; }
 .card { background:var(--bg2); border:1px solid var(--line2); border-radius:18px; padding:26px;
   box-shadow:0 24px 70px #0009; }
 .kicker { font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--accent);
@@ -411,7 +411,7 @@ button:hover { filter:brightness(1.07); }
 .foot a { color:var(--dim); text-decoration:none; }
 "#;
 
-/// The tasq logo (the bowtie from the TUI's splash), in the site's colours.
+/// The tasq logo: the violet square from the site.
 const ICON_SVG: &str = include_str!("assets/icon.svg");
 const ICON_PNG: &[u8] = include_bytes!("assets/icon.png");
 const APPLE_ICON_PNG: &[u8] = include_bytes!("assets/apple-touch-icon.png");
@@ -447,7 +447,7 @@ fn page(title: &str, inner: &str) -> String {
          <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\
          <link href=\"https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap\" rel=\"stylesheet\">\
          <style>{STYLE}</style></head><body><div class=\"glow\"></div><main>\
-         <div class=\"brand\"><img src=\"/icon.svg\" alt=\"\">tasq</div>\
+         <div class=\"brand\"><span class=\"sq\"></span>tasq</div>\
          <div class=\"card\">{inner}</div>\
          <p class=\"foot\"><a href=\"https://tasq-app.github.io/tasq/\">tasq</a> · your tasks, in the terminal</p>\
          </main></body></html>",
