@@ -754,6 +754,14 @@ move the selected block half an hour later / earlier and `H` / `L` a day
 back / forward, `E` makes it an event (or a task again), `t` goes to today
 and `Esc` back to the list.
 
+Every hour is two rows high, and the day and week grids scroll through
+the whole day, from 00 to 24: `Ctrl-e` / `Ctrl-y` move them an hour,
+`Ctrl-d` / `Ctrl-u` half a screen, and so does the mouse wheel over them,
+without changing the selection. They start at 07 (or earlier, when
+something starts earlier) and follow the selected block when it's out of
+view. `↑ 2` / `↓ 1` in a column's corner counts the blocks scrolled out
+of view above and below.
+
 With the mouse, a click selects anything in the calendar — a block, an
 all-day task or event, a bar across days, a day of the month — so the
 keys (`e`, `D`, `E`, `x`…) act on it, and a second click opens it. Drag a
