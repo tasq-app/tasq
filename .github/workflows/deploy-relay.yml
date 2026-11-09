@@ -1,0 +1,106 @@
+name: Deploy relay
+
+# Rebuilds tasq-relay on Dokploy after every push to main that touches it,
+# through Dokploy's API (Dokploy's own Autodeploy depends on its GitHub app
+# seeing the push, which is easy to lose). Also runnable by hand from the
+# Actions tab: "Deploy relay" → "Run workflow".
+#
+# Repository or organization secrets (Settings → Secrets and variables →
+# Actions); spelled DOKPLOY_* or DOCKPLOY_*:
+#   DOKPLOY_URL      e.g. https://dokploy.example.com (the panel, no slash at the end)
+#   DOKPLOY_API_KEY  Dokploy → Settings → Profile → API/CLI → Generate
+#   DOKPLOY_APP_ID   the tasq-relay application's id (in its URL in Dokploy)
+# If the panel is only on your Tailscale network (Tailscale admin):
+#   TS_OAUTH_CLIENT_ID, TS_OAUTH_SECRET  an OAuth client with the auth_keys
+#   scope and tag:ci; DOKPLOY_URL is then the panel's Tailscale address.
+#   DOKPLOY_IP (optional): the machine's Tailscale IP, when DOKPLOY_URL's
+#   name only resolves on your computer.
+# Optional repository variable:
+#   RELAY_HEALTH_URL e.g. https://sync.example.com/health, checked afterwards
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "deploy/relay/**"
+      - ".github/workflows/deploy-relay.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-relay
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Dokploy deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DOKPLOY_URL: ${{ secrets.DOKPLOY_URL || secrets.DOCKPLOY_URL }}
+      DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY || secrets.DOCKPLOY_API_KEY }}
+      DOKPLOY_APP_ID: ${{ secrets.DOKPLOY_APP_ID || secrets.DOCKPLOY_APP_ID }}
+      DOKPLOY_IP: ${{ secrets.DOKPLOY_IP || secrets.DOCKPLOY_IP }}
+      HEALTH: ${{ vars.RELAY_HEALTH_URL }}
+      TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+    steps:
+      # The panel is often reachable only inside a Tailscale network: join it
+      # for the run when the Tailscale OAuth client is set.
+      - name: Join Tailscale
+        if: env.TS_OAUTH_CLIENT_ID != ''
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Ask Dokploy to rebuild
+        run: |
+          if [ -z "$DOKPLOY_URL" ] || [ -z "$DOKPLOY_API_KEY" ] || [ -z "$DOKPLOY_APP_ID" ]; then
+            # Not set up yet: say so, without turning every push red.
+            echo "::notice::Not deploying: DOKPLOY_URL, DOKPLOY_API_KEY or DOKPLOY_APP_ID is missing (see deploy/relay/README.md)."
+            echo "skipped=1" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          # A name only your own computer knows (/etc/hosts, e.g.
+          # dokploy.internal): pin it to the machine's Tailscale IP.
+          resolve=()
+          if [ -n "$DOKPLOY_IP" ]; then
+            hostport=${DOKPLOY_URL#*://}; hostport=${hostport%%/*}
+            host=${hostport%%:*}; port=${hostport##*:}
+            [ "$port" = "$host" ] && { case "$DOKPLOY_URL" in https:*) port=443;; *) port=80;; esac; }
+            resolve=(--resolve "$host:$port:$DOKPLOY_IP")
+          fi
+          for i in 1 2 3 4; do
+            code=$(curl -sS "${resolve[@]}" -o resp.txt -w '%{http_code}' -X POST \
+              "${DOKPLOY_URL%/}/api/application.deploy" \
+              -H "x-api-key: $DOKPLOY_API_KEY" \
+              -H 'Content-Type: application/json' \
+              -d "{\"applicationId\":\"$DOKPLOY_APP_ID\"}") || code=000
+            if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+              echo "Dokploy accepted the deploy ($code)."
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $code"; head -c 500 resp.txt; echo
+            sleep $((i * 10))
+          done
+          echo "::error::Dokploy didn't accept the deploy."
+          exit 1
+
+      - name: Wait until it answers
+        if: env.HEALTH != '' && env.skipped != '1'
+        run: |
+          # The build takes a few minutes; the old container keeps answering
+          # meanwhile, so this only proves the relay is up afterwards.
+          sleep 240
+          for i in $(seq 1 30); do
+            if curl -fsS "$HEALTH" >/dev/null; then echo "Relay is up."; exit 0; fi
+            sleep 20
+          done
+          echo "::error::$HEALTH didn't answer after the deploy."
+          exit 1

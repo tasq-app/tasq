@@ -91,6 +91,9 @@ jobs:
         with:
           install: true
           cache: true
+          # mise 2026.11.4 can't be downloaded (every attempt fails with an
+          # HTTP error, from GitHub and from mise.jdx.dev): pin the one before.
+          version: 2026.11.3
 
       - name: Add Rust target
         run: rustup target add ${{ matrix.target }}

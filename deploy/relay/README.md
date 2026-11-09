@@ -21,7 +21,41 @@ one SQLite file, plain HTTP on port 8080 behind your HTTPS.
 6. **Deploy.** When it's up, `https://sync.example.com/health` answers
    `"ok"`.
 
-With *Autodeploy* on, every push to `main` rebuilds it.
+## Deploy on every push
+
+GitHub tells Dokploy to rebuild after every push to `main` that touches the
+relay (`.github/workflows/deploy-relay.yml`). It needs, once:
+
+1. In Dokploy, *Settings* → *Profile* → *API/CLI* → **Generate** a key.
+2. Open the `tasq-relay` application: its id is the last part of the
+   address bar (`.../services/application/<id>`).
+3. In GitHub, *Settings* → *Secrets and variables* → *Actions* →
+   *New repository secret* (or organization secrets), three times
+   (`DOCKPLOY_…` works too):
+   - `DOKPLOY_URL`: the panel's address, e.g. `https://dokploy.example.com`.
+   - `DOKPLOY_API_KEY`: the key from step 1.
+   - `DOKPLOY_APP_ID`: the id from step 2.
+4. Optional, in the *Variables* tab: `RELAY_HEALTH_URL`
+   (`https://sync.example.com/health`), so the run also checks the relay
+   answers afterwards.
+
+**Panel only on Tailscale?** GitHub can't reach it (that's also why
+Dokploy's Autodeploy webhook never fires), so the workflow joins your
+tailnet for the run. In the Tailscale admin console:
+
+1. *Access controls*: add `"tag:ci": ["autogroup:admin"]` to `tagOwners`,
+   and let `tag:ci` reach the Dokploy machine on port 3000.
+2. *Settings* → *OAuth clients* → *Generate*, scope *Auth Keys* (write)
+   with tag `tag:ci`.
+3. In GitHub add the secrets `TS_OAUTH_CLIENT_ID` and `TS_OAUTH_SECRET`,
+   and set `DOKPLOY_URL` to the address you open the panel with on
+   Tailscale (e.g. `http://my-vps:3000`).
+   If that name only works on your computer (e.g. `dokploy.internal` in
+   `/etc/hosts`), also add `DOKPLOY_IP` with the machine's Tailscale IP
+   (`100.x.y.z`, in *Machines*).
+
+To deploy by hand: GitHub → *Actions* → *Deploy relay* → *Run workflow*.
+Turn Dokploy's own *Autodeploy* off so a push doesn't build twice.
 
 ## Use it
 
