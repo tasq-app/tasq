@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.10.0](https://github.com/tasq-app/tasq/compare/v0.9.1...v0.10.0) (2026-11-09)
+
+
+### Features
+
+* Claude on your tasks from any device (remote MCP with OAuth) ([#96](https://github.com/tasq-app/tasq/issues/96)) ([94a1824](https://github.com/tasq-app/tasq/commit/94a18247fe41defecf2896cddc4b1dc92392cafb))
+* **extcal:** read-only calendars from your other Google accounts ([#95](https://github.com/tasq-app/tasq/issues/95)) ([f933f08](https://github.com/tasq-app/tasq/commit/f933f0831f6c0d2ff2a5afb3669633dffa78a932))
+* tasq update downloads and installs the latest release itself ([#97](https://github.com/tasq-app/tasq/issues/97)) ([98ea58a](https://github.com/tasq-app/tasq/commit/98ea58a3832cc95d56a660939135ad2087e8f133))
+* your tasq calendar in the browser (web app served by tasq-relay) ([#100](https://github.com/tasq-app/tasq/issues/100)) ([7305c22](https://github.com/tasq-app/tasq/commit/7305c224fd32ff3d39f467261f61bd5649c9612b))
+
+
+### Bug Fixes
+
+* **site:** one click on the trailer plays it with sound ([#94](https://github.com/tasq-app/tasq/issues/94)) ([8197cca](https://github.com/tasq-app/tasq/commit/8197ccadce8c0d1ce19f215d39b48b788dfe69ef))
+* **site:** the Watch button only on phones, and gone once it plays ([#92](https://github.com/tasq-app/tasq/issues/92)) ([77c1d24](https://github.com/tasq-app/tasq/commit/77c1d24ee2fce8df1159eccba209a2ec498f1a4b))
+
 ## [0.9.1](https://github.com/tasq-app/tasq/compare/v0.9.0...v0.9.1) (2026-11-06)
 
 
