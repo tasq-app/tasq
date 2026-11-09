@@ -30,7 +30,8 @@ relay (`.github/workflows/deploy-relay.yml`). It needs, once:
 2. Open the `tasq-relay` application: its id is the last part of the
    address bar (`.../services/application/<id>`).
 3. In GitHub, *Settings* → *Secrets and variables* → *Actions* →
-   *New repository secret*, three times:
+   *New repository secret* (or organization secrets), three times
+   (`DOCKPLOY_…` works too):
    - `DOKPLOY_URL`: the panel's address, e.g. `https://dokploy.example.com`.
    - `DOKPLOY_API_KEY`: the key from step 1.
    - `DOKPLOY_APP_ID`: the id from step 2.

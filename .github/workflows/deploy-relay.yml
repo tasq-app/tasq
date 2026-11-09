@@ -5,7 +5,8 @@ name: Deploy relay
 # seeing the push, which is easy to lose). Also runnable by hand from the
 # Actions tab: "Deploy relay" → "Run workflow".
 #
-# Repository secrets (Settings → Secrets and variables → Actions):
+# Repository or organization secrets (Settings → Secrets and variables →
+# Actions); spelled DOKPLOY_* or DOCKPLOY_*:
 #   DOKPLOY_URL      e.g. https://dokploy.example.com (the panel, no slash at the end)
 #   DOKPLOY_API_KEY  Dokploy → Settings → Profile → API/CLI → Generate
 #   DOKPLOY_APP_ID   the tasq-relay application's id (in its URL in Dokploy)
@@ -36,9 +37,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
-      DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
-      DOKPLOY_APP_ID: ${{ secrets.DOKPLOY_APP_ID }}
+      DOKPLOY_URL: ${{ secrets.DOKPLOY_URL || secrets.DOCKPLOY_URL }}
+      DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY || secrets.DOCKPLOY_API_KEY }}
+      DOKPLOY_APP_ID: ${{ secrets.DOKPLOY_APP_ID || secrets.DOCKPLOY_APP_ID }}
       HEALTH: ${{ vars.RELAY_HEALTH_URL }}
     steps:
       - name: Ask Dokploy to rebuild
