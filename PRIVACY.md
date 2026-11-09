@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 8 November 2026_
+_Last updated: 9 November 2026_
 
 tasq is a to-do app that runs on your computer. It has no servers and no
 accounts of its own, and it collects nothing about you: no analytics, no
@@ -56,8 +56,9 @@ account, tasq asks Google for:
 
 This access is read-only: tasq can't create, change, answer or delete
 anything in those calendars. The events are read straight from your
-computer to Google's API, with no server of ours in between, and kept in a
-local cache on your computer so you can see them offline. They are never
+computer to Google's API, and kept in a local cache on your computer so
+you can see them offline. (The one exception is the web calendar or Claude,
+if you turn them on: see below.) They are never
 turned into tasks, never written to any calendar (not even the "tasq" one)
 and never sent anywhere else.
 
@@ -66,8 +67,8 @@ Google Calendar one above. If you choose to show an account on all your
 devices, its token and your choice of calendars also go in tasq's
 database on each of your devices and travel between them inside tasq's
 sync, end-to-end encrypted: the sync server stores them sealed and can't
-read them, and it never sees the events. An account set to "only this
-device" never leaves the computer where you connected it.
+read them. An account set to "only this device" never leaves the computer
+where you connected it.
 
 tasq does not share, sell or use this data for advertising, and does not
 use it to train AI models. Its use of information received from Google APIs
@@ -106,6 +107,41 @@ assistant, under its own privacy policy.
 
 Disconnect it in tasq → Settings → Sync → Claude (or remove the connector
 in the assistant): the server forgets the keys at once.
+
+## The web calendar (optional)
+
+The web calendar works the same way, for your browser instead of an
+assistant: on tasq's sign-in page you type your sync email and password,
+the server makes your keys and keeps them sealed under a token that only
+your browser holds (a cookie it can't read from scripts). The server keeps
+the sealed keys, the token's hash, the time zone, the browser's name (for
+example "Safari on iPhone", from the browser's own description) and when
+it was last used. Each time the page asks for some days, the server reads
+your tasks, notes, spaces and shared themes in memory, works out the
+calendar and sends it to your browser. It only reads: the web calendar
+can't change anything. Nothing it reads is written to disk or logged.
+
+**Your other calendars, through the server.** While the web calendar or an
+assistant is connected, the server also reads the events of the Google
+accounts you show on all your devices, to draw them (and to tell Claude
+when you're busy). It uses the access those accounts already share inside
+your sync (above), asks Google directly with the same read-only scopes,
+and keeps what Google sends **only in memory**: never on disk. It asks
+Google again for what changed at most every two minutes, and forgets
+everything about an account half an hour after the last time you looked,
+or as soon as you stop showing it on all your devices. Accounts set to
+"only this device" are never read by the server. The events go to your
+browser (or the assistant) and nowhere else, and are not used for anything
+else.
+
+**Your browser.** The page keeps your choices (theme, view) in the
+browser's local storage, and the page itself (not your calendar) in its
+cache so it opens offline.
+
+Sign out from the page (⚙ → Sign out), or sign every browser out in
+tasq → Settings → Sync → Web calendar: the server forgets the keys at
+once. A browser not used for 90 days (12 hours, if you didn't ask to be
+remembered) is signed out by itself.
 
 ## Update check and phone capture
 

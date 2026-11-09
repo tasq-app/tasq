@@ -224,10 +224,14 @@ impl App {
             return;
         };
         let mut changed = false;
+        let client = auth::Client::find(
+            self.google_client.0.as_deref(),
+            self.google_client.1.as_deref(),
+        );
         for a in self.ext_state.accounts.iter().filter(|a| a.shared) {
             if let Some(token) = accounts::load_token(&a.email) {
                 let before = db.shared_accounts().unwrap_or_default();
-                let value = accounts::shared_value(a, &token);
+                let value = accounts::shared_value(a, &token, client.as_ref());
                 let _ = db.put_shared_account(&a.email, &value);
                 changed |= !before.iter().any(|(e, v)| *e == a.email && *v == value);
             }
@@ -542,30 +546,7 @@ impl App {
     /// order they're listed, from the second half of the palette so they
     /// read apart from the spaces (which take the first eight).
     pub fn ext_color(&self, account: &str, calendar: &str) -> crate::core::spaces::SpaceColor {
-        use crate::core::spaces::SpaceColor;
-        let chosen = self
-            .ext_state
-            .accounts
-            .iter()
-            .find(|a| a.email == account)
-            .and_then(|a| a.calendars.iter().find(|c| c.id == calendar))
-            .and_then(|c| c.color.as_deref())
-            .and_then(SpaceColor::parse);
-        if let Some(c) = chosen {
-            return c;
-        }
-        let k = self
-            .ext_state
-            .accounts
-            .iter()
-            .flat_map(|a| {
-                a.calendars
-                    .iter()
-                    .map(move |c| (a.email.as_str(), c.id.as_str()))
-            })
-            .position(|x| x == (account, calendar))
-            .unwrap_or(0);
-        SpaceColor::Slot((crate::core::spaces::AUTO_SLOTS + k) % crate::core::spaces::PALETTE_SLOTS)
+        accounts::color_of(&self.ext_state.accounts, account, calendar)
     }
 
     /// `c` on a calendar in Settings: the colour picker, on its colour.
@@ -617,52 +598,12 @@ impl App {
         from: chrono::NaiveDate,
         to: chrono::NaiveDate,
     ) -> Vec<crate::core::calendar::Occurrence> {
-        use crate::core::calendar::{ExtMark, Occurrence};
         let events: Vec<Cached> = self.ext_events().cloned().collect();
-        let pieces = match &self.frozen_tz {
-            Some(tz) => crate::extcal::occur::occurrences(&events, from, to, tz),
-            None => crate::extcal::occur::occurrences(&events, from, to, &chrono::Local),
-        };
-        pieces
-            .into_iter()
-            .map(|p| {
-                let k = events
-                    .iter()
-                    .position(|e| {
-                        e.account == p.account && e.calendar == p.calendar && e.event.id == p.id
-                    })
-                    .unwrap_or(0);
-                let calendar = self
-                    .ext_state
-                    .accounts
-                    .iter()
-                    .find(|a| a.email == p.account)
-                    .and_then(|a| a.calendars.iter().find(|c| c.id == p.calendar))
-                    .map(|c| c.name.clone())
-                    .unwrap_or_default();
-                Occurrence {
-                    abs: usize::MAX - k,
-                    date: p.date,
-                    start: p.start,
-                    minutes: p.minutes,
-                    deadline: false,
-                    projected: false,
-                    late: false,
-                    origin: p.origin,
-                    span: p.span,
-                    day: p.day,
-                    ext: Some(Box::new(ExtMark {
-                        color: self.ext_color(&p.account, &p.calendar),
-                        title: p.title,
-                        tentative: p.tentative,
-                        calendar,
-                        account: p.account,
-                        calendar_id: p.calendar,
-                        id: p.id,
-                    })),
-                }
-            })
-            .collect()
+        let accounts = &self.ext_state.accounts;
+        match &self.frozen_tz {
+            Some(tz) => crate::extcal::occur::calendar(&events, accounts, from, to, tz),
+            None => crate::extcal::occur::calendar(&events, accounts, from, to, &chrono::Local),
+        }
     }
 
     /// Tasks and the other calendars' events together, for drawing.

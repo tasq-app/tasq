@@ -49,3 +49,18 @@ works out the public address from the request (`X-Forwarded-Host` /
 `Host`, HTTPS); set `TASQ_RELAY_PUBLIC_URL=https://sync.example.com` if
 your proxy hides it. Only accounts whose owner connects Claude are ever
 read, and only while answering it.
+
+## The web calendar
+
+The same server also serves the web calendar at its root:
+`https://sync.example.com/` (sign-in at `/login`, the days at
+`/v1/calendar`). Nothing to set up: open it and sign in with a tasq
+account. Like Claude, it reads an account only while its owner is signed
+in, and only when the page asks.
+
+To show the meetings of the Google accounts people share on all their
+devices, the server asks Google itself (with the system's `curl`, which
+the image includes). It reads them with the same Google client the
+person's computer used, which tasq sends along with the account inside
+the sync; `TASQ_GOOGLE_CLIENT_ID` / `TASQ_GOOGLE_CLIENT_SECRET` set one
+for the accounts that came without it (shared by an older tasq).

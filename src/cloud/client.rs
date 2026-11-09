@@ -97,6 +97,8 @@ pub struct Assistant {
     pub name: String,
     /// It may change tasks, not only read them.
     pub write: bool,
+    /// A browser signed in to the web calendar, not an assistant.
+    pub web: bool,
 }
 
 impl Http {
@@ -113,6 +115,7 @@ impl Http {
                             id: a["id"].as_str()?.to_string(),
                             name: a["name"].as_str()?.to_string(),
                             write: a["write"].as_bool().unwrap_or(false),
+                            web: a["kind"] == "web",
                         })
                     })
                     .collect()
@@ -120,12 +123,14 @@ impl Http {
             .unwrap_or_default())
     }
 
-    /// Disconnect every assistant: the server forgets their keys.
-    pub fn revoke_assistants(&self) -> Result<()> {
+    /// Disconnect every assistant, or with `web` every browser signed in
+    /// to the web calendar: the server forgets their keys.
+    pub fn revoke_assistants(&self, web: bool) -> Result<()> {
+        let kind = if web { "web" } else { "assistant" };
         let (code, v) = self.call(
             "POST",
             "/v1/assistants/revoke",
-            Some(json!({ "all": true }).to_string()),
+            Some(json!({ "kind": kind }).to_string()),
         )?;
         answer(code, &v)
     }

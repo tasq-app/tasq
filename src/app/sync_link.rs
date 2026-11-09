@@ -63,7 +63,10 @@ enum Job {
     Sync,
     SignOut,
     /// Disconnect Claude (every assistant) from the account.
-    RevokeAssistants,
+    /// Disconnect the assistants, or (`web`) the browsers.
+    RevokeAssistants {
+        web: bool,
+    },
 }
 
 enum Note {
@@ -75,7 +78,9 @@ enum Note {
     SignedOut,
     /// Who's connected (Claude), after a sync round.
     Assistants(Vec<Assistant>),
-    AssistantsRevoked,
+    AssistantsRevoked {
+        web: bool,
+    },
 }
 
 pub struct SyncLink {
@@ -184,10 +189,10 @@ impl SyncLink {
                     Err(e) => send(Note::Failed(e.to_string())),
                 }
             }
-            Job::RevokeAssistants => {
+            Job::RevokeAssistants { web } => {
                 let Some(s) = session.as_ref() else { return };
-                match Http::new(&s.server, s.keys.clone()).revoke_assistants() {
-                    Ok(()) => send(Note::AssistantsRevoked),
+                match Http::new(&s.server, s.keys.clone()).revoke_assistants(web) {
+                    Ok(()) => send(Note::AssistantsRevoked { web }),
                     Err(e) => send(Note::Failed(e.to_string())),
                 }
             }
@@ -341,7 +346,44 @@ impl App {
     }
 
     /// Every loop: send a sync that's due, take in what the thread says.
+    /// Share your theme files with your account, for the web calendar
+    /// (once a run: they're read at start). Only ones that read as themes.
+    fn share_themes(&mut self) {
+        if self.themes_shared {
+            return;
+        }
+        self.themes_shared = true;
+        let Some(dir) = crate::theme::themes_dir() else {
+            return;
+        };
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        let Some(db) = self.store.db.as_mut() else {
+            return;
+        };
+        for path in entries.filter_map(|e| e.ok()).map(|e| e.path()) {
+            if path.extension().and_then(|s| s.to_str()) != Some("toml") {
+                continue;
+            }
+            let Ok(text) = std::fs::read_to_string(&path) else {
+                continue;
+            };
+            if let Ok(t) = crate::theme::parse_theme(&text)
+                && !crate::theme::BUILT_IN.iter().any(|b| b.name == t.name)
+            {
+                let _ = db.put_shared_theme(t.name, &text);
+            }
+        }
+    }
+
     pub fn sync_poll(&mut self) -> bool {
+        if self
+            .sync_due
+            .is_some_and(|due| due <= Instant::now() && self.is_db() && self.sync.is_some())
+        {
+            self.share_themes();
+        }
         if let Some(due) = self.sync_due
             && due <= Instant::now()
             && self.is_db()
@@ -411,9 +453,15 @@ impl App {
                     self.assistants = None;
                 }
                 Note::Assistants(list) => self.assistants = Some(list),
-                Note::AssistantsRevoked => {
-                    self.assistants = Some(Vec::new());
-                    self.flash("Claude disconnected · the server forgot its keys");
+                Note::AssistantsRevoked { web } => {
+                    if let Some(list) = self.assistants.as_mut() {
+                        list.retain(|a| a.web != web);
+                    }
+                    self.flash(if web {
+                        "web calendar signed out everywhere · the server forgot its keys"
+                    } else {
+                        "Claude disconnected · the server forgot its keys"
+                    });
                 }
             }
         }
@@ -451,25 +499,75 @@ impl App {
         )
     }
 
+    /// The web calendar's address.
+    pub fn web_url(&self) -> String {
+        format!(
+            "{}/",
+            session::server(self.sync_url.as_deref()).trim_end_matches('/')
+        )
+    }
+
+    fn browsers(&self) -> usize {
+        self.assistants
+            .as_ref()
+            .map_or(0, |l| l.iter().filter(|a| a.web).count())
+    }
+
+    /// What Settings shows on the web calendar's row.
+    pub fn web_label(&self) -> String {
+        match self.browsers() {
+            0 => "Enter copies the link · open it on your phone".to_string(),
+            1 => "● 1 browser signed in · Enter signs it out".to_string(),
+            n => format!("● {n} browsers signed in · Enter signs them out"),
+        }
+    }
+
+    /// Enter on the web calendar's row: copy the link, or sign the
+    /// browsers out.
+    pub fn web_enter(&mut self) {
+        if self.browsers() > 0 {
+            let _ = self
+                .sync_link()
+                .jobs
+                .send(Job::RevokeAssistants { web: true });
+            self.flash("signing the web calendar out…");
+            return;
+        }
+        let url = self.web_url();
+        let copied = crate::clipboard::copy(&url).is_ok();
+        self.flash(if copied {
+            format!("copied {url} · open it on your phone and sign in with your tasq account")
+        } else {
+            format!("open {url} on your phone and sign in with your tasq account")
+        });
+    }
+
     /// What Settings shows on the Claude row.
     pub fn assistants_label(&self) -> String {
-        match &self.assistants {
-            Some(list) if !list.is_empty() => {
-                let what = if list.iter().any(|a| a.write) {
-                    "reads and changes your tasks"
-                } else {
-                    "reads your tasks"
-                };
-                format!("● connected · {what} · Enter disconnects")
-            }
-            _ => "Enter copies the link to add in Claude → Connectors".to_string(),
+        let claude: Vec<&crate::cloud::client::Assistant> = self
+            .assistants
+            .iter()
+            .flatten()
+            .filter(|a| !a.web)
+            .collect();
+        if claude.is_empty() {
+            return "Enter copies the link to add in Claude → Connectors".to_string();
         }
+        let what = if claude.iter().any(|a| a.write) {
+            "reads and changes your tasks"
+        } else {
+            "reads your tasks"
+        };
+        format!("● connected · {what} · Enter disconnects")
     }
 
     /// Enter on the Claude row: copy the connector link, or disconnect.
     pub fn assistants_enter(&mut self) {
-        if self.assistants.as_ref().is_some_and(|l| !l.is_empty()) {
-            let _ = self.sync_link().jobs.send(Job::RevokeAssistants);
+        if self.assistants.iter().flatten().any(|a| !a.web) {
+            let _ = self
+                .sync_link()
+                .jobs
+                .send(Job::RevokeAssistants { web: false });
             self.flash("disconnecting Claude…");
             return;
         }

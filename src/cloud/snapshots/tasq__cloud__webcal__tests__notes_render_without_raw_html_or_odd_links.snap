@@ -1,0 +1,13 @@
+---
+source: src/cloud/webcal.rs
+assertion_line: 397
+expression: "markdown_html(\"# Plan\\n\\n- [x] tema 1\\n- [ ] tema 2\\n\\n**ojo** <script>alert(1)</script> \\\n             [doc](https://example.com) [x](javascript:alert(1))\")"
+---
+<h1>Plan</h1>
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+tema 1</li>
+<li><input disabled="" type="checkbox"/>
+tema 2</li>
+</ul>
+<p><strong>ojo</strong> &lt;script&gt;alert(1)&lt;/script&gt; <a href="https://example.com">doc</a> <a href="#">x</a></p>

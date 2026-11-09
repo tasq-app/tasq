@@ -1114,6 +1114,58 @@ While it's connected the server reads your tasks each time Claude asks
 (see [`PRIVACY.md`](PRIVACY.md)); Settings → Sync → Claude shows it's
 connected, and Enter there disconnects it.
 
+If you show some of your other calendars on all your devices (see
+[Your other calendars](#google-calendar)), Claude sees their events too in
+`now`, `agenda` and `free_time`: your work meetings count as busy.
+
+## Your calendar in the browser (beta)
+
+The calendar as tasq draws it, on your phone or any computer: each space
+in its colour, tinted blocks with a stronger left edge, dashed for repeats
+still to come, the all-day strip, the red line for now, free gaps, and the
+meetings from your other calendars next to your tasks. It only reads:
+change things in tasq (or ask Claude).
+
+<p>
+<img src="docs/screenshots/web-phone-agenda.png" width="23%" alt="The week's agenda on a phone">
+<img src="docs/screenshots/web-phone-day.png" width="23%" alt="A day hour by hour on a phone">
+<img src="docs/screenshots/web-phone-meeting.png" width="23%" alt="A meeting's details, with its video call">
+<img src="docs/screenshots/web-phone-month.png" width="23%" alt="The month, a dot per task">
+</p>
+
+![The week on a computer](docs/screenshots/web-desktop-week.png)
+
+1. Sign in to sync on your computer (above).
+2. Settings (`,`) → **Sync** → **Web calendar**, Enter: the link is copied
+   (your sync server's address). Open it on your phone.
+3. Sign in with your tasq email and password. Leave **Remember this
+   browser** on and it stays signed in while you keep using it.
+4. On the phone: Share → **Add to Home Screen** (Safari), or **Install**
+   (Chrome). It opens like an app.
+
+- **Phone:** the week across the top (swipe it, tap a day), and three
+  tabs: **Agenda** (the week, day by day), **Day** (hour by hour, with the
+  free gaps underneath; swipe for the next day) and **Month** (a dot per
+  task in its colour, red for deadlines; tap a day for its list). Tap
+  anything for its details: notes, subtasks, how it repeats, and for a
+  meeting the **Join video call** and **Open in Google Calendar** buttons,
+  in the right Google account.
+- **Computer:** the week as columns, tasks lasting several days as one
+  bar across the top, and the selected task or the day's free gaps on the
+  side. Every button is there, and the keys tasq uses work too: `h`/`l`
+  previous/next, `t` today, `d` `w` `m` `a` day, week, month, agenda,
+  `j`/`k` through the items, Enter for the details, `z` all 24 hours, `?`
+  for the list.
+- **Themes:** ⚙ → the six tasq comes with, and your own: a theme file in
+  tasq's themes folder goes with sync and shows up under **Your themes**.
+  It's picked per browser, apart from the terminal's.
+- It updates every minute and each time you come back to it.
+
+While a browser is signed in, the server reads your tasks each time the
+page asks (see [`PRIVACY.md`](PRIVACY.md)). Settings → Sync → **Web
+calendar** shows how many browsers are, and Enter there signs them all
+out; **Sign out** in the page's ⚙ signs out that one.
+
 ## Google Calendar
 
 tasq can keep your dated tasks in Google Calendar, each in its space's

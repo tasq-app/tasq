@@ -12,7 +12,7 @@ notify = "8"
 qrcode = { version = "0.14", default-features = false }
 ratatui = "0.30.0"
 tiny_http = "0.12"
-pulldown-cmark = { version = "0.13", default-features = false }
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
 unicode-width = "0.2"
 serde_json = "1"
