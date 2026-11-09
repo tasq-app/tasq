@@ -91,6 +91,8 @@ jobs:
         with:
           install: true
           cache: true
+          # mise.jdx.dev, not GitHub releases: those keep answering 504.
+          fetch_from_github: false
 
       - name: Add Rust target
         run: rustup target add ${{ matrix.target }}
