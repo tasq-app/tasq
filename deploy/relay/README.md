@@ -50,6 +50,9 @@ tailnet for the run. In the Tailscale admin console:
 3. In GitHub add the secrets `TS_OAUTH_CLIENT_ID` and `TS_OAUTH_SECRET`,
    and set `DOKPLOY_URL` to the address you open the panel with on
    Tailscale (e.g. `http://my-vps:3000`).
+   If that name only works on your computer (e.g. `dokploy.internal` in
+   `/etc/hosts`), also add `DOKPLOY_IP` with the machine's Tailscale IP
+   (`100.x.y.z`, in *Machines*).
 
 To deploy by hand: GitHub → *Actions* → *Deploy relay* → *Run workflow*.
 Turn Dokploy's own *Autodeploy* off so a push doesn't build twice.
