@@ -40,6 +40,46 @@ from your computer. You can also revoke it at
 [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 To remove the events, delete the "tasq" calendar in Google Calendar.
 
+## Your other calendars (optional, read-only)
+
+You can also connect one or more Google accounts (a work account, your
+personal one) so tasq shows their events next to your tasks. For each
+account, tasq asks Google for:
+
+- **`calendar.calendarlist.readonly`**: to list that account's calendars,
+  so you can choose which ones to show.
+- **`calendar.events.readonly`**: to read the events in the calendars you
+  chose: title, time, place, description, who is invited and whether you
+  said yes, and the links to the event, its video call and its attached
+  files.
+- **`openid` and `email`**: to show which account is connected.
+
+This access is read-only: tasq can't create, change, answer or delete
+anything in those calendars. The events are read straight from your
+computer to Google's API, with no server of ours in between, and kept in a
+local cache on your computer so you can see them offline. They are never
+turned into tasks, never written to any calendar (not even the "tasq" one)
+and never sent anywhere else.
+
+Each account's access (a refresh token) is kept on your computer like the
+Google Calendar one above. If you choose to show an account on all your
+devices, its token and your choice of calendars also go in tasq's
+database on each of your devices and travel between them inside tasq's
+sync, end-to-end encrypted: the sync server stores them sealed and can't
+read them, and it never sees the events. An account set to "only this
+device" never leaves the computer where you connected it.
+
+tasq does not share, sell or use this data for advertising, and does not
+use it to train AI models. Its use of information received from Google APIs
+adheres to the
+[Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy),
+including the Limited Use requirements.
+
+**Disconnect** an account in Settings revokes its access, deletes its token
+and deletes its cached events, on every device where it was shown. You can
+also revoke it at
+[myaccount.google.com/permissions](https://myaccount.google.com/permissions).
+
 ## Apple Calendar (optional)
 
 If you connect Apple Calendar, you give tasq your Apple ID and an

@@ -152,6 +152,17 @@ fn title(app: &App, abs: usize) -> String {
 /// An occurrence's title: a diamond for an event, and which day it is of
 /// one lasting several.
 fn occ_title(app: &App, o: &Occurrence) -> String {
+    if let Some(x) = &o.ext {
+        let mut t = if x.tentative {
+            format!("◌ {}", x.title)
+        } else {
+            x.title.clone()
+        };
+        if o.span > 1 {
+            t.push_str(&format!(" · {}/{}", o.day + 1, o.span));
+        }
+        return t;
+    }
     let mut t = title(app, o.abs);
     if app.tasks().get(o.abs).is_some_and(|t| t.event) {
         t = format!("◆ {t}");
@@ -413,7 +424,11 @@ fn bar(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     // Summary on the right.
     let summary = match cal.view {
         CalView::Day => {
-            let items = app.cal_day_items();
+            let items: Vec<_> = app
+                .cal_day_items()
+                .into_iter()
+                .filter(|o| o.ext.is_none())
+                .collect();
             let planned: u32 = items
                 .iter()
                 .filter(|o| o.start.is_some())
@@ -509,7 +524,10 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
             } else if o.deadline {
                 (theme.overdue, "◷ ")
             } else {
-                (task_color(app, o.abs), if o.projected { "↻ " } else { "" })
+                (
+                    occ_color(app, theme, o),
+                    if o.projected { "↻ " } else { "" },
+                )
             };
             let text = format!(" {prefix}{} ", occ_title(app, o));
             let w = (text.chars().count() as u16).min(grid_r.width.saturating_sub(GUTTER_W + 1));
@@ -726,24 +744,26 @@ fn gap_before_next(
 /// future repeat), the title, then its hours and space.
 fn draw_block(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme, o: &Occurrence, sel: bool) {
     let done = app.tasks().get(o.abs).is_some_and(|t| t.done);
-    let color = if o.deadline {
-        theme.overdue
-    } else {
-        task_color(app, o.abs)
+    let color = occ_color(app, theme, o);
+    let amount = match (&o.ext, sel) {
+        (Some(_), true) => 0.25,
+        (Some(_), false) => 0.08,
+        (None, true) => 0.40,
+        (None, false) => 0.20,
     };
-    let amount = if sel { 0.40 } else { 0.20 };
     let bg = if done {
         theme.panel
     } else {
         tint(color, theme.bg, amount).unwrap_or(theme.panel)
     };
     fill(buf, r, Style::default().bg(bg));
-    let edge = if o.projected {
-        "┆"
-    } else if sel {
-        "┃"
-    } else {
-        "▎"
+    let edge = match &o.ext {
+        Some(_) if sel => "┃",
+        Some(x) if x.tentative => "┆",
+        Some(_) => "│",
+        None if o.projected => "┆",
+        None if sel => "┃",
+        None => "▎",
     };
     for y in r.top()..r.bottom() {
         if let Some(c) = buf.cell_mut((r.x, y)) {
@@ -779,11 +799,14 @@ fn draw_block(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme, o: &Occurrenc
         return;
     };
     let hours = format!("{} – {}", hhmm(s), hhmm(e));
-    let space = app
-        .tasks()
-        .get(o.abs)
-        .and_then(|t| t.projects.first())
-        .map(|p| crate::core::spaces::display(p));
+    let space = match &o.ext {
+        Some(x) => Some(x.calendar.clone()),
+        None => app
+            .tasks()
+            .get(o.abs)
+            .and_then(|t| t.projects.first())
+            .map(|p| crate::core::spaces::display(p)),
+    };
     if r.height == 1 {
         // One row: title and start time on the same line.
         let line = format!(
@@ -909,6 +932,26 @@ fn side_panel(
                 row(buf, &mut y, "", "a future repeat", key);
             }
         }
+        None if selected.is_some_and(|o| o.ext.is_some()) => {
+            let Some((o, m)) = selected.and_then(|o| Some((o, o.ext.as_ref()?))) else {
+                return;
+            };
+            row(buf, &mut y, "event", &m.title, val);
+            row(buf, &mut y, "calendar", &m.calendar, val);
+            if let (Some(s), Some(e)) = (o.start, o.end()) {
+                row(
+                    buf,
+                    &mut y,
+                    "time",
+                    &format!("{} – {}", hhmm(s), hhmm(e)),
+                    val,
+                );
+            }
+            if m.tentative {
+                row(buf, &mut y, "", "not answered yet", val.fg(theme.overdue));
+            }
+            row(buf, &mut y, "", "Enter for details · read-only", key);
+        }
         None => {
             put(buf, x, y, "nothing on this day", w, key);
             y += 1;
@@ -955,7 +998,9 @@ fn day_head(d: chrono::NaiveDate) -> String {
 
 /// A chip or block colour for an occurrence.
 fn occ_color(app: &App, theme: &Theme, o: &Occurrence) -> Color {
-    if o.late || o.deadline {
+    if let Some(x) = &o.ext {
+        theme.space_color(x.color)
+    } else if o.late || o.deadline {
         theme.overdue
     } else {
         task_color(app, o.abs)
@@ -968,8 +1013,8 @@ fn week_blocks(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     };
     let days = week_days(app);
     let today = app.today_naive();
-    let occs = app.cal_occurrences(days[0], days[6]);
-    let selected = app.cal_selected();
+    let occs = app.cal_view_occurrences(days[0], days[6]);
+    let selected = app.cal_selected_any();
     const GW: u16 = 4;
     let col_w = (r.width.saturating_sub(GW)) / 7;
     let col_x = |i: usize| r.x + GW + col_w * i as u16;
@@ -1183,6 +1228,12 @@ fn week_blocks(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
 /// Where a click on block `r` lands: the block, and its bottom row to
 /// drag its length (when it has more than one).
 fn block_hits(app: &App, r: Rect, o: &Occurrence) {
+    // Another calendar's event: a click opens it, nothing drags it.
+    if o.ext.is_some() {
+        app.hits
+            .add(r, crate::app::Hit::CalItem(Box::new(o.clone())));
+        return;
+    }
     if o.projected && app.tasks().get(o.abs).is_none_or(|t| t.rec.is_none()) {
         return;
     }
@@ -1262,15 +1313,22 @@ fn draw_mini_block(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme, o: &Occu
     let bg = if done {
         theme.panel
     } else {
-        tint(color, theme.bg, if sel { 0.40 } else { 0.20 }).unwrap_or(theme.panel)
+        let amount = match (&o.ext, sel) {
+            (Some(_), true) => 0.25,
+            (Some(_), false) => 0.08,
+            (None, true) => 0.40,
+            (None, false) => 0.20,
+        };
+        tint(color, theme.bg, amount).unwrap_or(theme.panel)
     };
     fill(buf, r, Style::default().bg(bg));
-    let edge = if o.projected {
-        "┆"
-    } else if sel {
-        "┃"
-    } else {
-        "▎"
+    let edge = match &o.ext {
+        Some(_) if sel => "┃",
+        Some(x) if x.tentative => "┆",
+        Some(_) => "│",
+        None if o.projected => "┆",
+        None if sel => "┃",
+        None => "▎",
     };
     for y in r.top()..r.bottom() {
         if let Some(c) = buf.cell_mut((r.x, y)) {
@@ -1323,8 +1381,8 @@ fn week_agenda(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     };
     let days = week_days(app);
     let today = app.today_naive();
-    let occs = app.cal_occurrences(days[0], days[6]);
-    let selected = app.cal_selected();
+    let occs = app.cal_view_occurrences(days[0], days[6]);
+    let selected = app.cal_selected_any();
     agenda(
         buf,
         r,
@@ -1495,7 +1553,7 @@ fn month(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
     let first = crate::app::month_bounds(cal.date).0;
     let (grid_from, weeks) = cal.month_window();
     let grid_to = grid_from + chrono::Days::new(u64::from(weeks) * 7 - 1);
-    let occs = app.cal_occurrences(grid_from, grid_to);
+    let occs = app.cal_view_occurrences(grid_from, grid_to);
     let titles = cal.month_style == crate::app::CalStyle::List;
 
     // Room: the grid, and in the counts look the selected day below it.
@@ -1687,8 +1745,8 @@ fn month(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
                 width: r.width,
                 height: r.bottom() - py,
             };
-            let items = app.cal_day_items();
-            let selected = app.cal_selected();
+            let items = app.cal_view_occurrences(cal.date, cal.date);
+            let selected = app.cal_selected_any();
             agenda(
                 buf,
                 pr,

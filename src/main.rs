@@ -144,6 +144,7 @@ fn main() -> Result<()> {
     // A kept Google Calendar connection comes back on, and syncs.
     if std::env::var_os("TASQ_NO_GOOGLE").is_none() {
         app_state.gcal_resume();
+        app_state.ext_resume();
     }
     if std::env::var_os("TASQ_NO_APPLE").is_none() {
         app_state.acal_resume();
@@ -263,6 +264,9 @@ fn run(
             dirty = true;
         }
         if app.acal_poll() {
+            dirty = true;
+        }
+        if app.ext_poll() {
             dirty = true;
         }
         if app.sync_poll() {
@@ -556,6 +560,10 @@ fn next_timeout(app: &App) -> Duration {
         (Some(a), Some(b)) => Some(a.min(b)),
         (a, b) => a.or(b),
     };
+    let earliest = match (earliest, app.ext_deadline()) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (a, b) => a.or(b),
+    };
     let earliest = match (earliest, app.acal_deadline()) {
         (Some(a), Some(b)) => Some(a.min(b)),
         (a, b) => a.or(b),
@@ -627,6 +635,18 @@ fn handle_key(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     // A space's colour picker takes every key while it's open.
     if app.color_pick.is_some() {
         handle_color_pick(app, key);
+        return;
+    }
+    // Another calendar's event: its links open, any other key closes it.
+    if app.ext_detail.is_some() {
+        match key.code {
+            KeyCode::Char('o') | KeyCode::Enter => app.ext_detail_open(None),
+            KeyCode::Char('g') => app.ext_detail_open(Some(0)),
+            KeyCode::Char(c @ '1'..='9') => {
+                app.ext_detail_open(Some(c as usize - '0' as usize));
+            }
+            _ => app.ext_detail = None,
+        }
         return;
     }
     // "Only this one, or this and the ones after?" takes the next key.
@@ -2148,6 +2168,16 @@ fn handle_settings(app: &mut App, key: KeyEvent) {
         KeyCode::Char('j') | KeyCode::Down => app.settings_move(true),
         KeyCode::Char('k') | KeyCode::Up => app.settings_move(false),
         KeyCode::Char('l') | KeyCode::Right | KeyCode::Tab => app.settings_enter_rows(),
+        // `c` on one of your other calendars: its colour.
+        KeyCode::Char('c') if app.settings.in_rows => {
+            if let Some(tasq::app::SetKey::ExtCalendar(a, c)) = app
+                .settings_rows(app.settings.section)
+                .get(app.settings.row)
+                .and_then(|r| r.key)
+            {
+                app.ext_pick_color(a, c);
+            }
+        }
         KeyCode::Enter | KeyCode::Char(' ') => {
             if let Some(action) = app.settings_activate() {
                 apply_action(app, action);
@@ -2564,7 +2594,9 @@ fn apply_action(app: &mut App, action: Action) {
         // In the calendar, every task action is about the task selected
         // there, not the one under the list's cursor.
         Action::BeginEdit | Action::BeginEditInsert if app.calendar.is_some() => {
-            if action == Action::BeginEditInsert {
+            if app.cal_open_ext() {
+                // Another calendar's event: its details, read-only.
+            } else if action == Action::BeginEditInsert {
                 app.cal_edit_insert();
             } else if let Some(occ) = app.cal_selected() {
                 app.cal_apply(occ, tasq::app::SeriesOp::Edit(false));

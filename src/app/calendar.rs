@@ -228,12 +228,47 @@ impl App {
         let Some(c) = &self.calendar else {
             return Vec::new();
         };
-        self.cal_occurrences(c.date, c.date)
+        self.cal_view_occurrences(c.date, c.date)
     }
 
-    pub fn cal_selected(&self) -> Option<Occurrence> {
+    /// What's selected on the day: a task's occurrence, or another
+    /// calendar's event.
+    pub fn cal_selected_any(&self) -> Option<Occurrence> {
         let c = self.calendar.as_ref()?;
         self.cal_day_items().into_iter().nth(c.selected)
+    }
+
+    /// The selected task's occurrence: what every task action is about.
+    /// Another calendar's event is read-only, so none of them touch it.
+    pub fn cal_selected(&self) -> Option<Occurrence> {
+        self.cal_selected_any().filter(|o| o.ext.is_none())
+    }
+
+    /// Enter on another calendar's event: its details. Whether one was.
+    pub fn cal_open_ext(&mut self) -> bool {
+        let Some(x) = self.cal_selected_any().and_then(|o| o.ext) else {
+            return false;
+        };
+        let found =
+            self.ext_state.events.iter().find(|e| {
+                e.account == x.account && e.calendar == x.calendar_id && e.event.id == x.id
+            });
+        if let Some(e) = found {
+            self.ext_detail = Some(crate::app::ExtDetail {
+                event: e.clone(),
+                calendar: x.calendar.clone(),
+            });
+        }
+        true
+    }
+
+    /// A task action on another calendar's event: say why nothing happens.
+    fn cal_read_only(&mut self) -> bool {
+        let ext = self.cal_selected_any().is_some_and(|o| o.ext.is_some());
+        if ext {
+            self.flash("from another calendar · read-only in tasq");
+        }
+        ext
     }
 
     fn cal_clamp(&mut self) {
@@ -338,6 +373,9 @@ impl App {
             self.open_cal(CalView::Day);
             return;
         }
+        if self.cal_open_ext() {
+            return;
+        }
         if let Some(occ) = self.cal_selected() {
             self.cal_apply(occ, SeriesOp::Edit(false));
         }
@@ -352,6 +390,9 @@ impl App {
 
     /// `D` / Delete: delete the selected task (a repeat asks which ones).
     pub fn cal_delete(&mut self) {
+        if self.cal_read_only() {
+            return;
+        }
         if let Some(occ) = self.cal_selected() {
             self.cal_apply(occ, SeriesOp::Delete);
         }
@@ -558,6 +599,9 @@ impl App {
 
     /// `x`: complete the selected task (the current one of a repeat).
     pub fn cal_complete(&mut self) {
+        if self.cal_read_only() {
+            return;
+        }
         let Some(occ) = self.cal_selected() else {
             return;
         };

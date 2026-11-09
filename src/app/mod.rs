@@ -22,6 +22,7 @@ mod chord;
 mod color_pick;
 mod draft;
 mod draft_overlay;
+mod extcal_link;
 mod filter_pop;
 mod flash;
 mod gcal_link;
@@ -70,6 +71,7 @@ pub use draft_overlay::{
     REC_UNIT_ORDER, RecurrenceBuilderState, SLASH_ENTRIES, SlashEntry, SlashKind, SlashMenuState,
     format_rec_value, recurrence_next_preview,
 };
+pub use extcal_link::{ExtDetail, ExtState};
 pub use filter_pop::{DUE_TERMS, FilterPop, PopPick, PopRow, search_label};
 pub use flash::Flash;
 pub use gcal_link::GcalStatus;
@@ -194,6 +196,10 @@ pub struct App {
     pub(crate) gcal_due: Option<std::time::Instant>,
     /// Your own Google OAuth client from the config (id, secret).
     pub(crate) google_client: (Option<String>, Option<String>),
+    /// The thread that reads your other calendars, once one is connected.
+    pub(crate) ext: Option<extcal_link::ExtLink>,
+    pub ext_state: ExtState,
+    pub(crate) ext_due: Option<std::time::Instant>,
     /// The thread that talks to Apple Calendar (CalDAV), once connected.
     pub(crate) acal: Option<acal_link::AcalLink>,
     pub acal_status: GcalStatus,
@@ -218,6 +224,8 @@ pub struct App {
     pub spaces_in_use: Option<std::collections::BTreeSet<String>>,
     /// A change to a repeating task asking "only this one?".
     pub series_ask: Option<SeriesAsk>,
+    /// Another calendar's event, open on its details.
+    pub ext_detail: Option<ExtDetail>,
     /// The calendar's day columns as last drawn, for the mouse.
     pub cal_cols: std::cell::RefCell<Vec<CalCol>>,
     /// A block being dragged in the calendar.
@@ -285,6 +293,8 @@ pub struct App {
     /// The time the calendar treats as now, in minutes; `None` reads the
     /// clock. Snapshot tests pin it (24*60 or more hides the now line).
     pub frozen_now: Option<u32>,
+    /// Tests pin the time zone other calendars' events are drawn in.
+    pub frozen_tz: Option<chrono::FixedOffset>,
     pub command_palette: CommandPaletteState,
     /// Vertical scroll offset (rows from the top of the line list) for each
     /// view, keyed by `View::idx()`. Updated at render time via `Cell` so the
@@ -427,6 +437,9 @@ impl App {
             gcal_status: GcalStatus::Off,
             gcal_due: None,
             google_client,
+            ext: None,
+            ext_state: ExtState::default(),
+            ext_due: None,
             acal: None,
             acal_status: GcalStatus::Off,
             acal_due: None,
@@ -441,6 +454,7 @@ impl App {
             sync_url,
             spaces_in_use: None,
             series_ask: None,
+            ext_detail: None,
             cal_cols: std::cell::RefCell::new(Vec::new()),
             cal_drag: None,
             trash_screen: None,
@@ -472,6 +486,7 @@ impl App {
             saved_pick_idx: 0,
             calendar: None,
             frozen_now: None,
+            frozen_tz: None,
             command_palette: CommandPaletteState::default(),
             view_scroll: [Cell::new(0), Cell::new(0)],
             inspector_scroll: Cell::new(0),
