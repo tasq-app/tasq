@@ -3,9 +3,11 @@
 //! Two pieces:
 //!
 //! 1. [`run`] — handler for `tasq update`. Detects how tasq was installed
-//!    (Homebrew, Cargo, plain binary) and prints the exact command the user
-//!    should run. Does not execute it: we don't want to surprise users with a
-//!    `brew upgrade` or a binary self-replace.
+//!    (Homebrew, Cargo, Nix, plain binary). For a package manager it prints
+//!    the command to run (we don't run `brew upgrade` behind the user's
+//!    back). For a downloaded binary it updates itself: downloads the newest
+//!    release for this platform, checks it against the release's `.sha256`,
+//!    and swaps it in for the running executable (see [`self_update`]).
 //!
 //! 2. [`spawn_check`] — background thread invoked at TUI startup that consults
 //!    a cache under `$XDG_CACHE_HOME/tasq/latest_version.json`. If the cache
@@ -28,14 +30,16 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 pub enum InstallKind {
     Homebrew,
     Cargo,
+    Nix,
     Binary,
     Unknown,
 }
 
-/// Run the `tasq update` subcommand: detect install method and print
-/// instructions. Exits with code 0 on success; the caller (`main`) should
-/// `return Ok(())` after invoking this.
-pub fn run() -> io::Result<()> {
+/// Run the `tasq update` subcommand: detect the install method, then either
+/// print the package manager's upgrade command or, for a downloaded binary,
+/// update it in place. The caller (`main`) should `return Ok(())` after.
+pub fn run() -> anyhow::Result<()> {
+    cleanup_old_binary();
     let exe = std::env::current_exe().ok();
     let kind = exe
         .as_deref()
@@ -58,13 +62,24 @@ pub fn run() -> io::Result<()> {
             println!();
             println!("    cargo install --git https://github.com/tasq-app/tasq --force");
         }
-        InstallKind::Binary => {
-            println!("Looks like a downloaded binary. Grab the latest from:");
+        InstallKind::Nix => {
+            println!("Looks like a Nix install. Update it through Nix, e.g.:");
             println!();
-            println!("    https://github.com/tasq-app/tasq/releases/latest");
-            println!();
-            println!("...and replace the file above.");
+            println!("    nix profile upgrade tasq");
         }
+        InstallKind::Binary => match &exe {
+            Some(p) => {
+                if let Err(e) = self_update(p, current) {
+                    eprintln!("tasq: update failed: {e:#}");
+                    eprintln!();
+                    eprintln!("You can still update by hand: grab the latest from");
+                    eprintln!("    {RELEASES_PAGE}");
+                    eprintln!("and replace the file above.");
+                    std::process::exit(1);
+                }
+            }
+            None => println!("Grab the latest from {RELEASES_PAGE}"),
+        },
         InstallKind::Unknown => {
             println!("Could not detect the install method. Options:");
             println!();
@@ -90,12 +105,288 @@ pub fn detect_kind(exe: &Path) -> InstallKind {
     if s.contains("/.cargo/bin/") || s.contains("\\.cargo\\bin\\") {
         return InstallKind::Cargo;
     }
+    if s.starts_with("/nix/store/") {
+        return InstallKind::Nix;
+    }
     // A bare /usr/local/bin/tasq could be either a Homebrew shim (older
     // macOS) or a manual download. Without more signal, treat it as a binary.
     if !s.is_empty() {
         return InstallKind::Binary;
     }
     InstallKind::Unknown
+}
+
+const RELEASES_PAGE: &str = "https://github.com/tasq-app/tasq/releases/latest";
+const DOWNLOAD_BASE: &str = "https://github.com/tasq-app/tasq/releases/download";
+const DOWNLOAD_TIMEOUT_SECS: u64 = 300;
+
+/// The release target this build was compiled for, as named in the release
+/// assets (`tasq-<tag>-<target>.<ext>`). `None` on platforms we don't ship.
+pub fn release_target() -> Option<&'static str> {
+    if cfg!(all(
+        target_os = "linux",
+        target_arch = "x86_64",
+        target_env = "gnu"
+    )) {
+        Some("x86_64-unknown-linux-gnu")
+    } else if cfg!(all(
+        target_os = "linux",
+        target_arch = "aarch64",
+        target_env = "gnu"
+    )) {
+        Some("aarch64-unknown-linux-gnu")
+    } else if cfg!(all(target_os = "macos", target_arch = "x86_64")) {
+        Some("x86_64-apple-darwin")
+    } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        Some("aarch64-apple-darwin")
+    } else if cfg!(all(target_os = "windows", target_arch = "x86_64")) {
+        Some("x86_64-pc-windows-msvc")
+    } else {
+        None
+    }
+}
+
+/// The archive file name of a release asset for `target`.
+pub fn asset_name(tag: &str, target: &str) -> String {
+    let ext = if target.contains("windows") {
+        "zip"
+    } else {
+        "tar.gz"
+    };
+    format!("tasq-{tag}-{target}.{ext}")
+}
+
+/// The hash out of a `.sha256` file: `shasum` writes `<hash>  <file>`, the
+/// Windows build writes the bare (upper-case) hash. Returns it lower-cased,
+/// or `None` when the first word isn't 64 hex digits. Exposed for tests.
+pub fn parse_sha256_file(body: &str) -> Option<String> {
+    let word = body.split_whitespace().next()?;
+    if word.len() == 64 && word.bytes().all(|b| b.is_ascii_hexdigit()) {
+        Some(word.to_ascii_lowercase())
+    } else {
+        None
+    }
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    Sha256::digest(bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+
+/// Download the newest release for this platform, verify it, and replace the
+/// executable at `exe` with it.
+fn self_update(exe: &Path, current: &str) -> anyhow::Result<()> {
+    use anyhow::{Context, anyhow, bail};
+
+    let target =
+        release_target().ok_or_else(|| anyhow!("there is no release binary for this platform"))?;
+    println!("Checking for the latest release...");
+    let tag = fetch_latest_body()
+        .and_then(|b| parse_tag_from_release_json(&b))
+        .ok_or_else(|| anyhow!("couldn't read the latest release from GitHub (offline?)"))?;
+    if !is_newer(&tag, current) {
+        println!("Already up to date ({current}).");
+        return Ok(());
+    }
+    println!("Updating {current} -> {}", tag.trim_start_matches('v'));
+
+    let work = std::env::temp_dir().join(format!("tasq-update-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&work);
+    std::fs::create_dir_all(&work)
+        .with_context(|| format!("couldn't create {}", work.display()))?;
+    let result = (|| -> anyhow::Result<()> {
+        let asset = asset_name(&tag, target);
+        let url = format!("{DOWNLOAD_BASE}/{tag}/{asset}");
+        let archive = work.join(&asset);
+        let sums = work.join(format!("{asset}.sha256"));
+        println!("Downloading {asset}...");
+        download(&url, &archive)?;
+        download(&format!("{url}.sha256"), &sums)?;
+
+        let expected = parse_sha256_file(&std::fs::read_to_string(&sums)?)
+            .ok_or_else(|| anyhow!("the release's .sha256 file is malformed"))?;
+        let actual = sha256_hex(&std::fs::read(&archive)?);
+        if actual != expected {
+            bail!("checksum mismatch for {asset} (expected {expected}, got {actual})");
+        }
+        println!("Checksum OK.");
+
+        let unpacked = work.join("unpacked");
+        std::fs::create_dir_all(&unpacked)?;
+        extract(&archive, &unpacked)?;
+        let bin_name = if cfg!(windows) { "tasq.exe" } else { "tasq" };
+        let new_bin = find_file(&unpacked, bin_name)
+            .ok_or_else(|| anyhow!("{bin_name} not found in {asset}"))?;
+        replace_exe(exe, &new_bin)
+    })();
+    let _ = std::fs::remove_dir_all(&work);
+    result?;
+
+    // The new binary is in place: drop the "update available" hint.
+    if let Some(p) = cache_path() {
+        let _ = write_cache(&p, now_epoch(), &tag);
+    }
+    println!("Updated to {}.", tag.trim_start_matches('v'));
+    Ok(())
+}
+
+fn download(url: &str, dest: &Path) -> anyhow::Result<()> {
+    use anyhow::{Context, bail};
+    let status = Command::new("curl")
+        .args([
+            "-fsSL",
+            "--retry",
+            "2",
+            "-m",
+            &DOWNLOAD_TIMEOUT_SECS.to_string(),
+            "-A",
+            concat!("tasq/", env!("CARGO_PKG_VERSION")),
+            "-o",
+        ])
+        .arg(dest)
+        .arg(url)
+        .status()
+        .context("couldn't run curl")?;
+    if !status.success() {
+        bail!("download failed: {url}");
+    }
+    Ok(())
+}
+
+/// Unpack a release archive. `tar` handles both: on Windows 10+ the bundled
+/// `tar.exe` (bsdtar) reads zip files. We call it by its System32 path so a
+/// GNU tar from Git Bash earlier on PATH (which can't) isn't picked up, and
+/// fall back to PowerShell's Expand-Archive.
+fn extract(archive: &Path, dest: &Path) -> anyhow::Result<()> {
+    use anyhow::{Context, bail};
+    if cfg!(windows) {
+        if let Some(root) = std::env::var_os("SystemRoot") {
+            let tar = PathBuf::from(root).join("System32").join("tar.exe");
+            if tar.is_file() {
+                let ok = Command::new(&tar)
+                    .arg("-xf")
+                    .arg(archive)
+                    .arg("-C")
+                    .arg(dest)
+                    .status()
+                    .map(|s| s.success())
+                    .unwrap_or(false);
+                if ok {
+                    return Ok(());
+                }
+            }
+        }
+        let status = Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command"])
+            .arg(format!(
+                "Expand-Archive -Force -LiteralPath '{}' -DestinationPath '{}'",
+                archive.display(),
+                dest.display()
+            ))
+            .status()
+            .context("couldn't run powershell to unzip the release")?;
+        if !status.success() {
+            bail!("couldn't unzip {}", archive.display());
+        }
+        return Ok(());
+    }
+    let status = Command::new("tar")
+        .arg("-xzf")
+        .arg(archive)
+        .arg("-C")
+        .arg(dest)
+        .status()
+        .context("couldn't run tar")?;
+    if !status.success() {
+        bail!("couldn't unpack {}", archive.display());
+    }
+    Ok(())
+}
+
+fn find_file(dir: &Path, name: &str) -> Option<PathBuf> {
+    for entry in std::fs::read_dir(dir).ok()?.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(found) = find_file(&path, name) {
+                return Some(found);
+            }
+        } else if path.file_name().is_some_and(|n| n == name) {
+            return Some(path);
+        }
+    }
+    None
+}
+
+/// Where a replaced Windows executable is parked until it can be deleted.
+fn old_binary_path(exe: &Path) -> PathBuf {
+    let mut name = exe.file_name().unwrap_or_default().to_os_string();
+    name.push(".old");
+    exe.with_file_name(name)
+}
+
+/// Remove the executable a previous `tasq update` parked on Windows (it
+/// couldn't be deleted while it was running). Silent and cheap.
+pub fn cleanup_old_binary() {
+    if cfg!(windows)
+        && let Ok(exe) = std::env::current_exe()
+    {
+        let _ = std::fs::remove_file(old_binary_path(&exe));
+    }
+}
+
+fn permission_hint(e: &io::Error, exe: &Path) -> String {
+    if e.kind() == io::ErrorKind::PermissionDenied {
+        if cfg!(windows) {
+            format!(
+                "no permission to write {} (run the terminal as administrator)",
+                exe.display()
+            )
+        } else {
+            format!(
+                "no permission to write {} (try `sudo tasq update`)",
+                exe.display()
+            )
+        }
+    } else {
+        format!("couldn't replace {}: {e}", exe.display())
+    }
+}
+
+/// Swap `new_bin` in for the executable at `exe`.
+///
+/// Unix: copy next to `exe` and rename over it — atomic, and the running
+/// process keeps its (now unlinked) inode. Windows: a running .exe can't be
+/// overwritten or deleted, but it can be renamed, so park it as
+/// `tasq.exe.old` (removed on the next run) and copy the new one in.
+fn replace_exe(exe: &Path, new_bin: &Path) -> anyhow::Result<()> {
+    use anyhow::anyhow;
+    if cfg!(windows) {
+        let old = old_binary_path(exe);
+        let _ = std::fs::remove_file(&old);
+        std::fs::rename(exe, &old).map_err(|e| anyhow!(permission_hint(&e, exe)))?;
+        if let Err(e) = std::fs::copy(new_bin, exe) {
+            // Put the old one back so tasq keeps working.
+            let _ = std::fs::rename(&old, exe);
+            return Err(anyhow!(permission_hint(&e, exe)));
+        }
+        let _ = std::fs::remove_file(&old);
+        return Ok(());
+    }
+    let staged = exe.with_file_name(".tasq-update.new");
+    std::fs::copy(new_bin, &staged).map_err(|e| anyhow!(permission_hint(&e, exe)))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&staged, std::fs::Permissions::from_mode(0o755));
+    }
+    if let Err(e) = std::fs::rename(&staged, exe) {
+        let _ = std::fs::remove_file(&staged);
+        return Err(anyhow!(permission_hint(&e, exe)));
+    }
+    Ok(())
 }
 
 /// Spawn the background update check. Returns a receiver that yields exactly
@@ -366,6 +657,51 @@ mod tests {
         assert_eq!(
             detect_kind(&PathBuf::from("/tmp/tasq")),
             InstallKind::Binary
+        );
+    }
+
+    #[test]
+    fn detect_kind_nix_path() {
+        assert_eq!(
+            detect_kind(&PathBuf::from("/nix/store/abc-tasq-0.9.1/bin/tasq")),
+            InstallKind::Nix
+        );
+    }
+
+    #[test]
+    fn asset_names_match_the_release_workflow() {
+        assert_eq!(
+            asset_name("v0.9.2", "x86_64-pc-windows-msvc"),
+            "tasq-v0.9.2-x86_64-pc-windows-msvc.zip"
+        );
+        assert_eq!(
+            asset_name("v0.9.2", "aarch64-apple-darwin"),
+            "tasq-v0.9.2-aarch64-apple-darwin.tar.gz"
+        );
+    }
+
+    #[test]
+    fn parse_sha256_file_handles_both_formats() {
+        let h = "a".repeat(64);
+        // shasum: `<hash>  <path>`
+        assert_eq!(
+            parse_sha256_file(&format!("{h}  dist/tasq.tar.gz\n")).as_deref(),
+            Some(h.as_str())
+        );
+        // Windows Get-FileHash: bare upper-case hash, CRLF.
+        assert_eq!(
+            parse_sha256_file(&format!("{}\r\n", h.to_uppercase())).as_deref(),
+            Some(h.as_str())
+        );
+        assert!(parse_sha256_file("not a hash").is_none());
+        assert!(parse_sha256_file("").is_none());
+    }
+
+    #[test]
+    fn sha256_hex_known_value() {
+        assert_eq!(
+            sha256_hex(b"abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
         );
     }
 
