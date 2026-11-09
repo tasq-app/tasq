@@ -21,7 +21,25 @@ one SQLite file, plain HTTP on port 8080 behind your HTTPS.
 6. **Deploy.** When it's up, `https://sync.example.com/health` answers
    `"ok"`.
 
-With *Autodeploy* on, every push to `main` rebuilds it.
+## Deploy on every push
+
+GitHub tells Dokploy to rebuild after every push to `main` that touches the
+relay (`.github/workflows/deploy-relay.yml`). It needs, once:
+
+1. In Dokploy, *Settings* → *Profile* → *API/CLI* → **Generate** a key.
+2. Open the `tasq-relay` application: its id is the last part of the
+   address bar (`.../services/application/<id>`).
+3. In GitHub, *Settings* → *Secrets and variables* → *Actions* →
+   *New repository secret*, three times:
+   - `DOKPLOY_URL`: the panel's address, e.g. `https://dokploy.example.com`.
+   - `DOKPLOY_API_KEY`: the key from step 1.
+   - `DOKPLOY_APP_ID`: the id from step 2.
+4. Optional, in the *Variables* tab: `RELAY_HEALTH_URL`
+   (`https://sync.example.com/health`), so the run also checks the relay
+   answers afterwards.
+
+To deploy by hand: GitHub → *Actions* → *Deploy relay* → *Run workflow*.
+Turn Dokploy's own *Autodeploy* off so a push doesn't build twice.
 
 ## Use it
 

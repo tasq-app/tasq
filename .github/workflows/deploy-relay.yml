@@ -1,0 +1,77 @@
+name: Deploy relay
+
+# Rebuilds tasq-relay on Dokploy after every push to main that touches it,
+# through Dokploy's API (Dokploy's own Autodeploy depends on its GitHub app
+# seeing the push, which is easy to lose). Also runnable by hand from the
+# Actions tab: "Deploy relay" → "Run workflow".
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   DOKPLOY_URL      e.g. https://dokploy.example.com (the panel, no slash at the end)
+#   DOKPLOY_API_KEY  Dokploy → Settings → Profile → API/CLI → Generate
+#   DOKPLOY_APP_ID   the tasq-relay application's id (in its URL in Dokploy)
+# Optional repository variable:
+#   RELAY_HEALTH_URL e.g. https://sync.example.com/health, checked afterwards
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "deploy/relay/**"
+      - ".github/workflows/deploy-relay.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-relay
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Dokploy deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+      DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+      DOKPLOY_APP_ID: ${{ secrets.DOKPLOY_APP_ID }}
+      HEALTH: ${{ vars.RELAY_HEALTH_URL }}
+    steps:
+      - name: Ask Dokploy to rebuild
+        run: |
+          if [ -z "$DOKPLOY_URL" ] || [ -z "$DOKPLOY_API_KEY" ] || [ -z "$DOKPLOY_APP_ID" ]; then
+            echo "::error::Missing DOKPLOY_URL, DOKPLOY_API_KEY or DOKPLOY_APP_ID (see deploy/relay/README.md)."
+            exit 1
+          fi
+          for i in 1 2 3 4; do
+            code=$(curl -sS -o resp.txt -w '%{http_code}' -X POST \
+              "${DOKPLOY_URL%/}/api/application.deploy" \
+              -H "x-api-key: $DOKPLOY_API_KEY" \
+              -H 'Content-Type: application/json' \
+              -d "{\"applicationId\":\"$DOKPLOY_APP_ID\"}") || code=000
+            if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then
+              echo "Dokploy accepted the deploy ($code)."
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $code"; head -c 500 resp.txt; echo
+            sleep $((i * 10))
+          done
+          echo "::error::Dokploy didn't accept the deploy."
+          exit 1
+
+      - name: Wait until it answers
+        if: env.HEALTH != ''
+        run: |
+          # The build takes a few minutes; the old container keeps answering
+          # meanwhile, so this only proves the relay is up afterwards.
+          sleep 240
+          for i in $(seq 1 30); do
+            if curl -fsS "$HEALTH" >/dev/null; then echo "Relay is up."; exit 0; fi
+            sleep 20
+          done
+          echo "::error::$HEALTH didn't answer after the deploy."
+          exit 1
