@@ -13,7 +13,8 @@ use anyhow::{Result, anyhow};
 use serde_json::{Value, json};
 
 use super::sync::CalendarInfo;
-use crate::gcal::auth::{plain, run, write_private};
+use crate::core::spaces::{AUTO_SLOTS, PALETTE_SLOTS, SpaceColor};
+use crate::gcal::auth::{Client, plain, run, write_private};
 
 /// One of an account's calendars, and whether you show it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -126,9 +127,72 @@ impl ExtAccount {
 }
 
 /// What sync carries of a shared account: its calendar choices and its
-/// access. Keys sorted, so the same account always reads the same.
-pub fn shared_value(a: &ExtAccount, token: &str) -> String {
-    json!({ "calendars": a.calendars_json(), "token": token }).to_string()
+/// access, and the app's Google client the access was given to (so tasq's
+/// server can read the account for the web calendar and Claude, when you
+/// turn that on, without being set up for it). Keys sorted, so the same
+/// account always reads the same.
+pub fn shared_value(a: &ExtAccount, token: &str, client: Option<&Client>) -> String {
+    let mut v = json!({ "calendars": a.calendars_json(), "token": token });
+    if let Some(c) = client {
+        v["client"] = json!({ "id": c.id, "secret": c.secret });
+    }
+    v.to_string()
+}
+
+/// The Google client a shared account's access belongs to, if the device
+/// that shared it said.
+pub fn client_of_shared(value: &str) -> Option<Client> {
+    let v: Value = serde_json::from_str(value).ok()?;
+    let id = v["client"]["id"].as_str().filter(|s| !s.is_empty())?;
+    Some(Client {
+        id: id.to_string(),
+        secret: v["client"]["secret"]
+            .as_str()
+            .unwrap_or_default()
+            .to_string(),
+    })
+}
+
+/// The colour a calendar is painted in: the one you chose, else one of
+/// the palette's second eight by its place among all the calendars (the
+/// spaces take the first eight).
+pub fn color_of(accounts: &[ExtAccount], account: &str, calendar: &str) -> SpaceColor {
+    let chosen = accounts
+        .iter()
+        .find(|a| a.email == account)
+        .and_then(|a| a.calendars.iter().find(|c| c.id == calendar))
+        .and_then(|c| c.color.as_deref())
+        .and_then(SpaceColor::parse);
+    if let Some(c) = chosen {
+        return c;
+    }
+    let k = accounts
+        .iter()
+        .flat_map(|a| {
+            a.calendars
+                .iter()
+                .map(move |c| (a.email.as_str(), c.id.as_str()))
+        })
+        .position(|x| x == (account, calendar))
+        .unwrap_or(0);
+    SpaceColor::Slot((AUTO_SLOTS + k) % PALETTE_SLOTS)
+}
+
+/// A calendar's name, as its account lists it.
+pub fn calendar_name(accounts: &[ExtAccount], account: &str, calendar: &str) -> String {
+    accounts
+        .iter()
+        .find(|a| a.email == account)
+        .and_then(|a| a.calendars.iter().find(|c| c.id == calendar))
+        .map(|c| c.name.clone())
+        .unwrap_or_default()
+}
+
+/// Whether the calendar is one you show.
+pub fn is_shown(accounts: &[ExtAccount], account: &str, calendar: &str) -> bool {
+    accounts
+        .iter()
+        .any(|a| a.email == account && a.calendars.iter().any(|c| c.id == calendar && c.shown))
 }
 
 /// A shared account back from sync: the account and its token.
@@ -334,12 +398,24 @@ mod tests {
         // What sync carries, and back.
         let mut a = all[0].clone();
         a.calendars[0].color = Some("#8aadf4".into());
-        let v = shared_value(&a, "1//tok");
+        let v = shared_value(&a, "1//tok", None);
         let (back, token) = from_shared("me@x", &v).unwrap();
         assert_eq!(token, "1//tok");
         assert!(back.shared);
         assert_eq!(back.calendars, a.calendars);
-        assert_eq!(shared_value(&back, "1//tok"), v, "the same text every time");
+        assert_eq!(
+            shared_value(&back, "1//tok", None),
+            v,
+            "the same text every time"
+        );
+        assert!(client_of_shared(&v).is_none());
+        let client = Client {
+            id: "app.apps.googleusercontent.com".into(),
+            secret: "s".into(),
+        };
+        let with = shared_value(&back, "1//tok", Some(&client));
+        assert_eq!(client_of_shared(&with), Some(client));
+        assert_eq!(from_shared("me@x", &with).unwrap().1, "1//tok");
         assert!(
             from_shared("me@x", r#"{"calendars":[]}"#).is_none(),
             "no token, no account"

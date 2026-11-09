@@ -34,6 +34,8 @@ pub enum Kind {
     Space,
     /// Another calendar's account, shown on all your devices.
     Account,
+    /// A theme of your own (its file's text), for the web calendar.
+    Theme,
 }
 
 impl Kind {
@@ -43,6 +45,7 @@ impl Kind {
             Kind::Note => "note",
             Kind::Space => "space",
             Kind::Account => "account",
+            Kind::Theme => "theme",
         }
     }
 
@@ -52,6 +55,7 @@ impl Kind {
             "note" => Some(Kind::Note),
             "space" => Some(Kind::Space),
             "account" => Some(Kind::Account),
+            "theme" => Some(Kind::Theme),
             _ => None,
         }
     }
@@ -170,7 +174,7 @@ fn canonical(kind: Kind, value: &str) -> Option<String> {
         Kind::Note => note_value(v["body"].as_str()?),
         Kind::Space => space_value(v["hidden"].as_bool()?, v["color"].as_str()),
         // Kept as the other device wrote it: this one stores it the same.
-        Kind::Account => v.to_string(),
+        Kind::Account | Kind::Theme => v.to_string(),
     })
 }
 
@@ -261,6 +265,21 @@ fn current(conn: &Connection) -> rusqlite::Result<Records> {
             .map(|v| v.to_string())
             .unwrap_or(value);
         out.insert((Kind::Account, email), (value, rfc3339_ms(&updated)));
+    }
+    let mut stmt = conn.prepare("SELECT name, value, updated_at FROM shared_themes")?;
+    let rows = stmt.query_map([], |r| {
+        Ok((
+            r.get::<_, String>(0)?,
+            r.get::<_, String>(1)?,
+            r.get::<_, String>(2)?,
+        ))
+    })?;
+    for row in rows {
+        let (name, value, updated) = row?;
+        let value = serde_json::from_str::<Value>(&value)
+            .map(|v| v.to_string())
+            .unwrap_or(value);
+        out.insert((Kind::Theme, name), (value, rfc3339_ms(&updated)));
     }
     Ok(out)
 }
@@ -645,6 +664,19 @@ fn apply_one(
         }
         (Kind::Account, None) => {
             tx.execute("DELETE FROM shared_accounts WHERE email = ?1", [key])
+                .map_err(io_err)?;
+        }
+        (Kind::Theme, Some(v)) => {
+            tx.execute(
+                "INSERT INTO shared_themes (name, value, updated_at) VALUES (?1, ?2, ?3)
+                 ON CONFLICT (name) DO UPDATE SET value = excluded.value,
+                     updated_at = excluded.updated_at",
+                params![key, v.to_string(), now],
+            )
+            .map_err(io_err)?;
+        }
+        (Kind::Theme, None) => {
+            tx.execute("DELETE FROM shared_themes WHERE name = ?1", [key])
                 .map_err(io_err)?;
         }
     }

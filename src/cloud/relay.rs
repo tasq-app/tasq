@@ -45,6 +45,8 @@ CREATE INDEX IF NOT EXISTS blobs_by_account ON blobs (account, seq);
 
 pub struct Relay {
     pub(crate) conn: Mutex<Connection>,
+    /// Other calendars read for the web and Claude, in memory.
+    pub(crate) externals: super::external::Externals,
 }
 
 /// An answer: status and JSON body.
@@ -80,6 +82,7 @@ impl Relay {
         conn.execute_batch(super::assistant::SCHEMA)?;
         Ok(Self {
             conn: Mutex::new(conn),
+            externals: Default::default(),
         })
     }
 
@@ -117,6 +120,10 @@ pub struct Incoming {
     pub auth: Option<String>,
     pub host: Option<String>,
     pub proto: Option<String>,
+    /// For the web: its sign-in cookie, the browser, the language.
+    pub cookie: Option<String>,
+    pub user_agent: Option<String>,
+    pub language: Option<String>,
     pub body: Vec<u8>,
 }
 
@@ -145,6 +152,9 @@ impl Relay {
     /// the sync API.
     pub fn respond(&self, req: &Incoming) -> Outgoing {
         if let Some(out) = super::assistant::respond(self, req) {
+            return out;
+        }
+        if let Some(out) = super::web::respond(self, req) {
             return out;
         }
         Outgoing::json(self.handle(&req.method, &req.url, req.auth.as_deref(), &req.body))
@@ -314,6 +324,9 @@ pub fn serve_on(server: tiny_http::Server, relay: Relay) -> anyhow::Result<()> {
                         auth: header("Authorization"),
                         host: header("X-Forwarded-Host").or_else(|| header("Host")),
                         proto: header("X-Forwarded-Proto"),
+                        cookie: header("Cookie"),
+                        user_agent: header("User-Agent"),
+                        language: header("Accept-Language"),
                         body,
                     };
                     let out = if too_big {

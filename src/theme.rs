@@ -440,7 +440,7 @@ pub(crate) fn parse_theme_for_tests(s: &str) -> Theme {
     parse_theme(s).expect("theme parses")
 }
 
-fn parse_theme(s: &str) -> Result<Theme, String> {
+pub(crate) fn parse_theme(s: &str) -> Result<Theme, String> {
     let mut name: Option<String> = None;
     let mut colors: std::collections::BTreeMap<&'static str, Color> =
         std::collections::BTreeMap::new();
@@ -585,10 +585,10 @@ fn unquote(s: &str) -> &str {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
-    const FULL_THEME: &str = "\
+    pub(crate) const FULL_THEME: &str = "\
 name = Solarized Dark
 bg = #002b36
 panel = #073642

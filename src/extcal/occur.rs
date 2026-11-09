@@ -10,8 +10,10 @@
 
 use chrono::{DateTime, Days, NaiveDate, TimeZone, Timelike};
 
+use super::accounts::{self, ExtAccount};
 use super::cache::Cached;
 use super::event::{Response, When};
+use crate::core::calendar::{ExtMark, Occurrence};
 
 /// One event's piece of one day.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,6 +113,57 @@ pub fn occurrences<Tz: TimeZone>(
     }
     out.sort_by(|a, b| (a.date, a.start, &a.title).cmp(&(b.date, b.start, &b.title)));
     out
+}
+
+/// `events` as the calendar views draw them, next to the tasks: each
+/// piece an [`Occurrence`] with its calendar's colour and name, and an
+/// `abs` of its own past any task list (`usize::MAX - k`, `k` its place in
+/// `events`), so it never stands for a task.
+pub fn calendar<Tz: TimeZone>(
+    events: &[Cached],
+    accounts: &[ExtAccount],
+    from: NaiveDate,
+    to: NaiveDate,
+    tz: &Tz,
+) -> Vec<Occurrence> {
+    occurrences(events, from, to, tz)
+        .into_iter()
+        .map(|p| {
+            let k = events
+                .iter()
+                .position(|e| {
+                    e.account == p.account && e.calendar == p.calendar && e.event.id == p.id
+                })
+                .unwrap_or(0);
+            Occurrence {
+                abs: usize::MAX - k,
+                date: p.date,
+                start: p.start,
+                minutes: p.minutes,
+                deadline: false,
+                projected: false,
+                late: false,
+                origin: p.origin,
+                span: p.span,
+                day: p.day,
+                ext: Some(Box::new(ExtMark {
+                    color: accounts::color_of(accounts, &p.account, &p.calendar),
+                    calendar: accounts::calendar_name(accounts, &p.account, &p.calendar),
+                    title: p.title,
+                    tentative: p.tentative,
+                    account: p.account,
+                    calendar_id: p.calendar,
+                    id: p.id,
+                })),
+            }
+        })
+        .collect()
+}
+
+/// The event an occurrence from [`calendar`] stands for.
+pub fn event_of<'a>(events: &'a [Cached], o: &Occurrence) -> Option<&'a Cached> {
+    o.ext.as_ref()?;
+    events.get(usize::MAX - o.abs)
 }
 
 #[cfg(test)]

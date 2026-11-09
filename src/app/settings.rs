@@ -53,6 +53,7 @@ pub enum SetKey {
     SyncAccount,
     SyncSignOut,
     Assistants,
+    WebCalendar,
     AppleDisconnect,
     /// Your other calendars: add an account, sync one, show or hide one
     /// of its calendars, disconnect it.
@@ -132,6 +133,14 @@ impl App {
                     "Claude",
                     self.assistants_label(),
                     Some(SetKey::Assistants),
+                )
+            }))
+            .chain(self.sync_signed_in().then(|| {
+                row(
+                    "Sync",
+                    "Web calendar",
+                    self.web_label(),
+                    Some(SetKey::WebCalendar),
                 )
             }))
             .chain(self.sync_signed_in().then(|| {
@@ -540,6 +549,10 @@ impl App {
             }
             SetKey::Assistants => {
                 self.assistants_enter();
+                None
+            }
+            SetKey::WebCalendar => {
+                self.web_enter();
                 None
             }
             SetKey::SyncSignOut => {

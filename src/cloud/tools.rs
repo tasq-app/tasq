@@ -14,6 +14,7 @@ use chrono::{Duration, NaiveDate, Timelike};
 use serde_json::{Value, json};
 
 use super::client::Local;
+use super::external::{ExtCalendar, event_json};
 use super::keys::Keys;
 use super::relay::Relay;
 use super::run::sync_once;
@@ -42,7 +43,7 @@ app synced across their computers). Times are the user's local time; `now` tells
 Reading: `now` (right now, next, today), `agenda` (days or a range), `late`, `inbox` (no day yet), \
 `list_tasks`, `search` (tasks and notes), `get_task` (everything about one task: notes, subtasks, \
 next repeats, streak), `free_time`, `routines`, `list_spaces`, `list_tags`, `list_notes`, \
-`read_note`. Changing: `add_task` takes the user's own words as they'd type them in tasq, in \
+`read_note`. `now`, `agenda` and `free_time` include the meetings of the user's other calendars (work Google accounts…), read-only. Changing: `add_task` takes the user's own words as they'd type them in tasq, in \
 English or Spanish (\"dentista el viernes a las 6 durante 1h en salud\", \"gym every monday at \
 7am\", \"pay rent by the 1st high priority\"); tasq reads dates, deadlines (\"by\"), times, \
 durations, repeats, spaces (\"in work\") and @tags from the text, and the optional fields \
@@ -58,7 +59,7 @@ pub(super) struct Account<'a> {
     relay: &'a Relay,
     keys: Keys,
     today: NaiveDate,
-    store: Store,
+    pub(super) store: Store,
 }
 
 impl<'a> Account<'a> {
@@ -100,11 +101,41 @@ impl<'a> Account<'a> {
         self.store.db.as_ref().ok_or_else(|| anyhow!("no database"))
     }
 
+    /// Your own themes, as your computers shared them.
+    pub(super) fn db_shared_themes(&self) -> Vec<(String, String)> {
+        self.db()
+            .ok()
+            .and_then(|db| db.shared_themes().ok())
+            .unwrap_or_default()
+    }
+
+    /// The other calendars' events from `from` to `to` (local days in
+    /// `tz`), for the accounts shared on all devices.
+    pub(super) fn external(&self, from: NaiveDate, to: NaiveDate) -> ExtCalendar {
+        let shared = self
+            .db()
+            .ok()
+            .and_then(|db| db.shared_accounts().ok())
+            .unwrap_or_default();
+        let secs = |d: NaiveDate| {
+            d.and_hms_opt(0, 0, 0)
+                .map_or(0, |t| t.and_utc().timestamp())
+        };
+        // A day of margin each side: the zone moves the edges.
+        let window = (secs(from) - 86_400, secs(to) + 2 * 86_400);
+        self.relay.externals.read(
+            &self.keys.account,
+            &shared,
+            window,
+            chrono::Utc::now().timestamp(),
+        )
+    }
+
     fn db_mut(&mut self) -> Result<&mut Db> {
         self.store.db.as_mut().ok_or_else(|| anyhow!("no database"))
     }
 
-    fn tasks(&self) -> &[Task] {
+    pub(super) fn tasks(&self) -> &[Task] {
         self.store.tasks()
     }
 
@@ -160,7 +191,7 @@ impl<'a> Account<'a> {
     }
 
     /// The notes of task `t`: `(file name, body)`, the main note first.
-    fn task_notes(&self, t: &Task) -> Result<Vec<(String, String)>> {
+    pub(super) fn task_notes(&self, t: &Task) -> Result<Vec<(String, String)>> {
         let Some(id) = notes_id_from_raw(&t.raw) else {
             return Ok(Vec::new());
         };
@@ -234,7 +265,7 @@ fn occurrence_json(o: &Occurrence, tasks: &[Task]) -> Value {
     v
 }
 
-fn note_title(name: &str, body: &str) -> String {
+pub(super) fn note_title(name: &str, body: &str) -> String {
     body.lines()
         .find_map(|l| l.trim().strip_prefix("# ").map(str::trim))
         .filter(|t| !t.is_empty())
@@ -671,7 +702,7 @@ pub(super) fn tool_list(write: bool) -> Vec<Value> {
         tool(
             "now",
             "What's on now",
-            "The user's local date and time; what they're doing right now; what's next; the rest of today (timed and all-day); what's late; how many of today's tasks are done.",
+            "The user's local date and time; what they're doing right now; what's next; the rest of today (timed and all-day); what's late; how many of today's tasks are done. Meetings from the user's other calendars (kind `external_event`, read-only, with their video-call link) count too.",
             json!({}),
             &[],
             Kind::Read,
@@ -679,7 +710,7 @@ pub(super) fn tool_list(write: bool) -> Vec<Value> {
         tool(
             "agenda",
             "Agenda",
-            "The calendar from `from` to `to` (inclusive, at most 62 days; both default to today), by day: timed blocks with start and end, all-day tasks, events lasting several days, deadline markers and upcoming repeats. Late open tasks show on today.",
+            "The calendar from `from` to `to` (inclusive, at most 62 days; both default to today), by day: timed blocks with start and end, all-day tasks, events lasting several days, deadline markers and upcoming repeats. Late open tasks show on today. Also the events of the user's other calendars (kind `external_event`, read-only; left out when filtering by space).",
             json!({ "from": date, "to": date, "space": st("only this space (and its sub-spaces)"), "include_done": { "type": "boolean" } }),
             &[],
             Kind::Read,
@@ -735,7 +766,7 @@ pub(super) fn tool_list(write: bool) -> Vec<Value> {
         tool(
             "free_time",
             "Free time",
-            "The free gaps in a day between `from` and `to` (default 08:00–22:00) at least `min_minutes` long (default 30), around the timed tasks.",
+            "The free gaps in a day between `from` and `to` (default 08:00–22:00) at least `min_minutes` long (default 30), around the timed tasks and the meetings of the user's other calendars.",
             json!({ "date": date, "from": st("HH:MM"), "to": st("HH:MM"), "min_minutes": { "type": "integer" } }),
             &[],
             Kind::Read,
@@ -892,7 +923,7 @@ pub(super) fn call_tool(
         "list_tasks" => list_tasks(&a, args),
         "search" => search(&a, args),
         "get_task" => get_task(&a, args, today),
-        "free_time" => free_time(&a, args, today),
+        "free_time" => free_time(&a, args, today, tz),
         "routines" => Ok(routines(&a, today)),
         "list_spaces" => Ok(list_spaces(&a)),
         "list_tags" => Ok(list_tags(&a)),
@@ -920,6 +951,37 @@ pub(super) fn call_tool(
     Ok(out)
 }
 
+/// Tasks and the other calendars' events from `from` to `to`, by day, then
+/// all-day first, then by start.
+pub(super) fn with_external(
+    a: &Account,
+    from: NaiveDate,
+    to: NaiveDate,
+    today: NaiveDate,
+    tz: chrono_tz::Tz,
+) -> (Vec<Occurrence>, ExtCalendar) {
+    let ext = a.external(from, to);
+    let mut all = calendar::occurrences(a.tasks(), from, to, today);
+    all.extend(ext.occurrences(from, to, &tz));
+    all.sort_by(|x, y| {
+        (x.date, x.start.is_some(), x.start).cmp(&(y.date, y.start.is_some(), y.start))
+    });
+    (all, ext)
+}
+
+/// A task's occurrence, or another calendar's event.
+fn item_json(o: &Occurrence, tasks: &[Task], ext: &ExtCalendar) -> Value {
+    match (ext.event_of(o), &o.ext) {
+        (Some(c), Some(m)) => event_json(o, c, &m.calendar),
+        _ => occurrence_json(o, tasks),
+    }
+}
+
+/// Still to do: an open task, or any event.
+fn is_open(o: &Occurrence, tasks: &[Task]) -> bool {
+    o.ext.is_some() || tasks.get(o.abs).is_some_and(|t| !t.done)
+}
+
 fn now(
     a: &Account,
     today: NaiveDate,
@@ -928,38 +990,45 @@ fn now(
     tz: chrono_tz::Tz,
 ) -> Result<Value> {
     let tasks = a.tasks();
-    let occs = calendar::occurrences(tasks, today, today + Duration::days(1), today);
-    let open = |o: &&&Occurrence| !tasks[o.abs].done;
-    let open_ref = |o: &&Occurrence| !tasks[o.abs].done;
+    let (occs, ext) = with_external(a, today, today + Duration::days(1), today, tz);
     let todays: Vec<&Occurrence> = occs.iter().filter(|o| o.date == today).collect();
     let current: Vec<Value> = todays
         .iter()
-        .filter(open)
+        .filter(|o| is_open(o, tasks))
         .filter(|o| o.start.is_some_and(|s| s <= minute) && o.end().is_some_and(|e| e > minute))
-        .map(|o| occurrence_json(o, tasks))
+        .map(|o| item_json(o, tasks, &ext))
         .collect();
     let next = occs
         .iter()
-        .filter(open_ref)
+        .filter(|o| is_open(o, tasks))
         .find(|o| o.start.is_some() && (o.date > today || o.start.is_some_and(|s| s > minute)))
-        .map(|o| occurrence_json(o, tasks));
+        .map(|o| item_json(o, tasks, &ext));
     let done_today = tasks
         .iter()
         .filter(|t| t.done && t.done_date.as_deref() == Some(&today.to_string()))
         .count();
     let open_today = todays
         .iter()
-        .filter(open)
+        .filter(|o| o.ext.is_none() && is_open(o, tasks))
         .filter(|o| !tasks[o.abs].event)
         .count();
-    Ok(json!({
+    let mut v = json!({
         "now": now_s,
         "timezone": tz.name(),
         "current": current,
         "next": next,
-        "today": todays.iter().map(|o| occurrence_json(o, tasks)).collect::<Vec<_>>(),
+        "today": todays.iter().map(|o| item_json(o, tasks, &ext)).collect::<Vec<_>>(),
         "progress_today": { "done": done_today, "left": open_today },
-    }))
+    });
+    note_ext_status(&mut v, &ext);
+    Ok(v)
+}
+
+/// Say which other calendars couldn't be read just now.
+fn note_ext_status(v: &mut Value, ext: &ExtCalendar) {
+    if !ext.status.is_empty() {
+        v["other_calendars_unavailable"] = json!(ext.status);
+    }
 }
 
 fn agenda(a: &Account, args: &Value, today: NaiveDate, tz: chrono_tz::Tz) -> Result<Value> {
@@ -977,27 +1046,29 @@ fn agenda(a: &Account, args: &Value, today: NaiveDate, tz: chrono_tz::Tz) -> Res
     };
     let include_done = args["include_done"].as_bool().unwrap_or(true);
     let tasks = a.tasks();
-    let occs = calendar::occurrences(tasks, from, to, today);
+    let (occs, ext) = with_external(a, from, to, today, tz);
     let mut days = Vec::new();
     let mut d = from;
     while d <= to {
         let items: Vec<Value> = occs
             .iter()
             .filter(|o| o.date == d)
-            .filter(|o| include_done || !tasks[o.abs].done)
-            .filter(|o| {
-                space
-                    .as_ref()
-                    .is_none_or(|sp| spaces::in_space(&tasks[o.abs].projects, sp))
+            .filter(|o| include_done || is_open(o, tasks))
+            .filter(|o| match &space {
+                None => true,
+                // A space asks for tasks: the other calendars stay out.
+                Some(sp) => o.ext.is_none() && spaces::in_space(&tasks[o.abs].projects, sp),
             })
-            .map(|o| occurrence_json(o, tasks))
+            .map(|o| item_json(o, tasks, &ext))
             .collect();
         days.push(
             json!({ "date": d.to_string(), "weekday": d.format("%A").to_string(), "items": items }),
         );
         d += Duration::days(1);
     }
-    Ok(json!({ "today": today.to_string(), "timezone": tz.name(), "days": days }))
+    let mut v = json!({ "today": today.to_string(), "timezone": tz.name(), "days": days });
+    note_ext_status(&mut v, &ext);
+    Ok(v)
 }
 
 fn date_of(s: Option<&String>) -> Option<NaiveDate> {
@@ -1186,16 +1257,16 @@ fn get_task(a: &Account, args: &Value, today: NaiveDate) -> Result<Value> {
     Ok(v)
 }
 
-fn free_time(a: &Account, args: &Value, today: NaiveDate) -> Result<Value> {
+fn free_time(a: &Account, args: &Value, today: NaiveDate, tz: chrono_tz::Tz) -> Result<Value> {
     let day = arg_date(args, "date", today)?.unwrap_or(today);
     let from = s(args, "from").map_or(Ok(8 * 60), |v| read_time(v, today))?;
     let to = s(args, "to").map_or(Ok(22 * 60), |v| read_time(v, today))?;
     let min = args["min_minutes"].as_u64().unwrap_or(30) as u32;
     let tasks = a.tasks();
-    let occs = calendar::occurrences(tasks, day, day, today);
+    let (occs, ext) = with_external(a, day, day, today, tz);
     let busy: Vec<&Occurrence> = occs
         .iter()
-        .filter(|o| o.date == day && o.start.is_some() && !tasks[o.abs].done)
+        .filter(|o| o.date == day && o.start.is_some() && is_open(o, tasks))
         .collect();
     let slots = calendar::free_slots(&busy, from, to, min.max(1));
     Ok(json!({
@@ -1204,7 +1275,7 @@ fn free_time(a: &Account, args: &Value, today: NaiveDate) -> Result<Value> {
             .iter()
             .map(|(s, e)| json!({ "from": hhmm(*s), "to": hhmm(*e), "minutes": e - s }))
             .collect::<Vec<_>>(),
-        "busy": busy.iter().map(|o| occurrence_json(o, tasks)).collect::<Vec<_>>(),
+        "busy": busy.iter().map(|o| item_json(o, tasks, &ext)).collect::<Vec<_>>(),
     }))
 }
 

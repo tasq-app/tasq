@@ -213,6 +213,8 @@ pub struct App {
     pub sync_status: SyncStatus,
     /// The assistants (Claude) connected to the sync account, once known.
     pub assistants: Option<Vec<crate::cloud::client::Assistant>>,
+    /// Your theme files were put in the sync this run.
+    pub themes_shared: bool,
     pub(crate) sync_due: Option<std::time::Instant>,
     /// The sign-in being typed in Settings.
     pub sync_input: Option<SyncInput>,
@@ -448,6 +450,7 @@ impl App {
             sync: None,
             sync_status: SyncStatus::Off,
             assistants: None,
+            themes_shared: false,
             sync_due: None,
             sync_input: None,
             sync_pending_input: None,

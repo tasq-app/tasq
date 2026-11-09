@@ -1,0 +1,15 @@
+{
+  "name": "tasq",
+  "short_name": "tasq",
+  "description": "Your tasq calendar",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#24273a",
+  "theme_color": "#1e2030",
+  "icons": [
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

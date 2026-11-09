@@ -20,8 +20,10 @@
 //! - `GET`/`POST /oauth/authorize`: the sign-in page.
 //! - `POST /oauth/token`: a code (PKCE S256) or a refresh token for tokens.
 //! - `POST /mcp`: MCP over streamable HTTP (JSON answers).
-//! - With a device's own bearer: `GET /v1/assistants` (who's connected),
-//!   `POST /v1/assistants/revoke` `{"id"}` or `{"all": true}`.
+//! - With a device's own bearer: `GET /v1/assistants` (who's connected,
+//!   assistants and browsers with the web calendar: `kind`),
+//!   `POST /v1/assistants/revoke` `{"id"}`, `{"kind": "web" | "assistant"}`
+//!   or `{"all": true}`.
 
 use anyhow::Result;
 use rusqlite::{Connection, OptionalExtension, params};
@@ -74,13 +76,18 @@ const ACCESS_SECS: i64 = 3600;
 /// How long a sign-in code waits to be exchanged.
 const CODE_SECS: i64 = 300;
 
-const READ: &str = "tasks:read";
+pub(super) const READ: &str = "tasks:read";
 const WRITE: &str = "tasks:write";
+/// The client id of the web calendar's sign-ins (see [`super::web`]):
+/// they live with the assistants, so Settings lists and disconnects them
+/// the same way, but a web sign-in can't be used for MCP, nor the other
+/// way round.
+pub(super) const WEB_CLIENT: &str = "web";
 
 /// MCP versions this server speaks, newest first.
 const VERSIONS: &[&str] = &["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 
-fn unix() -> i64 {
+pub(super) fn unix() -> i64 {
     chrono::Utc::now().timestamp()
 }
 
@@ -95,7 +102,7 @@ fn oauth_err(code: u16, error: &str, description: &str) -> Outgoing {
     )
 }
 
-fn html_out(code: u16, page: String) -> Outgoing {
+pub(super) fn html_out(code: u16, page: String) -> Outgoing {
     Outgoing {
         code,
         content_type: "text/html; charset=utf-8".into(),
@@ -107,7 +114,7 @@ fn html_out(code: u16, page: String) -> Outgoing {
     }
 }
 
-fn redirect(to: &str) -> Outgoing {
+pub(super) fn redirect(to: &str) -> Outgoing {
     Outgoing {
         code: 302,
         content_type: "text/plain".into(),
@@ -118,7 +125,7 @@ fn redirect(to: &str) -> Outgoing {
 
 /// The server's public address: `TASQ_RELAY_PUBLIC_URL`, else the host the
 /// request came to (HTTPS unless it's this machine).
-fn base_url(req: &Incoming) -> String {
+pub(super) fn base_url(req: &Incoming) -> String {
     if let Ok(u) = std::env::var("TASQ_RELAY_PUBLIC_URL")
         && !u.is_empty()
     {
@@ -164,11 +171,11 @@ pub fn parse_form(s: &str) -> Vec<(String, String)> {
         .collect()
 }
 
-fn field<'a>(form: &'a [(String, String)], key: &str) -> Option<&'a str> {
+pub(super) fn field<'a>(form: &'a [(String, String)], key: &str) -> Option<&'a str> {
     form.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str())
 }
 
-fn esc_html(s: &str) -> String {
+pub(super) fn esc_html(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
@@ -233,7 +240,10 @@ pub fn respond(relay: &Relay, req: &Incoming) -> Option<Outgoing> {
     Some(out)
 }
 
-fn with_conn<T>(relay: &Relay, f: impl FnOnce(&Connection) -> rusqlite::Result<T>) -> Option<T> {
+pub(super) fn with_conn<T>(
+    relay: &Relay,
+    f: impl FnOnce(&Connection) -> rusqlite::Result<T>,
+) -> Option<T> {
     let conn = relay.conn.lock().ok()?;
     f(&conn).ok()
 }
@@ -417,7 +427,7 @@ const ICON_PNG: &[u8] = include_bytes!("assets/icon.png");
 const APPLE_ICON_PNG: &[u8] = include_bytes!("assets/apple-touch-icon.png");
 const FAVICON_PNG: &[u8] = include_bytes!("assets/favicon.png");
 
-fn asset(content_type: &str, body: &[u8]) -> Outgoing {
+pub(super) fn asset(content_type: &str, body: &[u8]) -> Outgoing {
     Outgoing {
         code: 200,
         content_type: content_type.into(),
@@ -434,7 +444,7 @@ fn icons(base: &str) -> Value {
     ])
 }
 
-fn page(title: &str, inner: &str) -> String {
+pub(super) fn page(title: &str, inner: &str) -> String {
     format!(
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">\
          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\
@@ -455,7 +465,7 @@ fn page(title: &str, inner: &str) -> String {
     )
 }
 
-fn page_message(title: &str, msg: &str) -> String {
+pub(super) fn page_message(title: &str, msg: &str) -> String {
     page(
         title,
         &format!(
@@ -610,14 +620,14 @@ fn authorize_submit(relay: &Relay, form: &[(String, String)]) -> Outgoing {
 }
 
 /// New access and refresh tokens for `secret` (the keys), sealed under each.
-struct Issued {
-    access: String,
-    refresh: String,
-    access_wrapped: String,
-    refresh_wrapped: String,
+pub(super) struct Issued {
+    pub(super) access: String,
+    pub(super) refresh: String,
+    pub(super) access_wrapped: String,
+    pub(super) refresh_wrapped: String,
 }
 
-fn issue(secret: &str) -> Result<Issued> {
+pub(super) fn issue(secret: &str) -> Result<Issued> {
     let access = keys::random_token()?;
     let refresh = keys::random_token()?;
     Ok(Issued {
@@ -740,7 +750,8 @@ fn token_from_refresh(relay: &Relay, form: &[(String, String)]) -> Outgoing {
     let hash = keys::token_hash(refresh);
     let row: Option<(String, String, String, String)> = with_conn(relay, |c| {
         c.query_row(
-            "SELECT id, client, scope, refresh_wrapped FROM assistants WHERE refresh_hash = ?1",
+            "SELECT id, client, scope, refresh_wrapped FROM assistants
+             WHERE refresh_hash = ?1 AND client <> 'web'",
             [&hash],
             |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
         )
@@ -797,7 +808,7 @@ fn caller(relay: &Relay, auth: Option<&str>) -> Option<Caller> {
         with_conn(relay, |c| {
             c.query_row(
                 "SELECT id, scope, tz, access_wrapped, access_expires FROM assistants
-                 WHERE access_hash = ?1",
+                 WHERE access_hash = ?1 AND client <> 'web'",
                 [&hash],
                 |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
             )
@@ -937,7 +948,7 @@ fn list_assistants(relay: &Relay, auth: Option<&str>) -> Outgoing {
     };
     let rows: Vec<Value> = with_conn(relay, |c| {
         let mut stmt = c.prepare(
-            "SELECT id, name, scope, created_at, last_used FROM assistants
+            "SELECT id, name, scope, created_at, last_used, client FROM assistants
              WHERE account = ?1 ORDER BY created_at",
         )?;
         stmt.query_map([&account], |r| {
@@ -947,6 +958,7 @@ fn list_assistants(relay: &Relay, auth: Option<&str>) -> Outgoing {
                 "write": r.get::<_, String>(2)?.contains(WRITE),
                 "created_at": r.get::<_, String>(3)?,
                 "last_used": r.get::<_, Option<String>>(4)?,
+                "kind": if r.get::<_, String>(5)? == WEB_CLIENT { "web" } else { "assistant" },
             }))
         })?
         .collect()
@@ -965,6 +977,14 @@ fn revoke(relay: &Relay, auth: Option<&str>, body: &[u8]) -> Outgoing {
         with_conn(relay, |c| {
             c.execute("DELETE FROM assistants WHERE account = ?1", [&account])
         })
+    } else if let Some(kind) = v["kind"].as_str() {
+        // "web": every browser signed in; "assistant": every assistant.
+        let sql = if kind == "web" {
+            "DELETE FROM assistants WHERE account = ?1 AND client = 'web'"
+        } else {
+            "DELETE FROM assistants WHERE account = ?1 AND client <> 'web'"
+        };
+        with_conn(relay, |c| c.execute(sql, [&account]))
     } else if let Some(id) = v["id"].as_str() {
         with_conn(relay, |c| {
             c.execute(
@@ -998,6 +1018,7 @@ mod tests {
             host: Some("tasq.example".into()),
             proto: None,
             body: body.as_bytes().to_vec(),
+            ..Default::default()
         }
     }
 

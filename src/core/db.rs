@@ -149,6 +149,7 @@ impl Db {
         // Other calendars' accounts shown on all your devices: a table an
         // older tasq doesn't know and leaves alone, so no version step.
         conn.execute_batch(SHARED_ACCOUNTS).map_err(io_err)?;
+        conn.execute_batch(SHARED_THEMES).map_err(io_err)?;
         let mut db = Self {
             conn,
             path,
@@ -449,6 +450,63 @@ pub(super) fn add_spaces(conn: &Connection, paths: &[String], now: &str) -> rusq
         }
     }
     Ok(())
+}
+
+/// Your own themes (the files in the themes folder), so the web calendar
+/// can paint with them: by name, the file's text. They travel with sync,
+/// end-to-end encrypted, like tasks.
+const SHARED_THEMES: &str = "
+CREATE TABLE IF NOT EXISTS shared_themes (
+    name        TEXT PRIMARY KEY,
+    value       TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+CREATE TRIGGER IF NOT EXISTS sync_theme_gone AFTER DELETE ON shared_themes
+WHEN EXISTS (SELECT 1 FROM sync_state) BEGIN
+    INSERT OR REPLACE INTO sync_deleted VALUES
+        ('theme', old.name, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+END;
+";
+
+impl Db {
+    /// Your themes as shared: name and value (`{"toml": …}`).
+    pub fn shared_themes(&self) -> std::io::Result<Vec<(String, String)>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT name, value FROM shared_themes ORDER BY name")
+            .map_err(io_err)?;
+        let rows = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .map_err(io_err)?;
+        rows.collect::<Result<_, _>>().map_err(io_err)
+    }
+
+    /// Share a theme file's text under its name (nothing if it's the same).
+    pub fn put_shared_theme(&mut self, name: &str, toml: &str) -> std::io::Result<()> {
+        let value = serde_json::json!({ "toml": toml }).to_string();
+        let same: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT value FROM shared_themes WHERE name = ?1",
+                [name],
+                |r| r.get(0),
+            )
+            .optional()
+            .map_err(io_err)?;
+        if same.as_deref() == Some(value.as_str()) {
+            return Ok(());
+        }
+        self.conn
+            .execute(
+                "INSERT INTO shared_themes (name, value, updated_at) VALUES (?1, ?2, ?3)
+                 ON CONFLICT (name) DO UPDATE SET value = excluded.value,
+                     updated_at = excluded.updated_at",
+                params![name, value, now_rfc3339()],
+            )
+            .map_err(io_err)?;
+        self.data_version = self.read_data_version().map_err(io_err)?;
+        Ok(())
+    }
 }
 
 /// The accounts of other calendars you show on all your devices: by
