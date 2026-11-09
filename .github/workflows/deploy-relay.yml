@@ -62,8 +62,10 @@ jobs:
       - name: Ask Dokploy to rebuild
         run: |
           if [ -z "$DOKPLOY_URL" ] || [ -z "$DOKPLOY_API_KEY" ] || [ -z "$DOKPLOY_APP_ID" ]; then
-            echo "::error::Missing DOKPLOY_URL, DOKPLOY_API_KEY or DOKPLOY_APP_ID (see deploy/relay/README.md)."
-            exit 1
+            # Not set up yet: say so, without turning every push red.
+            echo "::notice::Not deploying: DOKPLOY_URL, DOKPLOY_API_KEY or DOKPLOY_APP_ID is missing (see deploy/relay/README.md)."
+            echo "skipped=1" >> "$GITHUB_ENV"
+            exit 0
           fi
           # A name only your own computer knows (/etc/hosts, e.g.
           # dokploy.internal): pin it to the machine's Tailscale IP.
@@ -91,7 +93,7 @@ jobs:
           exit 1
 
       - name: Wait until it answers
-        if: env.HEALTH != ''
+        if: env.HEALTH != '' && env.skipped != '1'
         run: |
           # The build takes a few minutes; the old container keeps answering
           # meanwhile, so this only proves the relay is up afterwards.
