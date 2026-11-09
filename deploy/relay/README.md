@@ -39,6 +39,18 @@ relay (`.github/workflows/deploy-relay.yml`). It needs, once:
    (`https://sync.example.com/health`), so the run also checks the relay
    answers afterwards.
 
+**Panel only on Tailscale?** GitHub can't reach it (that's also why
+Dokploy's Autodeploy webhook never fires), so the workflow joins your
+tailnet for the run. In the Tailscale admin console:
+
+1. *Access controls*: add `"tag:ci": ["autogroup:admin"]` to `tagOwners`,
+   and let `tag:ci` reach the Dokploy machine on port 3000.
+2. *Settings* → *OAuth clients* → *Generate*, scope *Auth Keys* (write)
+   with tag `tag:ci`.
+3. In GitHub add the secrets `TS_OAUTH_CLIENT_ID` and `TS_OAUTH_SECRET`,
+   and set `DOKPLOY_URL` to the address you open the panel with on
+   Tailscale (e.g. `http://my-vps:3000`).
+
 To deploy by hand: GitHub → *Actions* → *Deploy relay* → *Run workflow*.
 Turn Dokploy's own *Autodeploy* off so a push doesn't build twice.
 
