@@ -53,9 +53,62 @@ pub struct CalScreen {
     /// How many weeks the scrolled grid shows (kept from the month it
     /// started at, so the grid doesn't change height as it scrolls).
     pub month_rows: u16,
+    /// The day and week grids' first hour once scrolled (`Ctrl-e`/`Ctrl-y`,
+    /// `Ctrl-d`/`Ctrl-u`, the wheel); `None`: [`default_top`], moved just
+    /// enough to show the selected block.
+    pub hour_top: Option<u32>,
+}
+
+/// Rows an hour gets in the day and week grids: the same for every hour,
+/// however many hours the day has planned.
+pub const ROWS_PER_HOUR: u16 = 2;
+/// The grids' first hour when nothing earlier is planned.
+pub const DAY_FROM: u32 = 7;
+
+/// Whole hours a grid `height` rows tall shows.
+pub fn grid_hours(height: u16) -> u32 {
+    (u32::from(height) / u32::from(ROWS_PER_HOUR)).max(1)
+}
+
+/// `top` kept so a grid of `visible` hours doesn't run past midnight.
+pub fn clamp_top(top: u32, visible: u32) -> u32 {
+    top.min(24u32.saturating_sub(visible))
+}
+
+/// The first hour a grid starts at unscrolled: [`DAY_FROM`], or the hour
+/// of anything that starts earlier.
+pub fn default_top(starts: impl Iterator<Item = u32>) -> u32 {
+    starts
+        .map(|s| s / 60)
+        .min()
+        .map_or(DAY_FROM, |h| h.min(DAY_FROM))
+}
+
+/// The first hour that shows minutes `start..end` in a grid of `visible`
+/// hours, moving from `top` as little as possible. A block longer than the
+/// grid shows its start.
+pub fn reveal(top: u32, visible: u32, start: u32, end: u32) -> u32 {
+    let end = end.max(start + 1);
+    let t = if start < top * 60 {
+        start / 60
+    } else if end > (top + visible) * 60 {
+        end.div_ceil(60).saturating_sub(visible).min(start / 60)
+    } else {
+        top
+    };
+    clamp_top(t, visible)
 }
 
 impl CalScreen {
+    /// Whether the view is a grid of hours (the day, the week's blocks).
+    pub fn has_hour_grid(&self) -> bool {
+        match self.view {
+            CalView::Day => true,
+            CalView::Week => self.week_style == CalStyle::Blocks,
+            CalView::Month => false,
+        }
+    }
+
     /// The month grid: its first Monday and how many weeks. Scrolled by
     /// the arrows while the selected day stays in it; else the selected
     /// day's month.
@@ -196,6 +249,7 @@ impl App {
                 month_style: CalStyle::default(),
                 month_top: None,
                 month_rows: 0,
+                hour_top: None,
             },
         };
         self.calendar = Some(state);
@@ -276,6 +330,7 @@ impl App {
         if let Some(c) = self.calendar.as_mut() {
             c.selected = c.selected.min(n.saturating_sub(1));
         }
+        self.cal_reveal();
     }
 
     /// Move the selected day by `days`. In the month, going past the
@@ -344,6 +399,49 @@ impl App {
             } else {
                 c.selected.saturating_sub(1)
             };
+        }
+        self.cal_reveal();
+    }
+
+    /// The hour grid as last drawn: its first hour and how many it shows.
+    fn cal_grid(&self) -> Option<(u32, u32)> {
+        let cols = self.cal_cols.borrow();
+        let c = cols.first()?;
+        Some((c.top / 60, grid_hours(c.h)))
+    }
+
+    /// Scroll the hour grid `hours` later (or earlier, negative), the
+    /// selection staying where it is. Nothing outside an hour grid.
+    pub fn cal_scroll(&mut self, hours: i32) {
+        let Some((top, visible)) = self.cal_grid() else {
+            return;
+        };
+        if let Some(c) = self.calendar.as_mut()
+            && c.has_hour_grid()
+        {
+            let t = (i64::from(top) + i64::from(hours)).max(0) as u32;
+            c.hour_top = Some(clamp_top(t, visible));
+        }
+    }
+
+    /// `Ctrl-d` / `Ctrl-u`: half the grid's hours later or earlier.
+    pub fn cal_scroll_half(&mut self, down: bool) {
+        let half = self.cal_grid().map_or(1, |(_, v)| (v / 2).max(1)) as i32;
+        self.cal_scroll(if down { half } else { -half });
+    }
+
+    /// After the selection moved: scroll a scrolled grid just enough to
+    /// show it. (Unscrolled, the drawing already follows the selection.)
+    fn cal_reveal(&mut self) {
+        let sel = self.cal_selected_any();
+        let grid = self.cal_grid();
+        if let Some(c) = self.calendar.as_mut()
+            && let Some(top) = c.hour_top
+            && let Some(o) = sel
+            && let (Some(s), Some(e)) = (o.start, o.end())
+        {
+            let visible = grid.map_or(24, |(_, v)| v);
+            c.hour_top = Some(reveal(top, visible, s, e));
         }
     }
 
@@ -658,6 +756,7 @@ impl App {
         {
             c.selected = i;
         }
+        self.cal_reveal();
     }
 }
 
@@ -666,6 +765,100 @@ impl App {
 mod tests {
     use super::*;
     use crate::app::test_support::build_app;
+
+    #[test]
+    fn the_hour_window_fits_every_height_and_moves_as_little_as_it_can() {
+        // Every height shows whole hours, two rows each: 33 rows used to
+        // round 15 hours down to 14 and scroll a grid that fit.
+        assert_eq!(grid_hours(33), 16);
+        assert_eq!(grid_hours(31), 15);
+        assert_eq!(grid_hours(1), 1);
+        assert_eq!(clamp_top(20, 10), 14);
+        assert_eq!(default_top([8 * 60 + 30, 15 * 60].into_iter()), DAY_FROM);
+        assert_eq!(default_top([6 * 60].into_iter()), 6);
+        assert_eq!(default_top(std::iter::empty()), DAY_FROM);
+        // Already in view: no move.
+        assert_eq!(reveal(7, 15, 15 * 60 + 30, 17 * 60 + 20), 7);
+        // Below: just enough to show its end.
+        assert_eq!(reveal(7, 10, 23 * 60, 24 * 60), 14);
+        assert_eq!(reveal(7, 10, 17 * 60 + 30, 18 * 60 + 30), 9);
+        // Above: its start at the top.
+        assert_eq!(reveal(7, 10, 30, 90), 0);
+        // Longer than the grid: its start shows.
+        assert_eq!(reveal(0, 2, 10 * 60, 15 * 60), 10);
+    }
+
+    fn draw(app: &App) -> String {
+        use ratatui::{Terminal, backend::TestBackend};
+        // Short: about ten hours of grid.
+        let mut term = Terminal::new(TestBackend::new(140, 28)).unwrap();
+        term.draw(|f| crate::ui::draw(f, app)).unwrap();
+        let buf = term.backend().buffer();
+        (0..buf.area.height)
+            .map(|y| {
+                (0..buf.area.width)
+                    .map(|x| buf[(x, y)].symbol().to_string())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn a_task_at_midnight_scrolls_into_view_instead_of_shrinking_the_hours() {
+        // Today is 2026-05-06, a wednesday.
+        let mut app = build_app(
+            "Class plan:2026-05-06 at:09:00 dur:1h\n\
+             Late plan:2026-05-06 at:23:00 dur:1h\n",
+        );
+        app.frozen_now = Some(24 * 60);
+        for view in [CalView::Week, CalView::Day] {
+            app.open_cal(view);
+            app.calendar.as_mut().unwrap().hour_top = None;
+            app.calendar.as_mut().unwrap().selected = 0;
+            let text = draw(&app);
+            // Two rows an hour, from 07; the late one is counted below.
+            assert!(text.contains("07"), "{view:?}\n{text}");
+            assert!(text.contains("↓1"), "{view:?}\n{text}");
+            assert!(!text.contains("Late"), "{view:?}\n{text}");
+            // Ctrl-d twice reaches it; the selection doesn't move.
+            app.cal_scroll_half(true);
+            draw(&app);
+            app.cal_scroll_half(true);
+            let text = draw(&app);
+            assert!(text.contains("Late"), "{view:?}\n{text}");
+            assert!(text.contains("↑1"), "{view:?}\n{text}");
+            assert_eq!(app.cal_selected().unwrap().abs, 0);
+            // Selecting the class again brings it back into view.
+            app.cal_select(true);
+            app.cal_select(false);
+            let text = draw(&app);
+            assert!(text.contains("Class"), "{view:?}\n{text}");
+            // Ctrl-y one hour; never above midnight.
+            app.cal_scroll(-30);
+            draw(&app);
+            assert_eq!(app.calendar.as_ref().unwrap().hour_top, Some(0));
+        }
+    }
+
+    #[test]
+    fn the_week_starts_at_the_same_hour_whichever_day_is_selected() {
+        // The bug: 07 with an 08:30 block selected, 08 with a 15:30 one.
+        let mut app = build_app(
+            "PGPI plan:2026-05-06 at:08:30 dur:110m\n\
+             Examen plan:2026-05-07 at:15:30 dur:110m\n",
+        );
+        app.open_cal(CalView::Week);
+        let first_hour = |app: &App| {
+            draw(app);
+            app.cal_cols.borrow()[0].top / 60
+        };
+        let wed = first_hour(&app);
+        app.cal_move(1);
+        assert_eq!(app.cal_selected().unwrap().abs, 1);
+        assert_eq!(first_hour(&app), wed);
+        assert_eq!(wed, DAY_FROM);
+    }
 
     #[test]
     fn r_in_the_calendar_reschedules_the_task_selected_there() {

@@ -253,6 +253,13 @@ impl App {
             self.notes_screen_scroll_by(if down { 2 } else { -2 });
             return None;
         }
+        // Over the day or week grid: the hours, an hour a notch.
+        if self.mode == super::Mode::Normal
+            && self.calendar.as_ref().is_some_and(|c| c.has_hour_grid())
+        {
+            self.cal_scroll(if down { 1 } else { -1 });
+            return None;
+        }
         Some(if down {
             Action::CursorDown
         } else {

@@ -61,7 +61,10 @@ pub use crate::core::filter::{ListDueBucket, ordered_unique};
 pub use acal_link::AppleInput;
 pub use autocomplete::{ActiveToken, AutocompleteTarget, TokenKind, active_token};
 pub use cal_drag::{CalCol, CalDrag};
-pub use calendar::{CalScreen, CalStyle, CalView, SeriesAsk, SeriesOp, month_bounds, week_start};
+pub use calendar::{
+    CalScreen, CalStyle, CalView, DAY_FROM, ROWS_PER_HOUR, SeriesAsk, SeriesOp, clamp_top,
+    default_top, grid_hours, month_bounds, reveal, week_start,
+};
 pub use checklist::{CHECKLIST_FILE, CheckItem, InspectorRow, NoteCard, NotesCache, TaskNotes};
 pub use chord::Chord;
 pub use color_pick::{ColorPick, PICK_COLS};

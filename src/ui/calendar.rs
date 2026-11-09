@@ -12,7 +12,7 @@ use ratatui::style::{Color, Modifier, Style};
 
 use chrono::Datelike;
 
-use crate::app::{App, CalView};
+use crate::app::{App, CalView, ROWS_PER_HOUR, clamp_top, default_top, grid_hours, reveal};
 use crate::core::calendar::{self, Occurrence};
 use crate::theme::Theme;
 use crate::ui::task_row::{chip_date, tint};
@@ -21,9 +21,6 @@ use crate::ui::task_row::{chip_date, tint};
 const SIDE_W: u16 = 32;
 /// Width of the hour labels.
 const GUTTER_W: u16 = 8;
-/// The hours always shown, widened to fit earlier or later blocks.
-const DAY_FROM: u32 = 7;
-const DAY_TO: u32 = 22;
 
 pub fn render(frame: &mut Frame, area: Rect, app: &App) {
     let theme = app.theme();
@@ -109,6 +106,56 @@ fn fit(s: &str, w: usize) -> String {
     let mut out: String = s.chars().take(w - 1).collect();
     out.push('…');
     out
+}
+
+/// The hour grid's first hour: where it was scrolled to, else from
+/// [`default_top`] moved just enough to show `focus` (minutes, start–end).
+fn window_top(
+    scrolled: Option<u32>,
+    starts: impl Iterator<Item = u32>,
+    visible: u32,
+    focus: Option<(u32, u32)>,
+) -> u32 {
+    if let Some(t) = scrolled {
+        return clamp_top(t, visible);
+    }
+    let t = clamp_top(default_top(starts), visible);
+    focus.map_or(t, |(s, e)| reveal(t, visible, s, e))
+}
+
+/// `↑ n` on a column's first row and `↓ n` on its last: how many blocks
+/// are scrolled out of view above and below.
+fn offscreen_marks(
+    buf: &mut Buffer,
+    theme: &Theme,
+    right: u16,
+    grid: Rect,
+    blocks: &[&Occurrence],
+    from: u32,
+    to: u32,
+) {
+    let above = blocks
+        .iter()
+        .filter(|o| o.end().is_some_and(|e| e <= from))
+        .count();
+    let below = blocks
+        .iter()
+        .filter(|o| o.start.is_some_and(|s| s >= to))
+        .count();
+    let style = Style::default()
+        .fg(theme.accent)
+        .add_modifier(Modifier::BOLD);
+    for (n, arrow, y) in [
+        (above, "↑", grid.y),
+        (below, "↓", grid.bottom().saturating_sub(1)),
+    ] {
+        if n == 0 {
+            continue;
+        }
+        let text = format!("{arrow}{n}");
+        let w = text.chars().count() as u16;
+        put(buf, right.saturating_sub(w), y, &text, w, style);
+    }
 }
 
 fn hhmm(m: u32) -> String {
@@ -579,42 +626,26 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
         return;
     }
 
-    // Hours to show, and how many rows an hour gets.
+    // Every hour the same height; the grid scrolls through the whole day.
     let timed: Vec<&Occurrence> = items.iter().filter(|o| o.start.is_some()).collect();
-    let first = timed
-        .iter()
-        .filter_map(|o| o.start)
-        .min()
-        .map_or(DAY_FROM, |s| (s / 60).min(DAY_FROM));
     let now = (cal.date == app.today_naive())
         .then(|| app.now_minutes())
         .flatten();
-    // Through the last block, and through now on today.
-    let last = timed
-        .iter()
-        .filter_map(|o| o.end())
-        .chain(now.map(|n| n + 60))
-        .max()
-        .map_or(DAY_TO, |e| e.div_ceil(60).clamp(DAY_TO, 24));
-    let hours = last - first;
-    // Rows per hour: as many as fill the height (up to 4), never under one;
-    // with too little room, a window of hours around what matters.
-    let scale = (f64::from(grid.height) / f64::from(hours.max(1))).clamp(1.0, 4.0);
-    let visible_hours = ((f64::from(grid.height) / scale) as u32).max(1);
-    // Scroll so the selected block (else now, else the first block) shows.
+    let last = 24;
+    let scale = f64::from(ROWS_PER_HOUR);
+    let visible = grid_hours(grid.height);
+    // Unscrolled: from 07 (or the first block), moved just enough to show
+    // the selected block, else now.
     let focus = selected
         .as_ref()
-        .and_then(|o| o.start)
-        .or(now)
-        .or_else(|| timed.first().and_then(|o| o.start))
-        .unwrap_or(first * 60);
-    let top = if hours <= visible_hours {
-        first
-    } else {
-        (focus / 60)
-            .saturating_sub(visible_hours / 3)
-            .clamp(first, last - visible_hours)
-    };
+        .and_then(|o| Some((o.start?, o.end()?)))
+        .or(now.map(|n| (n, n + 1)));
+    let top = window_top(
+        cal.hour_top,
+        timed.iter().filter_map(|o| o.start),
+        visible,
+        focus,
+    );
     let row_of =
         |m: u32| -> i64 { ((f64::from(m) - f64::from(top * 60)) * scale / 60.0).floor() as i64 };
 
@@ -683,6 +714,8 @@ fn day(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
         block_hits(app, block, o);
     }
     draw_ghost(buf, app, theme, &col, gx, gw);
+    let bottom = top * 60 + u32::from(grid.height) * 60 / u32::from(ROWS_PER_HOUR);
+    offscreen_marks(buf, theme, gx + gw, grid, &timed, top * 60, bottom);
 
     // Now: a red line across the free part of the grid.
     if let Some(now) = now
@@ -1092,33 +1125,18 @@ fn week_blocks(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
         return;
     }
 
-    // Hours across the week.
+    // Hours across the week: every hour the same height, scrolling.
     let timed: Vec<&Occurrence> = occs.iter().filter(|o| o.start.is_some()).collect();
-    let first = timed
-        .iter()
-        .filter_map(|o| o.start)
-        .min()
-        .map_or(DAY_FROM, |s| (s / 60).min(DAY_FROM));
-    let last = timed
-        .iter()
-        .filter_map(|o| o.end())
-        .max()
-        .map_or(DAY_TO, |e| e.div_ceil(60).clamp(DAY_TO, 24));
-    let hours = last - first;
-    let scale = (f64::from(grid.height) / f64::from(hours.max(1))).clamp(1.0, 4.0);
-    let visible_hours = ((f64::from(grid.height) / scale) as u32).max(1);
-    let focus = selected
-        .as_ref()
-        .and_then(|o| o.start)
-        .or_else(|| timed.first().and_then(|o| o.start))
-        .unwrap_or(first * 60);
-    let top = if hours <= visible_hours {
-        first
-    } else {
-        (focus / 60)
-            .saturating_sub(visible_hours / 3)
-            .clamp(first, last - visible_hours)
-    };
+    let last = 24;
+    let scale = f64::from(ROWS_PER_HOUR);
+    let visible = grid_hours(grid.height);
+    let focus = selected.as_ref().and_then(|o| Some((o.start?, o.end()?)));
+    let top = window_top(
+        cal.hour_top,
+        timed.iter().filter_map(|o| o.start),
+        visible,
+        focus,
+    );
     let row_of =
         |m: u32| -> i64 { ((f64::from(m) - f64::from(top * 60)) * scale / 60.0).floor() as i64 };
 
@@ -1200,6 +1218,16 @@ fn week_blocks(buf: &mut Buffer, r: Rect, app: &App, theme: &Theme) {
             draw_mini_block(buf, rect, app, theme, o, sel);
             block_hits(app, rect, o);
         }
+        let bottom = top * 60 + u32::from(grid.height) * 60 / u32::from(ROWS_PER_HOUR);
+        offscreen_marks(
+            buf,
+            theme,
+            inner_x + inner_w,
+            grid,
+            &day_timed,
+            top * 60,
+            bottom,
+        );
         // Now, on today's column.
         if *d == today
             && let Some(now) = app.now_minutes()
