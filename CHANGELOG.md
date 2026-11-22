@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/tasq-app/tasq/compare/v0.10.0...v0.10.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **gcal:** open the sign-in URL whole on Windows ([#103](https://github.com/tasq-app/tasq/issues/103)) ([3d62a74](https://github.com/tasq-app/tasq/commit/3d62a743cf2832ff6ad8ded6ef3641ead7cf14fc))
+
 ## [0.10.0](https://github.com/tasq-app/tasq/compare/v0.9.1...v0.10.0) (2026-11-09)
 
 
