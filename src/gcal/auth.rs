@@ -92,15 +92,25 @@ fn random(n: usize) -> String {
     http::b64url(&bytes)
 }
 
-/// Open `url` in the browser.
-pub(crate) fn open_browser(url: &str) -> Result<()> {
-    let (cmd, args): (&str, Vec<&str>) = if cfg!(target_os = "macos") {
+/// The program and arguments that open `url` in the browser.
+///
+/// On Windows not `cmd /C start`: `cmd` reads `&` as "and then run", so a
+/// URL with a query (every OAuth one) reached the browser cut at its first
+/// `&` and Google answered "Required parameter is missing: response_type".
+/// `url.dll`'s handler hands the URL to the shell untouched.
+fn browser_command(url: &str) -> (&'static str, Vec<&str>) {
+    if cfg!(target_os = "macos") {
         ("open", vec![url])
     } else if cfg!(windows) {
-        ("cmd", vec!["/C", "start", "", url])
+        ("rundll32", vec!["url.dll,FileProtocolHandler", url])
     } else {
         ("xdg-open", vec![url])
-    };
+    }
+}
+
+/// Open `url` in the browser.
+pub(crate) fn open_browser(url: &str) -> Result<()> {
+    let (cmd, args) = browser_command(url);
     std::process::Command::new(cmd)
         .args(args)
         .stdout(std::process::Stdio::null())
@@ -470,6 +480,16 @@ pub fn now_secs() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_browser_gets_the_whole_url() {
+        let url = "https://accounts.google.com/o/oauth2/v2/auth?client_id=x&response_type=code";
+        let (cmd, args) = browser_command(url);
+        // The URL goes as one argument, and never through `cmd`, which
+        // would cut it at the `&`.
+        assert_ne!(cmd, "cmd");
+        assert_eq!(args.last(), Some(&url));
+    }
 
     #[test]
     fn the_pieces_of_signing_in() {
