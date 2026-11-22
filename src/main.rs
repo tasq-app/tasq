@@ -1134,6 +1134,17 @@ fn handle_calendar(app: &mut App, key: KeyEvent, keybinds: &KeyBindings) {
     use tasq::app::CalView;
     let view = app.calendar.as_ref().map(|c| c.view);
     let month = view == Some(CalView::Month);
+    // nvim's scrolling: the hours move, the selection stays.
+    let grid = app.calendar.as_ref().is_some_and(|c| c.has_hour_grid());
+    if grid && key.modifiers.contains(KeyModifiers::CONTROL) {
+        match key.code {
+            KeyCode::Char('e') => return app.cal_scroll(1),
+            KeyCode::Char('y') => return app.cal_scroll(-1),
+            KeyCode::Char('d') => return app.cal_scroll_half(true),
+            KeyCode::Char('u') => return app.cal_scroll_half(false),
+            _ => {}
+        }
+    }
     match key.code {
         KeyCode::Esc => app.close_calendar(),
         KeyCode::Char('d') => app.open_cal(CalView::Day),
@@ -3843,6 +3854,37 @@ mod tests {
         // `O` used to be CreateOrOpenNote; it is freed and now resolves to
         // nothing built-in.
         assert_eq!(resolve(&mut app, key('O')), None);
+    }
+
+    #[test]
+    fn ctrl_keys_scroll_the_calendar_hours_instead_of_their_letters() {
+        use ratatui::{Terminal, backend::TestBackend};
+        let raw = "Class plan:2026-05-06 at:09:00\n";
+        let path = std::env::temp_dir().join(format!(
+            "tasq-cal-scroll-{}-{:?}.txt",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        std::fs::write(&path, raw).expect("seed");
+        let mut app = App::new(path, raw.to_string(), "2026-05-06".into(), test_cfg());
+        app.open_cal(tasq::app::CalView::Week);
+        let mut term = Terminal::new(TestBackend::new(140, 28)).expect("term");
+        let top = |app: &App| app.calendar.as_ref().and_then(|c| c.hour_top);
+        let mut press = |app: &mut App, k: KeyEvent| {
+            term.draw(|f| tasq::ui::draw(f, app)).expect("draw");
+            handle_key(app, k, &KeyBindings::default());
+        };
+        press(&mut app, ctrl('e'));
+        assert_eq!(top(&app), Some(8));
+        press(&mut app, ctrl('y'));
+        assert_eq!(top(&app), Some(7));
+        // Not the day view (d), not editing (e): still the week, unselected.
+        press(&mut app, ctrl('d'));
+        press(&mut app, ctrl('u'));
+        let cal = app.calendar.as_ref().expect("calendar");
+        assert_eq!(cal.view, tasq::app::CalView::Week);
+        assert_eq!(cal.hour_top, Some(7));
+        assert_eq!(app.selection.editing(), None);
     }
 
     #[test]
